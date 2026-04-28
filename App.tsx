@@ -17,9 +17,9 @@ import {
   GuidesTab,
   ProfileTab
 } from './components/DashboardTabs.tsx';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
+import { MyStore } from './components/features/my-store/MyStore.tsx';
 import { RewardFeature } from './components/features/programme-recompense/RewardFeature.tsx';
-import { AffiliationSystem } from './components/AffiliationSystem.tsx';
 import { PWAInstallBanner } from './components/ui/PWAInstallBanner.tsx';
 import { AdminPanel } from './components/AdminPanel.tsx';
 import { ProductSalesPage } from './components/ProductSalesPage.tsx';
@@ -530,8 +530,7 @@ const App: React.FC = () => {
       {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
       {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
       {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
-      {activeTab === 'affiliation' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} />}
-      {activeTab === 'catalog' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} onlyCatalog={true} />}
+      {(activeTab === 'affiliation' || activeTab === 'catalog') && <MyStore profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
       {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}

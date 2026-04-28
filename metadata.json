@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Remix: MZ+ Elite Business System \u0026 SQL Console",
-  "description": "Système de gestion premium avec console SQL intégrée pour les administrateurs MZ+.",
+  "name": "MZ+ Elite Business Hub",
+  "description": "Système de gestion haute performance pour les entrepreneurs MZ+. Dashboard d'actifs et monitoring ROI.",
   "requestFramePermissions": [
     "notifications"
   ]

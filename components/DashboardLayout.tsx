@@ -4,26 +4,15 @@ import { motion } from 'motion/react';
 import { 
   X, 
   LogOut, 
-  ChevronRight, 
-  GraduationCap, 
   Crown, 
   Trophy,
   Home,
   Sparkles,
   ShieldCheck,
-  Mail,
-  Target,
-  Menu,
-  Coins,
-  Briefcase,
   Zap,
-  Settings,
   HelpCircle,
-  Terminal,
-  Bell,
-  Users,
-  Link as LinkIcon,
-  User
+  User,
+  Coins
 } from 'lucide-react';
 import { GoldText, EliteBadge } from './UI.tsx';
 import { TabId, UserProfile } from '../types.ts';
@@ -221,8 +210,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         <NavButton 
           active={activeTab === 'affiliation'} 
           onClick={() => setActiveTab('affiliation')} 
-          emoji="🔗" 
-          label="Lien" 
+          emoji="🏪" 
+          label="Boutique" 
         />
         <NavButton 
           active={activeTab === 'team'} 

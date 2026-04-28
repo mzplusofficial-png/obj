@@ -2,24 +2,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  ShoppingBag as Bag, 
   Users, 
   UserPlus, 
   Lock,
   Target,
   Crown,
   ChevronRight,
-  MessageSquare,
   Zap,
   GraduationCap,
   Video,
   BookOpen,
   ArrowLeft,
-  MessagesSquare,
   Shield,
   Mail,
   Facebook,
   Share2,
+  Store,
   ArrowRight,
   Eye,
   EyeOff,
@@ -75,7 +73,7 @@ export const GlobalView: React.FC<any> = ({
   const nextLevel = "Or";
 
   const categories = [
-    { id: 'business', title: 'Business', desc: 'Commissions', emoji: '🎯', badge: 'GAGNER', color: 'bg-red-500/20 text-red-500 border-red-500/10' },
+    { id: 'business', title: 'Ma Boutique', desc: 'Mon Empire', emoji: '🏪', badge: 'ACTIF', color: 'bg-red-500/20 text-red-500 border-red-500/10' },
     { id: 'referral', title: 'Inviter & Gagner', desc: 'Gains passifs', emoji: '🔗', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/10' },
     { id: 'academy', title: 'Académie', desc: 'Formations', emoji: '🎓', color: 'bg-purple-500/20 text-purple-400 border-purple-500/10' },
   ];
@@ -119,7 +117,7 @@ export const GlobalView: React.FC<any> = ({
       case 'business':
         return (
           <div className="grid grid-cols-2 gap-3 animate-fade-in text-left">
-             <SubServiceCard title="Affiliation" desc="Liens" icon={Bag} onClick={() => onSwitchTab('affiliation')} />
+             <SubServiceCard title="Ma Boutique" desc="Gérer mes liens" icon={Store} onClick={() => onSwitchTab('affiliation')} />
              <SubServiceCard title="Vidéo" desc="TikTok/Reels" icon={Video} locked={!isMzPlus} onClick={() => onSwitchTab('rpa')} />
              <SubServiceCard title="Équipe" desc="Parrainage" icon={UserPlus} onClick={() => onSwitchTab('team')} />
           </div>
@@ -207,7 +205,9 @@ export const GlobalView: React.FC<any> = ({
         <div className="space-y-6">
            <div className="flex items-center gap-4">
               <h3 className="text-xl font-black uppercase tracking-tighter text-white">
-                {activeCategory}
+                {activeCategory === 'business' ? 'Ma Boutique' : 
+                 activeCategory === 'referral' ? 'Inviter' :
+                 activeCategory === 'academy' ? 'Académie' : activeCategory}
               </h3>
               <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-gold-main)]/20 to-transparent"></div>
            </div>
