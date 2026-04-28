@@ -15,35 +15,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/index.css">
     <script>
-      // FIX: UNCAUGHT TYPEERROR: CANNOT SET PROPERTY FETCH OF #<WINDOW> WHICH HAS ONLY A GETTER
-      // Ce script s'exécute le plus tôt possible pour s'assurer que 'fetch' peut être surchargé sans erreur.
-      (function() {
-        try {
-          var _f = window.fetch;
-          if (_f) {
-            Object.defineProperty(window, 'fetch', {
-              get: function() { return _f; },
-              set: function(v) { 
-                console.log('MZ+ System: Fetch override intercepted');
-                _f = v; 
-              },
-              configurable: true,
-              enumerable: true
-            });
-            console.log('MZ+ System: Fetch protection enabled');
-          }
-        } catch (e) {
-          // Si defineProperty échoue, on ne peut rien faire ici.
-        }
-      })();
-
       // Capture du prompt PWA le plus tôt possible
       window.deferredPrompt = null;
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         window.deferredPrompt = e;
         console.log('MZ+ System: PWA Prompt buffered');
-        // Déclencher un événement personnalisé pour notifier les composants React
         window.dispatchEvent(new CustomEvent('mz-pwa-prompt-ready'));
       });
     </script>
