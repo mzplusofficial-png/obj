@@ -328,6 +328,29 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handleViewProduct = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.product) {
+        setCustomerProduct(customEvent.detail.product);
+      }
+    };
+    const handleCloseProduct = () => {
+      setCustomerProduct(null);
+      if (window.location.search.includes('prod=')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+
+    window.addEventListener('view-product-details', handleViewProduct);
+    window.addEventListener('close-product-details', handleCloseProduct);
+
+    return () => {
+      window.removeEventListener('view-product-details', handleViewProduct);
+      window.removeEventListener('close-product-details', handleCloseProduct);
+    };
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'rpa' && !localStorage.getItem('mz_rpa_guide_completed')) {
       const timer = setTimeout(() => {
         setIsRPAGuideActive(true);

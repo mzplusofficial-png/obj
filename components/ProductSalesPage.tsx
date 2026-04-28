@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { 
   ShieldCheck, 
   Zap, 
@@ -37,6 +38,11 @@ export const ProductSalesPage: React.FC<ProductSalesPageProps> = ({
   isLoggedIn = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const minutes = Math.floor(countdown / 60);
   const seconds = countdown % 60;
 
@@ -58,7 +64,7 @@ export const ProductSalesPage: React.FC<ProductSalesPageProps> = ({
       {isLoggedIn && (
         <div className="absolute top-16 left-6 z-[110] animate-fade-in">
           <button 
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.dispatchEvent(new CustomEvent('close-product-details'))}
             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
           >
             <LayoutDashboard size={14} className="text-yellow-500" />
@@ -70,15 +76,23 @@ export const ProductSalesPage: React.FC<ProductSalesPageProps> = ({
       {/* Hero Section - Format 9:16 visuel */}
       <section className="relative h-[90vh] flex flex-col justify-end p-6 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img 
+          <motion.img 
+            initial={{ scale: 1.1, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
             src={product.image_url} 
             alt={product.name} 
-            className="w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
+            className="w-full h-full object-cover transition-transform hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
         </div>
 
-        <div className="relative z-10 space-y-4 animate-fade-in">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="relative z-10 space-y-4"
+        >
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500 text-black text-[10px] font-black uppercase tracking-widest rounded-full">
             Édition Limitée
           </div>
@@ -105,7 +119,7 @@ export const ProductSalesPage: React.FC<ProductSalesPageProps> = ({
                 <ArrowDown size={12} /> Découvrir les détails
              </p>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Détails du produit */}
