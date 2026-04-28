@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Trophy, UserPlus, Zap, Crown } from 'lucide-react';
+import { Sparkles, Trophy, UserPlus, Zap, Crown, Loader2 } from 'lucide-react';
+import { db, handleFirestoreError, OperationType } from '../../services/firebase.ts';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface ActivityEvent {
   id: string;
@@ -11,27 +13,67 @@ interface ActivityEvent {
   time: string;
 }
 
-const MOCK_EVENTS: ActivityEvent[] = [
-  { id: '1', type: 'gain', user: 'Modou D.', detail: '+5,000 CFA Commission', time: 'À l\'instant' },
-  { id: '2', type: 'join', user: 'Serge K.', detail: 'A rejoint le réseau', time: 'Il y a 2 min' },
-  { id: '3', type: 'premium', user: 'Alice M.', detail: 'Passage au Niveau MZ+', time: 'Il y a 5 min' },
-  { id: '4', type: 'gain', user: 'Ousmane S.', detail: '+12,500 CFA Commission', time: 'Il y a 8 min' },
-  { id: '5', type: 'coaching', user: 'Fatou B.', detail: 'Session Élite validée', time: 'Il y a 12 min' },
-  { id: '6', type: 'join', user: 'Jean-Paul T.', detail: 'Nouveau membre certifié', time: 'Il y a 15 min' },
-  { id: '7', type: 'premium', user: 'Yasmine L.', detail: 'Nouveau membre MZ+ Elite', time: 'Il y a 18 min' },
-];
-
 export const LivePulse: React.FC = () => {
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % MOCK_EVENTS.length);
-    }, 4000);
-    return () => clearInterval(interval);
+    const q = query(
+      collection(db, 'live_pulse'),
+      orderBy('created_at', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newEvents: ActivityEvent[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: data.type,
+          user: data.user_name,
+          detail: data.detail,
+          time: 'À l\'instant' // Dynamic time could be handled with a hook
+        };
+      });
+      
+      if (newEvents.length > 0) {
+        setEvents(newEvents);
+      }
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'live_pulse');
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const event = MOCK_EVENTS[currentIndex];
+  useEffect(() => {
+    if (events.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % events.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [events]);
+
+  if (loading) {
+    return (
+      <div className="h-10 flex items-center justify-center gap-2 opacity-50">
+        <Loader2 size={12} className="animate-spin text-yellow-500" />
+        <span className="text-[10px] font-black uppercase tracking-widest">Elite Pulse...</span>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="h-10 flex items-center justify-center opacity-20">
+        <span className="text-[8px] font-black uppercase tracking-[0.3em]">Pulse en attente d'activité</span>
+      </div>
+    );
+  }
+
+  const event = events[currentIndex];
 
   const getIcon = (type: string) => {
     switch (type) {
