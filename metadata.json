@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: MZ+ Elite Business System \u0026 SQL Console",
+  "description": "Système de gestion premium avec console SQL intégrée pour les administrateurs MZ+.",
+  "requestFramePermissions": [
+    "notifications"
+  ]
+}
