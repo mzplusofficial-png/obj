@@ -1,28 +1,28 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp, getDocFromServer, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
 
-// Test connection CRITICAL
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
+// // Test connection CRITICAL
+// async function testConnection() {
+//   try {
+//     await getDocFromServer(doc(db, 'test', 'connection'));
+//   } catch (error) {
+//     if(error instanceof Error && error.message.includes('the client is offline')) {
+//       console.error("Please check your Firebase configuration.");
+//     }
+//   }
+// }
+// testConnection();
 
 export enum OperationType {
   CREATE = 'create',

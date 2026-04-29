@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      optimizeDeps: {
+        include: ['firebase/app', 'firebase/firestore', 'firebase/auth', 'firebase/messaging'],
+      },
       plugins: [
         react(),
         tailwindcss(),

@@ -19,11 +19,7 @@ const FIRST_NAMES = [
 const LAST_INITIALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 const ACTIONS = [
-  "vient de vendre",
-  "a généré une vente pour",
-  "a touché une commission sur",
-  "a complété une vente de",
-  "a placé"
+  "a généré une vente pour"
 ];
 
 const xmur3 = (str: string) => {
@@ -197,8 +193,8 @@ export const LiveCommissionsFeed: React.FC<{ products: Product[] }> = ({ product
                    </div>
                    <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3">
-                         <p className="text-[11px] sm:text-[13px] text-white/90 truncate leading-snug">
-                            <span className="font-bold text-white">{sale.name}</span> <span className="text-white/40">{sale.actionText}</span> <span className="text-white/80 font-medium italic">{sale.productName}</span>
+                         <p className="text-[11px] sm:text-[13px] text-white/90 leading-snug line-clamp-2">
+                            <span className="font-bold text-white">{sale.name}</span> <span className="text-white/40">{sale.actionText}</span> <span className="text-white/80 font-medium italic">{(sale.productName || "").substring(0, 35)}{(sale.productName?.length > 35 ? "..." : "")}</span>
                          </p>
                          <div className="flex items-center gap-2 shrink-0">
                             <span className="text-[9px] text-white/30 uppercase tracking-widest whitespace-nowrap">{getTimeAgo(sale.time)}</span>
