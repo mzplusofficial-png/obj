@@ -31,7 +31,8 @@ import {
 import { supabase } from '../../../services/supabase.ts';
 import { Product, UserProfile, Commission, ProductStat } from '../../../types.ts';
 import { CurrencyDisplay } from '../../ui/CurrencyDisplay.tsx';
-import { ProductDetailView } from '../../ProductDetailView.tsx';
+import { ProductDetailView, ShareModal } from '../../ProductDetailView.tsx';
+import { LiveCommissionsFeed } from './LiveCommissionsFeed.tsx';
 
 interface MyStoreProps {
   profile: UserProfile | null;
@@ -53,6 +54,8 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [selectedCatalogProduct, setSelectedCatalogProduct] = useState<Product | null>(null);
   const [detailViewProduct, setDetailViewProduct] = useState<Product | null>(null);
+  const [shareProduct, setShareProduct] = useState<Product | null>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   // Stats derivations
   const totalVisits = useMemo(() => {
@@ -427,70 +430,61 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
                   </button>
                </div>
 
-               {/* PRODUCT INFO */}
-               <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center p-6 sm:p-8 bg-white/[0.02] border border-white/5 rounded-[24px]">
-                   <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[#0f0f12] shrink-0 border border-white/10 shadow-2xl relative group">
-                      <img src={analyzedProduct.image_url} alt={analyzedProduct.name} className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+               <div className="bg-white/[0.02] border border-white/5 rounded-[24px] overflow-hidden">
+                   {/* PRODUCT HEADER COMPACT */}
+                   <div className="flex items-center gap-4 p-5 sm:p-6 border-b border-white/5 bg-white/[0.01]">
+                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-black shrink-0 relative border border-white/5">
+                           <img src={analyzedProduct.image_url} alt={analyzedProduct.name} className="w-full h-full object-cover opacity-80" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                           <h3 className="text-sm sm:text-base font-bold text-white truncate mb-1.5">{analyzedProduct.name}</h3>
+                           <div className="flex flex-wrap items-center gap-2">
+                               <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-[#10b981]/10 text-[9px] font-black tracking-widest text-[#10b981] uppercase border border-[#10b981]/20">
+                                   <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981]"></div> Active
+                               </span>
+                               <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider py-1 px-2 rounded bg-white/5 border border-white/10">
+                                   <CurrencyDisplay amount={analyzedProduct.commission_amount} /> / vente
+                               </span>
+                           </div>
+                       </div>
                    </div>
-                   <div className="flex-1">
-                      <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-3">{analyzedProduct.name}</h3>
-                      <div className="flex flex-wrap gap-3">
-                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10b981]/10 border border-[#10b981]/20 text-[10px] font-black tracking-widest text-[#10b981] uppercase">
-                             <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981]"></div> Active
-                         </span>
-                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black tracking-widest text-white/40 uppercase">
-                             <CurrencyDisplay amount={analyzedProduct.commission_amount} /> / vente
-                         </span>
-                      </div>
-                   </div>
-               </div>
 
-               {/* STATS GRID */}
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                   {/* CLICKS */}
-                   <div className="bg-white/[0.02] border border-white/[0.06] p-6 lg:p-8 rounded-[24px] hover:bg-white/[0.04] transition-colors group">
-                       <div className="flex items-center gap-3 mb-6">
-                           <div className="w-8 h-8 rounded-full bg-[#6366f1]/10 flex items-center justify-center text-[#6366f1]">
-                              <Eye size={16} />
+                   {/* COMPACT STATS */}
+                   <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/5">
+                       <div className="p-5 flex flex-col justify-center hover:bg-white/[0.02] transition-colors">
+                           <div className="flex items-center gap-2 mb-2">
+                               <Eye size={12} className="text-[#6366f1]" />
+                               <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Clics</span>
                            </div>
-                           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#6366f1]/80">Trafic (Clics)</span>
+                           <div className="text-2xl font-black text-white">{totalVisits.toLocaleString()}</div>
                        </div>
-                       <div className="text-5xl font-black text-white tracking-tighter">{totalVisits.toLocaleString()}</div>
-                   </div>
-                   {/* SALES */}
-                   <div className="bg-white/[0.02] border border-white/[0.06] p-6 lg:p-8 rounded-[24px] hover:bg-white/[0.04] transition-colors group">
-                       <div className="flex items-center gap-3 mb-6">
-                           <div className="w-8 h-8 rounded-full bg-[#10b981]/10 flex items-center justify-center text-[#10b981]">
-                              <ShoppingBasket size={16} />
+                       <div className="p-5 flex flex-col justify-center hover:bg-white/[0.02] transition-colors border-l border-white/5 sm:border-l-0">
+                           <div className="flex items-center gap-2 mb-2">
+                               <ShoppingBasket size={12} className="text-[#10b981]" />
+                               <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Ventes</span>
                            </div>
-                           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#10b981]/80">Ventes Totales</span>
+                           <div className="text-2xl font-black text-white">{totalSales}</div>
                        </div>
-                       <div className="text-5xl font-black text-white tracking-tighter">{totalSales}</div>
-                   </div>
-                   {/* CONVERSION */}
-                   <div className="bg-white/[0.02] border border-white/[0.06] p-6 lg:p-8 rounded-[24px] hover:bg-white/[0.04] transition-colors group">
-                       <div className="flex items-center gap-3 mb-6">
-                           <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
-                              <Target size={16} />
+                       <div className="p-5 flex flex-col justify-center hover:bg-white/[0.02] transition-colors">
+                           <div className="flex items-center gap-2 mb-2">
+                               <Target size={12} className="text-orange-500" />
+                               <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Taux</span>
                            </div>
-                           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-500/80">Taux Conv.</span>
-                       </div>
-                       <div className="flex items-baseline gap-1">
-                          <div className="text-5xl font-black text-white tracking-tighter">{conversionRate.toFixed(1)}</div>
-                          <span className="text-xl font-black text-white/30">%</span>
-                       </div>
-                   </div>
-                   {/* REVENUE */}
-                   <div className="bg-white/[0.02] border border-white/[0.06] p-6 lg:p-8 rounded-[24px] hover:bg-white/[0.04] transition-colors group">
-                       <div className="flex items-center gap-3 mb-6">
-                           <div className="w-8 h-8 rounded-full bg-[#d5aa52]/10 flex items-center justify-center text-[#d5aa52]">
-                              <Zap size={16} />
+                           <div className="flex items-baseline gap-1">
+                               <div className="text-2xl font-black text-white">{conversionRate.toFixed(1)}</div>
+                               <span className="text-sm font-bold text-white/30">%</span>
                            </div>
-                           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d5aa52]/80">Gains Nets</span>
                        </div>
-                       <CurrencyDisplay amount={netRevenue} hideSymbol className="text-5xl font-black text-[#d5aa52] tracking-tighter italic" />
-                       <span className="text-xl font-black text-[#d5aa52]/40 italic ml-1">F</span>
+                       <div className="p-5 flex flex-col justify-center bg-gradient-to-br from-[#d5aa52]/5 to-transparent border-l border-white/5 sm:border-l-0">
+                           <div className="flex items-center gap-2 mb-2">
+                               <Zap size={12} className="text-[#d5aa52]" />
+                               <span className="text-[9px] font-bold uppercase tracking-widest text-[#d5aa52]/80">Gains</span>
+                           </div>
+                           <div className="flex items-baseline gap-1">
+                               <CurrencyDisplay amount={netRevenue} hideSymbol className="text-2xl font-black text-[#d5aa52]" />
+                               <span className="text-sm font-bold text-[#d5aa52]/40 italic">F</span>
+                           </div>
+                       </div>
                    </div>
                </div>
             </motion.div>
@@ -677,7 +671,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
                      <span className="text-[10px] font-black uppercase tracking-[0.3em]">Mes Actifs Privés</span>
                      <span className="text-[10px] font-black italic">{myProducts.length} ARTICLES</span>
                   </div>
-                  {myProducts.map((product) => (
+                  {(showAllProducts ? myProducts : myProducts.slice(0, 3)).map((product) => (
                     <div key={product.id} className="group transition-all pb-6 border-b border-white/[0.08] last:border-0 last:pb-0">
                       <div className="flex gap-4 sm:gap-6 items-start">
                         <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-[18px] overflow-hidden bg-black shrink-0 border border-white/5 relative">
@@ -707,7 +701,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
 
                           <div className="flex gap-3 mt-2 sm:mt-0 max-w-sm">
                             <button 
-                              onClick={() => setDetailViewProduct(product)} 
+                              onClick={() => setShareProduct(product)} 
                               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] bg-[#6366f1]/10 border border-[#6366f1]/20 text-[#818cf8] font-bold text-[13px] hover:bg-[#6366f1]/20 transition-all active:scale-95"
                             >
                               <Megaphone size={14} /> Promouvoir
@@ -727,6 +721,15 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
                     </div>
                   ))}
 
+                  {myProducts.length > 3 && !showAllProducts && (
+                     <button
+                        onClick={() => setShowAllProducts(true)}
+                        className="w-full py-4 text-center rounded-[20px] bg-white/[0.02] border border-white/5 text-[11px] font-black tracking-widest uppercase text-white/40 hover:text-white hover:bg-white/5 transition-all mt-4 mb-4"
+                     >
+                        Voir plus ({myProducts.length - 3})
+                     </button>
+                  )}
+
                   {/* ADD PRODUCT BUTTON AT THE END OF LIST */}
                   <button 
                     onClick={() => setActiveSegment('import_catalog')}
@@ -737,6 +740,8 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
                     </div>
                     <span className="text-[11px] font-black uppercase tracking-[0.3em]">Ajouter un produit</span>
                   </button>
+
+                  <LiveCommissionsFeed products={products} />
                 </div>
               )}
             </motion.div>
@@ -913,6 +918,15 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
           />
         )}
       </AnimatePresence>
+
+      {shareProduct && profile && (
+        <ShareModal 
+          isOpen={!!shareProduct} 
+          onClose={() => setShareProduct(null)} 
+          product={shareProduct} 
+          link={`${window.location.origin}/?ref=${profile.referral_code}&prod=${shareProduct.id}`} 
+        />
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fade-in {
