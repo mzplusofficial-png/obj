@@ -17,7 +17,8 @@ import {
   Copy,
   BarChart3,
   Calendar,
-  Filter
+  Filter,
+  Store
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -33,6 +34,7 @@ import { Product, UserProfile, Commission, ProductStat } from '../../../types.ts
 import { CurrencyDisplay } from '../../ui/CurrencyDisplay.tsx';
 import { ProductDetailView, ShareModal } from '../../ProductDetailView.tsx';
 import { LiveCommissionsFeed } from './LiveCommissionsFeed.tsx';
+import { PublicStorefront } from './PublicStorefront.tsx';
 
 interface MyStoreProps {
   profile: UserProfile | null;
@@ -56,6 +58,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
   const [detailViewProduct, setDetailViewProduct] = useState<Product | null>(null);
   const [shareProduct, setShareProduct] = useState<Product | null>(null);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [showPublicStore, setShowPublicStore] = useState(false);
 
   // Stats derivations
   const totalVisits = useMemo(() => {
@@ -305,20 +308,29 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
             <X size={20} />
           </button>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
              <button 
                onClick={() => {
                  setStatProductId(null);
                  setActiveSegment('stats');
                }}
-               className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all font-bold group relative"
+               className="group flex flex-col items-center gap-1 cursor-pointer"
                title="Statistiques détaillées"
              >
-                <BarChart3 size={18} className="group-hover:scale-110 transition-transform" />
+                <div className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all font-bold">
+                  <BarChart3 size={18} className="group-hover:scale-110 transition-transform" />
+                </div>
+                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Stats</span>
              </button>
-             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
-                <Target size={18} />
-             </div>
+             <button 
+                onClick={() => setShowPublicStore(true)}
+                className="group flex flex-col items-center gap-1 cursor-pointer"
+             >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-bold">
+                  <Eye size={18} className="group-hover:scale-110 transition-transform" />
+                </div>
+                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">Voir boutique</span>
+             </button>
           </div>
         )}
       </div>
@@ -328,7 +340,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
       <div className="px-6 sm:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* STAT CARD: VISITS */}
-          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors cursor-pointer" onClick={() => { setStatProductId(null); setActiveSegment('stats'); }}>
+          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Visites</span>
               <TrendingUp size={14} className="text-white/20 group-hover:text-[#6366f1] transition-colors" />
@@ -347,7 +359,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
           </div>
 
           {/* STAT CARD: CONVERSION */}
-          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors cursor-pointer" onClick={() => { setStatProductId(null); setActiveSegment('stats'); }}>
+          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Ventes Totales</span>
               <Target size={14} className="text-white/20 group-hover:text-emerald-500 transition-colors" />
@@ -362,12 +374,12 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
           </div>
 
           {/* STAT CARD: REVENUE */}
-          <div className="col-span-1 sm:col-span-2 bg-gradient-to-br from-[#d5aa52]/10 to-transparent border border-[#d5aa52]/20 p-6 rounded-[24px] relative overflow-hidden flex flex-col justify-between group cursor-pointer hover:border-[#d5aa52]/40 transition-colors" onClick={() => { setStatProductId(null); setActiveSegment('stats'); }}>
+          <div className="col-span-1 sm:col-span-2 bg-gradient-to-br from-[#d5aa52]/10 to-transparent border border-[#d5aa52]/20 p-6 rounded-[24px] relative overflow-hidden flex flex-col justify-between group hover:border-[#d5aa52]/40 transition-colors">
             <div className="absolute top-0 right-0 p-6 opacity-20">
               <Zap size={40} className="text-[#d5aa52]" />
             </div>
             <div>
-              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#d5aa52]/60 mb-2 block">Gains Générés</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#d5aa52]/60 mb-2 block">Revenus de ta boutique</span>
               <div className="flex items-baseline gap-2">
                 <CurrencyDisplay amount={netRevenue} className="text-5xl font-black text-white tracking-tighter italic" hideSymbol />
                 <span className="text-2xl font-black text-[#d5aa52]/40 italic">F</span>
@@ -375,7 +387,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-6 gap-4">
               <button 
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d5aa52]/10 border border-[#d5aa52]/20 text-[9px] font-black uppercase tracking-widest text-[#d5aa52] group-hover:bg-[#d5aa52]/20 transition-colors order-2 sm:order-1"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d5aa52]/10 border border-[#d5aa52]/20 text-[9px] font-black uppercase tracking-widest text-[#d5aa52] group-hover:bg-[#d5aa52]/20 transition-colors order-2 sm:order-1 cursor-pointer z-10"
                 onClick={(e) => {
                   e.stopPropagation();
                   setStatProductId(null);
@@ -927,6 +939,18 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
           link={`${window.location.origin}/?ref=${profile.referral_code}&prod=${shareProduct.id}`} 
         />
       )}
+
+      {/* PUBLIC STOREFRONT */}
+      <AnimatePresence>
+        {showPublicStore && (
+          <PublicStorefront 
+            products={myProducts} 
+            onClose={() => setShowPublicStore(false)} 
+            storeName={profile?.full_name ? `${profile.full_name} Shop` : "Shop Privé"} 
+            referralCode={profile?.referral_code}
+          />
+        )}
+      </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fade-in {
