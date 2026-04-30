@@ -110,3 +110,7 @@ ORDER BY total_score DESC;
 
 -- REFRESH SCHEMA
 NOTIFY pgrst, 'reload schema';
+
+-- 7. STORE PREFERENCES
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS store_preferences JSONB DEFAULT '{}'::jsonb;
+

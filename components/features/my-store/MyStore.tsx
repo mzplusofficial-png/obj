@@ -18,7 +18,8 @@ import {
   BarChart3,
   Calendar,
   Filter,
-  Store
+  Store,
+  Settings
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -35,13 +36,15 @@ import { CurrencyDisplay } from '../../ui/CurrencyDisplay.tsx';
 import { ProductDetailView, ShareModal } from '../../ProductDetailView.tsx';
 import { LiveCommissionsFeed } from './LiveCommissionsFeed.tsx';
 import { PublicStorefront } from './PublicStorefront.tsx';
+import { StoreSettingsModal } from './StoreSettingsModal.tsx';
 
 interface MyStoreProps {
   profile: UserProfile | null;
   onSwitchTab?: (tab: string) => void;
+  onRefresh?: () => void;
 }
 
-export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
+export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefresh }) => {
   const [activeSegment, setActiveSegment] = useState<'my_products' | 'import_catalog' | 'stats' | 'product_analysis'>('my_products');
   const [products, setProducts] = useState<Product[]>([]);
   const [storeProductIds, setStoreProductIds] = useState<string[]>([]);
@@ -59,6 +62,15 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
   const [shareProduct, setShareProduct] = useState<Product | null>(null);
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [showPublicStore, setShowPublicStore] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [storePreferences, setStorePreferences] = useState<any>(profile?.store_preferences || null);
+
+  // Update preferences if profile changes
+  useEffect(() => {
+    if (profile?.store_preferences) {
+      setStorePreferences(profile.store_preferences);
+    }
+  }, [profile]);
 
   // Stats derivations
   const totalVisits = useMemo(() => {
@@ -331,82 +343,76 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
                 </div>
                 <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">Voir boutique</span>
              </button>
+             <button 
+                onClick={() => setShowSettings(true)}
+                className="group flex flex-col items-center gap-1 cursor-pointer ml-1"
+             >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[#6366f1] bg-[#6366f1]/10 border border-[#6366f1]/20 hover:bg-[#6366f1]/20 transition-all font-bold shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                  <Settings size={18} className="group-hover:rotate-45 transition-transform duration-300" />
+                </div>
+                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-[#6366f1] transition-colors">Boutique</span>
+             </button>
           </div>
         )}
       </div>
 
-      {/* TECH-FOCUSED STATS DASHBOARD */}
+      {/* MINIMAL STATS STRIP */}
       {activeSegment !== 'stats' && activeSegment !== 'product_analysis' && (
       <div className="px-6 sm:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* STAT CARD: VISITS */}
-          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Visites</span>
-              <TrendingUp size={14} className="text-white/20 group-hover:text-[#6366f1] transition-colors" />
+        <div className="bg-[#12121a] border border-white/10 rounded-2xl flex flex-col sm:flex-row items-stretch overflow-hidden shadow-2xl divide-y sm:divide-y-0 sm:divide-x divide-white/10 relative">
+          
+          {/* VISITS */}
+          <div className="flex-1 p-4 sm:p-5 hover:bg-white/[0.02] transition-colors group relative flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 group-hover:text-white/60 transition-colors">Visites</span>
+              <TrendingUp size={12} className="text-white/20 group-hover:text-[#6366f1] transition-colors" />
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black text-white tracking-tighter">{totalVisits.toLocaleString()}</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white tracking-tighter">{totalVisits.toLocaleString()}</span>
               {totalVisits > 0 && (
-                <span className="text-[10px] font-bold text-emerald-500 ml-2 bg-emerald-500/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                  <TrendingUp size={10} /> +{(5 + (totalVisits % 15)).toFixed(1)}%
+                <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                  <TrendingUp size={8} /> +{(5 + (totalVisits % 15)).toFixed(1)}%
                 </span>
               )}
             </div>
-            <div className="mt-4 h-[2px] bg-white/5 w-full rounded-full overflow-hidden">
-              <div className="h-full bg-[#6366f1]/40 w-1/3"></div>
+          </div>
+
+          {/* TOTAL SALES */}
+          <div className="flex-1 p-4 sm:p-5 hover:bg-white/[0.02] transition-colors group relative flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 group-hover:text-emerald-500 transition-colors">Ventes Totales</span>
+              <Target size={12} className="text-white/20 group-hover:text-emerald-500 transition-colors" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white tracking-tighter">{totalSales}</span>
+              <span className="text-[9px] font-bold text-white/30 hidden lg:inline-block">Taux {conversionRate.toFixed(1)}%</span>
             </div>
           </div>
 
-          {/* STAT CARD: CONVERSION */}
-          <div className="bg-white/[0.02] border border-white/[0.06] p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Ventes Totales</span>
-              <Target size={14} className="text-white/20 group-hover:text-emerald-500 transition-colors" />
+          {/* REVENUE */}
+          <div className="flex-[1.5] p-4 sm:p-5 bg-gradient-to-r from-[#d5aa52]/5 to-transparent hover:from-[#d5aa52]/10 transition-colors group relative flex flex-col justify-center">
+            <div className="absolute top-1/2 -translate-y-1/2 right-4 sm:right-6 opacity-10 pointer-events-none group-hover:scale-110 transition-transform">
+               <Zap size={32} className="text-[#d5aa52]" />
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black text-white tracking-tighter">{totalSales}</span>
-              <span className="text-[10px] font-bold text-white/20 ml-2">Taux {conversionRate.toFixed(1)}%</span>
-            </div>
-            <div className="mt-4 h-[2px] bg-white/5 w-full rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500/40" style={{ width: `${Math.min(conversionRate, 100)}%` }}></div>
-            </div>
-          </div>
-
-          {/* STAT CARD: REVENUE */}
-          <div className="col-span-1 sm:col-span-2 bg-gradient-to-br from-[#d5aa52]/10 to-transparent border border-[#d5aa52]/20 p-6 rounded-[24px] relative overflow-hidden flex flex-col justify-between group hover:border-[#d5aa52]/40 transition-colors">
-            <div className="absolute top-0 right-0 p-6 opacity-20">
-              <Zap size={40} className="text-[#d5aa52]" />
-            </div>
-            <div>
-              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#d5aa52]/60 mb-2 block">Revenus de ta boutique</span>
-              <div className="flex items-baseline gap-2">
-                <CurrencyDisplay amount={netRevenue} className="text-5xl font-black text-white tracking-tighter italic" hideSymbol />
-                <span className="text-2xl font-black text-[#d5aa52]/40 italic">F</span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-6 gap-4">
+            <div className="flex items-center justify-between mb-1 relative z-10">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#d5aa52]/70 group-hover:text-[#d5aa52] transition-colors">Revenus Générés</span>
               <button 
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d5aa52]/10 border border-[#d5aa52]/20 text-[9px] font-black uppercase tracking-widest text-[#d5aa52] group-hover:bg-[#d5aa52]/20 transition-colors order-2 sm:order-1 cursor-pointer z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatProductId(null);
-                  setActiveSegment('stats');
-                }}
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   setStatProductId(null);
+                   setActiveSegment('stats');
+                 }}
+                 className="text-[9px] font-black uppercase tracking-wider text-[#d5aa52]/50 hover:text-[#d5aa52] transition-colors flex items-center gap-1 cursor-pointer bg-[#d5aa52]/10 hover:bg-[#d5aa52]/20 px-2 py-0.5 rounded"
               >
-                <BarChart3 size={10} /> Voir Statistiques en Détail
+                Détails <BarChart3 size={10} />
               </button>
-
-              <div className="flex items-center gap-2 order-1 sm:order-2">
-                <div className="flex -space-x-2">
-                  {commissions.filter(c => c.status === 'approved').slice(0,3).map((c, i) => (
-                    <div key={i} className="w-5 h-5 rounded-full border-2 border-[#0f0f12] bg-[#d5aa52]/20 shadow-[0_0_8px_rgba(213,170,82,0.5)]"></div>
-                  ))}
-                </div>
-                <span className="text-[9px] font-black uppercase text-white/40 tracking-widest italic">{commissions.filter(c => c.status === 'approved').length > 0 ? `${commissions.filter(c => c.status === 'approved').length} conversions détectées` : "Attente de flux..."}</span>
-              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5 relative z-10">
+              <CurrencyDisplay amount={netRevenue} className="text-2xl sm:text-3xl font-black text-white tracking-tighter italic" hideSymbol />
+              <span className="text-lg font-black text-[#d5aa52]/50 italic">F</span>
             </div>
           </div>
+          
         </div>
       </div>
       )}
@@ -946,11 +952,23 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab }) => {
           <PublicStorefront 
             products={myProducts} 
             onClose={() => setShowPublicStore(false)} 
-            storeName={profile?.full_name ? `${profile.full_name} Shop` : "Shop Privé"} 
+            storeName={storePreferences?.name || (profile?.full_name ? `${profile.full_name} Shop` : "Shop Privé")} 
             referralCode={profile?.referral_code}
+            preferences={storePreferences}
           />
         )}
       </AnimatePresence>
+
+      <StoreSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        userId={profile?.id || ''}
+        initialPreferences={storePreferences}
+        onSave={(prefs) => {
+          setStorePreferences(prefs);
+          if (onRefresh) onRefresh();
+        }}
+      />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fade-in {

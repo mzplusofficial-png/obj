@@ -230,7 +230,8 @@ const App: React.FC = () => {
         rpa_balance: Number(profile?.rpa_balance || 0), 
         rpa_points: Number(profile?.rpa_points || 0), 
         user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
-        created_at: profile?.created_at 
+        created_at: profile?.created_at,
+        store_preferences: profile?.store_preferences
       };
       setUserProfile(enrichedProfile);
 
@@ -553,7 +554,7 @@ const App: React.FC = () => {
       {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
       {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
       {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
-      {(activeTab === 'affiliation' || activeTab === 'catalog') && <MyStore profile={userProfile} onSwitchTab={setActiveTab} />}
+      {(activeTab === 'affiliation' || activeTab === 'catalog') && <MyStore profile={userProfile} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
       {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
       {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}

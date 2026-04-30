@@ -12,6 +12,7 @@ export interface UserProfile {
   rpa_points?: number;
   user_level: 'standard' | 'niveau_mz_plus';
   created_at?: string;
+  store_preferences?: any;
 }
 
 export interface Formation {
