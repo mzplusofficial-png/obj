@@ -866,7 +866,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleImport(product.id);
+                            setSelectedCatalogProduct(product);
                           }}
                           disabled={importingId === product.id}
                           className="w-full py-2 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all active:scale-95"
