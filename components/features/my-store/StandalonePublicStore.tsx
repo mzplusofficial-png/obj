@@ -36,8 +36,7 @@ export const StandalonePublicStore: React.FC<StandalonePublicStoreProps> = ({ st
         // 2. Fetch all generic products (the catalog)
         let { data: allProducts, error: productsError } = await supabase
           .from('products')
-          .select('*')
-          .eq('status', 'published');
+          .select('*');
 
         if (productsError) throw productsError;
         if (!allProducts) allProducts = [];
