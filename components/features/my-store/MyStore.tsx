@@ -63,6 +63,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [showPublicStore, setShowPublicStore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showManageDropdown, setShowManageDropdown] = useState(false);
   const [storePreferences, setStorePreferences] = useState<any>(profile?.store_preferences || null);
 
   // Update preferences if profile changes
@@ -320,44 +321,93 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
             <X size={20} />
           </button>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="relative">
              <button 
-               onClick={() => {
-                 setStatProductId(null);
-                 setActiveSegment('stats');
-               }}
-               className="group flex flex-col items-center gap-1 cursor-pointer"
-               title="Statistiques détaillées"
-             >
-                <div className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all font-bold">
-                  <BarChart3 size={18} className="group-hover:scale-110 transition-transform" />
-                </div>
-                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Stats</span>
-             </button>
-             <button 
-                onClick={() => setShowPublicStore(true)}
+                onClick={() => setShowManageDropdown(!showManageDropdown)}
                 className="group flex flex-col items-center gap-1 cursor-pointer"
              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-bold">
-                  <Eye size={18} className="group-hover:scale-110 transition-transform" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold shadow-lg relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Settings size={18} className={`transition-transform duration-300 ${showManageDropdown ? 'rotate-90' : 'group-hover:rotate-45'}`} />
                 </div>
-                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">Voir boutique</span>
+                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Paramètres</span>
              </button>
-             <button 
-                onClick={() => setShowSettings(true)}
-                className="group flex flex-col items-center gap-1 cursor-pointer ml-1"
-             >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[#6366f1] bg-[#6366f1]/10 border border-[#6366f1]/20 hover:bg-[#6366f1]/20 transition-all font-bold shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-                  <Settings size={18} className="group-hover:rotate-45 transition-transform duration-300" />
-                </div>
-                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-[#6366f1] transition-colors">Boutique</span>
-             </button>
+
+             <AnimatePresence>
+                {showManageDropdown && (
+                   <>
+                     <div 
+                       className="fixed inset-0 z-40" 
+                       onClick={() => setShowManageDropdown(false)}
+                     />
+                     <motion.div 
+                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                       animate={{ opacity: 1, y: 0, scale: 1 }}
+                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                       transition={{ duration: 0.15 }}
+                       className="absolute top-full right-0 mt-3 w-56 bg-[#12121a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
+                     >
+                       <button
+                          onClick={() => {
+                            setStatProductId(null);
+                            setActiveSegment('stats');
+                            setShowManageDropdown(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors text-white/80 hover:text-white border-b border-white/5 text-sm font-bold text-left group"
+                       >
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                            <BarChart3 size={14} className="text-white/60 group-hover:text-white transition-colors" />
+                          </div>
+                          Statistiques
+                       </button>
+                       <button
+                          onClick={() => {
+                            setShowPublicStore(true);
+                            setShowManageDropdown(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-emerald-500/10 transition-colors text-emerald-500 border-b border-white/5 text-sm font-bold text-left group"
+                       >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                            <Eye size={14} className="text-emerald-500" />
+                          </div>
+                          Voir ma boutique
+                       </button>
+                       <button
+                          onClick={() => {
+                            const storeLink = `${window.location.origin}/?store=${profile?.referral_code}`;
+                            navigator.clipboard.writeText(storeLink);
+                            alert("Lien de boutique copié dans le presse-papier !");
+                            setShowManageDropdown(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-orange-500/10 transition-colors text-orange-500 border-b border-white/5 text-sm font-bold text-left group"
+                       >
+                          <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                            <Copy size={14} className="text-orange-500" />
+                          </div>
+                          Copier mon lien
+                       </button>
+                       <button
+                          onClick={() => {
+                            setShowSettings(true);
+                            setShowManageDropdown(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#6366f1]/10 transition-colors text-[#6366f1] text-sm font-bold text-left group"
+                       >
+                          <div className="w-8 h-8 rounded-lg bg-[#6366f1]/10 flex items-center justify-center group-hover:bg-[#6366f1]/20 transition-colors">
+                            <Settings size={14} className="text-[#6366f1]" />
+                          </div>
+                          Personnaliser
+                       </button>
+                     </motion.div>
+                   </>
+                )}
+             </AnimatePresence>
           </div>
         )}
       </div>
 
       {/* MINIMAL STATS STRIP */}
-      {activeSegment !== 'stats' && activeSegment !== 'product_analysis' && (
+      {activeSegment !== 'stats' && activeSegment !== 'product_analysis' && activeSegment !== 'import_catalog' && (
       <div className="px-6 sm:px-8">
         <div className="bg-[#12121a] border border-white/10 rounded-2xl flex flex-col sm:flex-row items-stretch overflow-hidden shadow-2xl divide-y sm:divide-y-0 sm:divide-x divide-white/10 relative">
           
@@ -652,7 +702,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
               className="space-y-10"
             >
               {myProducts.length === 0 ? (
-                <div className="py-20 flex flex-col items-center text-center">
+                <div className="py-8 flex flex-col items-center text-center">
                   <div className="relative mb-6">
                      <div className="w-32 h-32 flex items-center justify-center mx-auto relative">
                         <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-2xl">
@@ -766,52 +816,81 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
           ) : (
             <motion.div 
               key="catalog"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-12"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-[150] bg-[#0f0f12] overflow-y-auto flex flex-col"
             >
-              <div className="flex items-center justify-between mb-2">
-                 <h2 className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30 italic">Import d'Actifs</h2>
-                 <button onClick={() => setActiveSegment('my_products')} className="text-[10px] font-bold text-white/20 hover:text-white transition-colors">ANNULER</button>
+              <div className="sticky top-0 z-10 bg-[#0f0f12]/80 backdrop-blur-xl border-b border-white/5 px-6 py-6 flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                      <Store size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black uppercase tracking-tighter text-white italic">Import d'Actifs</h2>
+                      <p className="text-[10px] uppercase text-white/40 tracking-[0.2em]">Ajoutez des produits à votre boutique</p>
+                    </div>
+                 </div>
+                 <button 
+                   onClick={() => setActiveSegment('my_products')} 
+                   className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                 >
+                   <X size={20} />
+                 </button>
               </div>
               
-              <div className="relative">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 text-white/10" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="RECHERCHER UN ACTIF..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-b border-white/[0.08] py-5 pl-10 text-[11px] font-black uppercase tracking-[0.3em] text-white placeholder:text-white/10 outline-none focus:border-emerald-500/40 transition-colors"
-                />
-              </div>
+              <div className="flex-1 p-6 sm:p-10 max-w-5xl mx-auto w-full space-y-8">
+                <div className="relative max-w-2xl mx-auto">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30" size={20} />
+                  <input 
+                    type="text" 
+                    placeholder="RECHERCHER UN ACTIF..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-full py-5 pl-14 pr-6 text-sm font-bold uppercase tracking-widest text-white placeholder:text-white/20 outline-none focus:border-emerald-500/50 focus:bg-white/10 transition-all shadow-xl"
+                  />
+                </div>
 
-              <div className="space-y-10">
-                {availableToImport.map((product) => (
-                  <div key={product.id} className="flex gap-6 items-center group">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black shrink-0 border border-white/5 grayscale group-hover:grayscale-0 transition-all duration-500 opacity-40 group-hover:opacity-100">
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availableToImport.map((product) => (
+                    <div key={product.id} className="flex gap-4 items-center bg-[#12121a] p-4 rounded-3xl border border-white/5 group hover:bg-white/5 hover:border-white/10 transition-all cursor-pointer" onClick={() => setSelectedCatalogProduct(product)}>
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black shrink-0 shadow-lg relative">
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <h4 className="text-sm font-black text-white uppercase truncate mb-1">{product.name}</h4>
+                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 w-fit px-2 py-0.5 rounded-md mb-2">
+                          +<CurrencyDisplay amount={product.commission_amount} className="inline px-1" /> COM
+                        </p>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleImport(product.id);
+                          }}
+                          disabled={importingId === product.id}
+                          className="w-full py-2 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all active:scale-95"
+                        >
+                          {importingId === product.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <>
+                              <Plus size={14} strokeWidth={3} /> Ajouter
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-white italic uppercase truncate mb-1 tracking-tight">{product.name}</h4>
-                      <p className="text-[10px] font-bold text-emerald-500/40 uppercase transition-colors group-hover:text-emerald-400 tracking-widest">
-                        +<CurrencyDisplay amount={product.commission_amount} className="inline px-1" /> COMMISSION
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setSelectedCatalogProduct(product)}
-                      disabled={importingId === product.id}
-                      className="w-12 h-12 rounded-full border border-white/10 text-white flex items-center justify-center hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all active:scale-90"
-                    >
-                      {importingId === product.id ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Plus size={18} strokeWidth={3} />
-                      )}
-                    </button>
+                  ))}
+                </div>
+                {availableToImport.length === 0 && (
+                  <div className="py-20 text-center flex flex-col items-center">
+                     <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center text-white/20 mb-4">
+                        <Search size={32} />
+                     </div>
+                     <p className="text-sm font-bold text-white/40 uppercase tracking-widest">Aucun résultat</p>
                   </div>
-                ))}
+                )}
               </div>
             </motion.div>
           )}

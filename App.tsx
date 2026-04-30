@@ -19,6 +19,7 @@ import {
 } from './components/DashboardTabs.tsx';
 import { motion } from 'motion/react';
 import { MyStore } from './components/features/my-store/MyStore.tsx';
+import { StandalonePublicStore } from './components/features/my-store/StandalonePublicStore.tsx';
 import { RewardFeature } from './components/features/programme-recompense/RewardFeature.tsx';
 import { PWAInstallBanner } from './components/ui/PWAInstallBanner.tsx';
 import { AdminPanel } from './components/AdminPanel.tsx';
@@ -55,6 +56,7 @@ const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('main');
   const [lastUpdateSignal, setLastUpdateSignal] = useState<number>(Date.now());
   const [customerProduct, setCustomerProduct] = useState<Product | null>(null);
+  const [storeOwnerCode, setStoreOwnerCode] = useState<string | null>(null);
   const [referrerId, setReferrerId] = useState<string | null>(null);
   const [purchaseStep, setPurchaseStep] = useState<'view' | 'processing' | 'success'>('view');
   const [isGuideActive, setIsGuideActive] = useState(false);
@@ -287,7 +289,12 @@ const App: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const prodId = params.get('prod');
         const refCode = params.get('ref');
+        const storeParam = params.get('store');
         const tabParam = params.get('tab') as TabId;
+
+        if (storeParam) {
+           setStoreOwnerCode(storeParam);
+        }
 
         if (tabParam) {
            setActiveTab(tabParam);
@@ -434,6 +441,10 @@ const App: React.FC = () => {
 
   if (loading || !isProductChecked || initSequence) {
     return <SystemInitiator loading={loading} />;
+  }
+
+  if (storeOwnerCode) {
+    return <StandalonePublicStore storeOwnerCode={storeOwnerCode} />;
   }
   
   if (customerProduct) return (<ProductSalesPage product={customerProduct} onPurchase={handlePurchase} purchaseStep={purchaseStep} countdown={900} isLoggedIn={!!session} />);
