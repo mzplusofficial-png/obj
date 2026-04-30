@@ -19,7 +19,8 @@ const FIRST_NAMES = [
 const LAST_INITIALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 const ACTIONS = [
-  "a généré une vente pour"
+  "a vendu",
+  "vient de vendre"
 ];
 
 const xmur3 = (str: string) => {
@@ -60,46 +61,36 @@ const generateSalesForDate = (date: Date, products: Product[]) => {
    const rand = sfc32(seed(), seed(), seed(), seed());
    
    const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())).getTime();
+   const endOfDay = startOfDay + 24 * 3600000;
    const sales: LiveSale[] = [];
    
-   for (let h = 0; h < 24; h++) {
-      // Adjust UTC hour to GMT+1
-      const gmt1Hour = (h + 1) % 24;
+   let currentTime = startOfDay;
+   let i = 0;
+   
+   while (currentTime < endOfDay) {
+      // Advance time by 1 to 25 minutes (in milliseconds)
+      const gapMinutes = Math.floor(rand() * 24) + 1;
+      const gapSeconds = Math.floor(rand() * 60);
+      currentTime += gapMinutes * 60000 + gapSeconds * 1000;
       
-      let numSales = 0;
-      if (gmt1Hour >= 18 && gmt1Hour <= 22) {
-         // High activity in the evening GMT+1 (5 to 15 sales per hour = roughly 4 to 12 minutes apart)
-         numSales = Math.floor(rand() * 11) + 5;
-      } else {
-         // Lulls at other times. 60% chance of 0 sales in an hour (which can lead to 2h+ gaps), else 1 to 3
-         if (rand() < 0.6) {
-            numSales = 0;
-         } else {
-            numSales = Math.floor(rand() * 3) + 1;
-         }
-      }
+      if (currentTime >= endOfDay) break;
       
-      for (let i = 0; i < numSales; i++) {
-         const minute = Math.floor(rand() * 60);
-         const second = Math.floor(rand() * 60);
-         const time = startOfDay + h * 3600000 + minute * 60000 + second * 1000;
-         
-         const product = sortedProducts[Math.floor(rand() * sortedProducts.length)];
-         const firstName = FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)];
-         const initial = LAST_INITIALS[Math.floor(rand() * LAST_INITIALS.length)];
-         const actionText = ACTIONS[Math.floor(rand() * ACTIONS.length)];
-         
-         sales.push({
-           id: `${dateString}-${h}-${i}`,
-           name: `${firstName} ${initial}.`,
-           actionText,
-           productId: product.id,
-           productName: product.name,
-           commission: product.commission_amount,
-           time,
-           imageUrl: product.image_url
-         });
-      }
+      const product = sortedProducts[Math.floor(rand() * sortedProducts.length)];
+      const firstName = FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)];
+      const initial = LAST_INITIALS[Math.floor(rand() * LAST_INITIALS.length)];
+      const actionText = ACTIONS[Math.floor(rand() * ACTIONS.length)];
+      
+      sales.push({
+        id: `${dateString}-${i}`,
+        name: `${firstName} ${initial}.`,
+        actionText,
+        productId: product.id,
+        productName: product.name,
+        commission: product.commission_amount,
+        time: currentTime,
+        imageUrl: product.image_url
+      });
+      i++;
    }
    
    return sales;
@@ -144,7 +135,7 @@ export const LiveCommissionsFeed: React.FC<{ products: Product[] }> = ({ product
       
       if (allSales.length > 0) {
         const past = allSales.filter(s => s.time <= currentNow);
-        setVisibleSales(past.slice(0, 6));
+        setVisibleSales(past.slice(0, 5));
       }
     }, 1000); // Check every second to pop them accurately in real-time
 
@@ -172,8 +163,7 @@ export const LiveCommissionsFeed: React.FC<{ products: Product[] }> = ({ product
              <Zap size={14} className="text-[#10b981]" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white uppercase tracking-widest italic leading-tight">Activité Live</h3>
-            <p className="text-[10px] text-[#10b981]/80 uppercase tracking-widest mt-0.5">Commissions en réseau</p>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest italic leading-tight">Commissions en temps réel</h3>
           </div>
        </div>
 

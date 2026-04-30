@@ -6,7 +6,7 @@ import {
   History, GraduationCap, Plus, Trash2, Edit3, Save, ListPlus, AlertTriangle, 
   RefreshCw, UserCog, ExternalLink, ShieldCheck, Loader2, Target, Image as ImageIcon,
   Home, Monitor, Globe, Code, Info, Upload, FileVideo, UserPlus, Clock, Eye, Activity, MousePointer2,
-  Crown, Settings
+  Crown, Settings, Store
 } from 'lucide-react';
 
 import { supabase } from '../services/supabase.ts';
@@ -21,10 +21,11 @@ import { AnnouncementAdmin } from './features/marketing-announcements/Announceme
 import { PushAdmin } from './features/admin-push-notifications/PushAdmin.tsx';
 import { UserBehaviorAdmin } from './features/admin-behavior/UserBehaviorAdmin.tsx';
 import { PremiumWelcomeAdmin } from './features/premium-welcome/PremiumWelcomeAdmin.tsx';
+import { AdminStoreSettings } from './features/my-store/AdminStoreSettings.tsx';
 
 import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
 
-type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding';
+type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings';
 
 export const AdminPanel: React.FC<{ 
   adminProfile: UserProfile | null; 
@@ -134,6 +135,7 @@ export const AdminPanel: React.FC<{
           <TabButton active={activeSubTab === 'mz_presentation'} onClick={() => setActiveSubTab('mz_presentation')} icon={Video} label="Offre MZ+" color="text-blue-400" />
           <TabButton active={activeSubTab === 'flash_offer'} onClick={() => setActiveSubTab('flash_offer')} icon={Flame} label="PASSEZ AU NIVEAU SUPÉRIEUR" />
           <TabButton active={activeSubTab === 'pwa_branding'} onClick={() => setActiveSubTab('pwa_branding')} icon={Settings} label="PWA & Branding" color="text-emerald-500" />
+          <TabButton active={activeSubTab === 'store_settings'} onClick={() => setActiveSubTab('store_settings')} icon={Store} label="Boutique" color="text-orange-500" />
         </div>
       </div>
 
@@ -221,6 +223,7 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'mz_presentation' && <MZPlusPresentationAdmin />}
         {activeSubTab === 'flash_offer' && <MZPlusFlashOfferAdmin />}
         {activeSubTab === 'pwa_branding' && <PWABrandingAdmin />}
+        {activeSubTab === 'store_settings' && <AdminStoreSettings />}
         {activeSubTab === 'activity_audit' && isAnyAdmin && <AdminActivityAudit />}
       </div>
     </div>

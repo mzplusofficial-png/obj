@@ -37,6 +37,9 @@ import { ProductDetailView, ShareModal } from '../../ProductDetailView.tsx';
 import { LiveCommissionsFeed } from './LiveCommissionsFeed.tsx';
 import { PublicStorefront } from './PublicStorefront.tsx';
 import { StoreSettingsModal } from './StoreSettingsModal.tsx';
+import { StoreStats } from './StoreStats.tsx';
+
+import { StoreFAQ } from './StoreFAQ.tsx';
 
 interface MyStoreProps {
   profile: UserProfile | null;
@@ -65,6 +68,24 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
   const [showSettings, setShowSettings] = useState(false);
   const [showManageDropdown, setShowManageDropdown] = useState(false);
   const [storePreferences, setStorePreferences] = useState<any>(profile?.store_preferences || null);
+  const [customizationEnabled, setCustomizationEnabled] = useState(true);
+
+  // Fetch platform settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase
+          .from('platform_settings')
+          .select('*')
+          .eq('id', 'store_customization')
+          .maybeSingle();
+        if (data) setCustomizationEnabled(data.value?.enabled !== false);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Update preferences if profile changes
   useEffect(() => {
@@ -320,21 +341,37 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
           >
             <X size={20} />
           </button>
-        ) : (
+         ) : (
           <div className="relative">
-             <button 
-                onClick={() => setShowManageDropdown(!showManageDropdown)}
-                className="group flex flex-col items-center gap-1 cursor-pointer"
-             >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold shadow-lg relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <Settings size={18} className={`transition-transform duration-300 ${showManageDropdown ? 'rotate-90' : 'group-hover:rotate-45'}`} />
-                </div>
-                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Paramètres</span>
-             </button>
+             {customizationEnabled ? (
+               <button 
+                  onClick={() => setShowManageDropdown(!showManageDropdown)}
+                  className="group flex flex-col items-center gap-1 cursor-pointer"
+               >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold shadow-lg relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <Settings size={18} className={`transition-transform duration-300 ${showManageDropdown ? 'rotate-90' : 'group-hover:rotate-45'}`} />
+                  </div>
+                  <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Paramètres</span>
+               </button>
+             ) : (
+               <button 
+                  onClick={() => {
+                    setStatProductId(null);
+                    setActiveSegment('stats');
+                  }}
+                  className="group flex flex-col items-center gap-1 cursor-pointer"
+               >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-bold shadow-lg relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <BarChart3 size={18} className="text-white transition-transform group-hover:scale-110" />
+                  </div>
+                  <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors">Stats</span>
+               </button>
+             )}
 
              <AnimatePresence>
-                {showManageDropdown && (
+                {showManageDropdown && customizationEnabled && (
                    <>
                      <div 
                        className="fixed inset-0 z-40" 
@@ -558,141 +595,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
             </motion.div>
              );
           })() : activeSegment === 'stats' ? (
-            <motion.div 
-               key="stats"
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-               exit={{ opacity: 0, y: -10 }}
-               className="space-y-12"
-            >
-               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30 italic">Insights Détaillés</h2>
-                    <p className="text-[10px] uppercase text-white/20 mt-1">
-                      {statProductId ? `Analyse: ${products.find(p => p.id === statProductId)?.name || 'Produit'}` : 'Analyse globale des flux et de la conversion'}
-                    </p>
-                  </div>
-                  <div className="flex bg-white/5 p-1 rounded-xl">
-                    <button 
-                       onClick={() => setStatsPeriod('7d')}
-                       className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all ${statsPeriod === '7d' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
-                    >
-                      7 Jours
-                    </button>
-                    <button 
-                       onClick={() => setStatsPeriod('30d')}
-                       className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all ${statsPeriod === '30d' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
-                    >
-                      30 Jours
-                    </button>
-                    <button 
-                       onClick={() => setStatsPeriod('all')}
-                       className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all ${statsPeriod === 'all' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
-                    >
-                      Max
-                    </button>
-                  </div>
-               </div>
-
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* REVENUE/SALES CHART */}
-                  <div className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-6 lg:p-8">
-                     <div className="flex items-center gap-3 mb-8">
-                       <div className="w-8 h-8 rounded-full bg-[#6366f1]/10 flex items-center justify-center text-[#6366f1]">
-                          <BarChart3 size={16} />
-                       </div>
-                       <h3 className="text-[14px] font-black text-white italic tracking-tighter uppercase">Trafic Généré</h3>
-                     </div>
-                     <div className="h-[250px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                           <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                             <defs>
-                                <linearGradient id="colorVisites" x1="0" y1="0" x2="0" y2="1">
-                                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                                </linearGradient>
-                             </defs>
-                             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
-                             <XAxis dataKey="displayDate" stroke="#ffffff40" fontSize={10} axisLine={false} tickLine={false} dy={10} />
-                             <RechartsTooltip 
-                               contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px' }}
-                               itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                               labelStyle={{ color: '#a1a1aa', fontSize: '10px', marginBottom: '4px' }}
-                             />
-                             <Area type="monotone" dataKey="visites" name="Visites (Clics)" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorVisites)" />
-                           </AreaChart>
-                        </ResponsiveContainer>
-                     </div>
-                  </div>
-
-                  {/* TRAFFIC / REVENUES CHART */}
-                  <div className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-6 lg:p-8">
-                     <div className="flex items-center justify-between mb-8">
-                       <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-[#d5aa52]/10 flex items-center justify-center text-[#d5aa52]">
-                            <TrendingUp size={16} />
-                         </div>
-                         <h3 className="text-[14px] font-black text-white italic tracking-tighter uppercase">Génération Revenus</h3>
-                       </div>
-                       <Filter size={16} className="text-white/20" />
-                     </div>
-                     <div className="h-[250px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                           <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                             <defs>
-                                <linearGradient id="colorRevenus" x1="0" y1="0" x2="0" y2="1">
-                                   <stop offset="5%" stopColor="#d5aa52" stopOpacity={0.3}/>
-                                   <stop offset="95%" stopColor="#d5aa52" stopOpacity={0}/>
-                                </linearGradient>
-                             </defs>
-                             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
-                             <XAxis dataKey="displayDate" stroke="#ffffff40" fontSize={10} axisLine={false} tickLine={false} dy={10} />
-                             <RechartsTooltip 
-                               contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px' }}
-                               itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                               labelStyle={{ color: '#a1a1aa', fontSize: '10px', marginBottom: '4px' }}
-                             />
-                             <Area type="monotone" dataKey="revenus" name="Montant (F)" stroke="#d5aa52" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenus)" />
-                           </AreaChart>
-                        </ResponsiveContainer>
-                     </div>
-                  </div>
-               </div>
-
-               {/* RECENT SALES TABLE (Optional detailed log) */}
-               <div className="bg-white/[0.02] border border-white/[0.06] rounded-[24px] p-6 lg:p-8 overflow-hidden">
-                 <h3 className="text-[14px] font-black text-white italic tracking-tighter uppercase mb-6">Activité Récente</h3>
-                 <div className="space-y-4">
-                   {commissions.length > 0 ? commissions.slice(0, 5).map((c, i) => (
-                     <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                         <div className="flex items-center gap-4 mb-3 sm:mb-0">
-                            <div className="w-10 h-10 rounded-full bg-black border border-white/5 flex items-center justify-center shrink-0">
-                               <ShoppingBasket size={14} className="text-white/40" />
-                            </div>
-                            <div>
-                               <p className="text-[13px] font-bold text-white mb-0.5">Commission #{c.id.substring(0,6)}</p>
-                               <p className="text-[10px] text-white/30 uppercase tracking-widest">{new Date(c.created_at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-center justify-between sm:gap-6">
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
-                              c.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                              c.status === 'pending' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' :
-                              'bg-red-500/10 text-red-500 border border-red-500/20'
-                            }`}>
-                              {c.status === 'approved' ? 'Validé' : c.status === 'pending' ? 'En attente' : 'Rejeté'}
-                            </span>
-                            <CurrencyDisplay amount={c.amount} className="text-[14px] font-black text-[#d5aa52]" />
-                         </div>
-                     </div>
-                   )) : (
-                     <div className="py-10 text-center">
-                       <p className="text-[12px] font-medium text-white/30 uppercase tracking-[0.2em]">Aucune transaction récente</p>
-                     </div>
-                   )}
-                 </div>
-               </div>
-            </motion.div>
+             <StoreStats profile={profile} initialProductId={statProductId} />
           ) : activeSegment === 'my_products' ? (
             <motion.div 
               key="my_assets"
@@ -810,6 +713,9 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                   </button>
 
                   <LiveCommissionsFeed products={products} />
+                  
+                  {/* FAQ Section */}
+                  <StoreFAQ />
                 </div>
               )}
             </motion.div>
