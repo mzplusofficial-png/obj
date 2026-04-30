@@ -399,6 +399,49 @@ export const GlobalView: React.FC<any> = ({
   );
 };
 
+const xmur3 = (str: string) => {
+    let h = 1779033703;
+    for(let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+    }
+    return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return (h ^= h >>> 16) >>> 0;
+    }
+};
+
+const sfc32 = (a: number, b: number, c: number, d: number) => {
+    return function() {
+      a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0; 
+      let t = (a + b) | 0;
+      a = b ^ b >>> 9;
+      b = c + (c << 3) | 0;
+      c = (c << 21 | c >>> 11);
+      d = d + 1 | 0;
+      t = t + d | 0;
+      c = c + t | 0;
+      return (t >>> 0) / 4294967296;
+    }
+};
+
+interface LiveWithdrawalEvent {
+    id: string;
+    name: string;
+    amountXAF: number;
+    currency: string;
+    type: 'validated' | 'rejected' | 'pending';
+    finalType?: 'validated' | 'rejected';
+    waitDuration?: number;
+    method: string;
+    reason: string;
+    time: number;
+    isPremium: boolean;
+    showFlash: boolean;
+    progress: number;
+}
+
 const LiveWithdrawalFeed = () => {
   const names = [
     // --- West Africa ---
@@ -507,120 +550,123 @@ const LiveWithdrawalFeed = () => {
     }
   };
 
-  const [feed, setFeed] = useState<any[]>([]);
-  const [isQuiet, setIsQuiet] = useState(false);
+  const generateWithdrawalsForDate = (date: Date): LiveWithdrawalEvent[] => {
+     const dateString = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}-withdrawals`;
+     const seed = xmur3(dateString);
+     const rand = sfc32(seed(), seed(), seed(), seed());
+     
+     const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())).getTime();
+     const endOfDay = startOfDay + 24 * 3600000;
+     const events: LiveWithdrawalEvent[] = [];
+     
+     let currentTime = startOfDay;
+     let i = 0;
+     
+     const methods = ["Orange Money", "MTN MoMo", "Wave", "Airtel Money", "Moov Money"];
+     const currencies = ['XAF', 'XOF', 'NGN', 'GHS', 'EUR', 'KES', 'ZAR'];
 
-  const generateRichEvent = (initial = false, forceType?: 'pending' | 'validated' | 'rejected') => {
-    const name = names[Math.floor(Math.random() * names.length)];
-    
-    // Amount limited to 1000 - 30000 FCFA according to user request
-    const amountTypeRoll = Math.random();
-    let amountXAF = 0;
-    if (amountTypeRoll > 0.8) {
-      amountXAF = (Math.floor(Math.random() * 20) + 11) * 1000; // 11000 to 30000
-    } else {
-      amountXAF = (Math.floor(Math.random() * 9) + 1) * 1000 + (Math.floor(Math.random() * 10) * 100); // 1000 to 10000
-    }
-    
-    const methods = ["Orange Money", "MTN MoMo", "Wave", "Airtel Money", "Moov Money"];
-    const method = methods[Math.floor(Math.random() * methods.length)];
-    
-    let type = forceType || (Math.random() > 0.4 ? (Math.random() > 0.85 ? 'rejected' : 'validated') : 'pending');
-    const reason = type === 'rejected' ? reasons[Math.floor(Math.random() * reasons.length)] : '';
-    
-    // Choose a random currency for variety in the global feed
-    const currencies = ['XAF', 'XOF', 'NGN', 'GHS', 'EUR', 'KES', 'ZAR'];
-    const selectedCurrency = currencies[Math.floor(Math.random() * currencies.length)];
-    
-    // Randomly assign premium status (98% of successful withdrawals are premium as per marketing goal)
-    const isPremium = Math.random() > 0.02;
-    
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      amountXAF,
-      currency: selectedCurrency,
-      type,
-      method,
-      reason,
-      timestamp: initial ? `${Math.floor(Math.random() * 15) + 1}m` : 'À l\'instant',
-      progress: type === 'pending' ? Math.floor(Math.random() * 15) + 5 : 100, // Slower start for realism
-      pendingCycles: 0,
-      waitThreshold: Math.random() > 0.6 ? (Math.floor(Math.random() * 8) + 10) : (Math.floor(Math.random() * 4) + 3), // Some take longer
-      showFlash: false,
-      isPremium
-    };
+     while (currentTime < endOfDay) {
+        // Interval entre 15 minutes et 3h (180 minutes)
+        const gapMinutes = Math.floor(rand() * 166) + 15;
+        const gapSeconds = Math.floor(rand() * 60);
+        currentTime += gapMinutes * 60000 + gapSeconds * 1000;
+        
+        if (currentTime >= endOfDay) break;
+        
+        const name = names[Math.floor(rand() * names.length)];
+        const method = methods[Math.floor(rand() * methods.length)];
+        const currency = currencies[Math.floor(rand() * currencies.length)];
+
+        let amountXAF = 0;
+        if (rand() > 0.8) {
+          amountXAF = (Math.floor(rand() * 20) + 11) * 1000; // 11000 to 30000
+        } else {
+          amountXAF = (Math.floor(rand() * 9) + 1) * 1000 + (Math.floor(rand() * 10) * 100); // 1000 to 10000
+        }
+
+        const typeFinal = rand() > 0.85 ? 'rejected' : 'validated';
+        const reason = typeFinal === 'rejected' ? reasons[Math.floor(rand() * reasons.length)] : '';
+        const isPremium = rand() > 0.02;
+
+        const waitDuration = (Math.floor(rand() * 10) + 5) * 60000; // Temps d'attente entre 5 et 15 minutes
+
+        events.push({
+           id: `${dateString}-${i}`,
+           name,
+           amountXAF,
+           currency,
+           type: 'pending', // Will be evaluated dynamically later
+           finalType: typeFinal,
+           waitDuration,
+           method,
+           reason,
+           time: currentTime,
+           isPremium,
+           showFlash: false,
+           progress: 100
+        });
+        i++;
+     }
+     
+     return events;
   };
 
+  const [visibleFeed, setVisibleFeed] = useState<LiveWithdrawalEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<LiveWithdrawalEvent[]>([]);
+  const [now, setNow] = useState(Date.now());
+
   useEffect(() => {
-    // Fill initial with 2 events for a more "quiet" start
-    setFeed([
-      generateRichEvent(true, 'validated'),
-      generateRichEvent(true, 'pending')
-    ]);
-
-    let timeoutId: NodeJS.Timeout;
-
-    const runFeedProcess = () => {
-      setFeed(prev => {
-        // 1. Logic for existing events (Status Resolution)
-        let pendingFound = false;
-        const nextFeed = prev.map(ev => {
-           if (ev.type === 'pending') {
-             // Increment cycles to ensure longer wait
-             const updatedCycles = ev.pendingCycles + 1;
-             
-             // Dynamic wait requirement for resolution
-             if (!pendingFound && updatedCycles >= (ev.waitThreshold || 3) && Math.random() > 0.5) {
-               pendingFound = true;
-               const isSuccess = Math.random() > 0.15;
-               return { 
-                 ...ev, 
-                 type: isSuccess ? 'validated' : 'rejected' as any, 
-                 progress: 100, 
-                 timestamp: 'TERMINÉ', 
-                 showFlash: true,
-                 reason: !isSuccess ? reasons[Math.floor(Math.random() * reasons.length)] : ''
-               };
-             }
-             // Smooth progress increase
-             const nextProgress = Math.min(ev.progress + (Math.random() * 15 + 5), 95);
-             return { ...ev, progress: nextProgress, pendingCycles: updatedCycles };
-           }
-           if (ev.showFlash) return { ...ev, showFlash: false };
-           return ev;
-        });
-
-        // 2. Decide if we add a new event
-        const addProbability = isQuiet ? 0.2 : 0.6;
-        if (Math.random() < addProbability) {
-          const newEvent = generateRichEvent();
-          return [newEvent, ...nextFeed.slice(0, 4)];
-        }
-        
-        // 3. Periodically remove oldest events if too many
-        return nextFeed.slice(0, 4);
-      });
-
-      // 4. Randomly toggle quiet mode
-      if (Math.random() > 0.95) setIsQuiet(q => !q);
-
-      // 5. Dynamic interval: bursts vs silence
-      const baseDelay = isQuiet ? 15000 : 6000;
-      const variableDelay = baseDelay + (Math.random() * 8000 - 4000); // +/- 4s
+      const today = new Date();
+      const yesterday = new Date(today.getTime() - 86400000);
+      const tomorrow = new Date(today.getTime() + 86400000);
       
-      timeoutId = setTimeout(runFeedProcess, variableDelay);
-    };
+      const generated = [
+         ...generateWithdrawalsForDate(yesterday),
+         ...generateWithdrawalsForDate(today),
+         ...generateWithdrawalsForDate(tomorrow)
+      ].sort((a,b) => b.time - a.time);
+      
+      setAllEvents(generated);
+  }, []);
 
-    timeoutId = setTimeout(runFeedProcess, 5000);
+  useEffect(() => {
+      const interval = setInterval(() => {
+          const currentNow = Date.now();
+          setNow(currentNow);
+          if (allEvents.length > 0) {
+              const past = allEvents.filter(s => s.time <= currentNow);
+              
+              const dynamicPast = past.map(ev => {
+                  const timeSince = currentNow - ev.time;
+                  if (ev.waitDuration && timeSince < ev.waitDuration) {
+                      return { ...ev, type: 'pending', progress: Math.min(95, (timeSince / ev.waitDuration) * 100) } as LiveWithdrawalEvent;
+                  } else {
+                      const showFlash = ev.waitDuration && timeSince >= ev.waitDuration && timeSince < ev.waitDuration + 5000;
+                      return { ...ev, type: ev.finalType || 'validated', progress: 100, showFlash: !!showFlash } as LiveWithdrawalEvent;
+                  }
+              });
 
-    return () => clearTimeout(timeoutId);
-  }, [isQuiet]);
+              setVisibleFeed(dynamicPast.slice(0, 5));
+          }
+      }, 1000);
+      return () => clearInterval(interval);
+  }, [allEvents]);
+
+  const getTimeAgo = (time: number) => {
+    const diff = Math.max(0, Math.floor((now - time) / 1000));
+    if (diff < 60) return "à l'instant";
+    const mins = Math.floor(diff / 60);
+    if (mins < 60) return `il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days}j`;
+  };
 
   return (
     <div className="space-y-4">
       <AnimatePresence mode="popLayout">
-        {feed.map((ev) => (
+        {visibleFeed.map((ev) => (
           <motion.div
             key={ev.id}
             layout
@@ -726,7 +772,7 @@ const LiveWithdrawalFeed = () => {
                     secondaryClassName="hidden"
                     showOriginal={false}
                   />
-                  <span className="text-[8px] font-bold text-neutral-500 uppercase">{ev.timestamp}</span>
+                  <span className="text-[8px] font-bold text-neutral-500 uppercase">{getTimeAgo(ev.time)}</span>
                 </div>
               </div>
             </div>
