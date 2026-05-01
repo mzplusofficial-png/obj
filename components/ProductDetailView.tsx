@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
-  ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon 
+  ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon, Store 
 } from 'lucide-react';
 import { Product } from '../types.ts';
 
@@ -219,7 +219,7 @@ export const getProductTrend = (product: Product, index: number) => {
   return { isPositive, percentage, salesToday, totalSales, viewersNow, isTopSeller, dynamicMessage: finalMessage, absHash: dailyHash };
 };
 
-export const ProductDetailView = ({ product, stats, referralCode, onBack, index }: { product: Product, stats: { clicks: number, conversions: number }, referralCode: string, onBack: () => void, index: number }) => {
+export const ProductDetailView = ({ product, stats, referralCode, onBack, index, onAddToStore, isImported = false }: { product: Product, stats: { clicks: number, conversions: number }, referralCode: string, onBack: () => void, index: number, onAddToStore?: () => void, isImported?: boolean }) => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const link = `${window.location.origin}/?ref=${referralCode}&prod=${product.id}`;
   
@@ -412,56 +412,36 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index 
                   </motion.div>
                )}
 
-               {/* Personal Stats for this Product */}
-               <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="w-full max-w-2xl px-6 mt-6 pb-6"
+               {/* Add to Store Button */}
+               <motion.div
+                 initial={{ opacity: 0, scale: 0.95 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 transition={{ delay: 0.5 }}
+                 className="w-full max-w-2xl px-6 mt-6 pb-2"
                >
-                  <div className="bg-[#050505] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-                     <div className="absolute inset-0 bg-yellow-500/0 group-hover:bg-yellow-500/5 transition-colors duration-700"></div>
-                     
-                     <div className="flex items-center gap-3 mb-8 relative z-10 border-b border-white/5 pb-6">
-                        <div className="w-1.5 h-6 bg-yellow-500 rounded-full shadow-[0_0_10px_#eab308]"></div>
-                        <h4 className="text-xs font-black uppercase tracking-widest text-white italic drop-shadow-md">Mes statistiques sur ce produit</h4>
+                  <button 
+                    onClick={() => {
+                       if (!isImported && onAddToStore) {
+                           onAddToStore();
+                       } else if (!isImported) {
+                           alert("Produit ajouté à votre boutique avec succès !");
+                       }
+                    }}
+                    disabled={isImported}
+                    className={`relative w-full py-5 rounded-[2rem] font-black uppercase text-sm tracking-[0.2em] flex flex-col items-center justify-center gap-2 group overflow-hidden shadow-lg transition-all duration-300 ${
+                       isImported 
+                         ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default' 
+                         : 'bg-gradient-to-br from-[#1A1814] to-[#0A0908] text-[var(--color-gold-main)] border border-[var(--color-border-gold)]/30 hover:border-[var(--color-gold-main)]/80 hover:shadow-[0_0_20px_rgba(201,168,76,0.15)] active:scale-[0.98]'
+                    }`}
+                  >
+                     {!isImported && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-gold-main)]/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>}
+                     <div className="flex items-center gap-2">
+                        {isImported ? <Check size={18} strokeWidth={3} /> : <Store size={18} strokeWidth={3} />}
+                        {isImported ? "Dans ma boutique" : "Ajouter à ma boutique"}
                      </div>
-
-                     <div className="relative z-10 flex flex-col gap-6">
-                        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center justify-between">
-                           <div className="flex flex-col">
-                              <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Target size={12} className="text-yellow-500"/> Ventes Conclues</span>
-                              <div className="flex items-baseline gap-2">
-                                 <span className="text-5xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-lg">{stats.conversions.toLocaleString()}</span>
-                                 <span className="text-[10px] font-black text-yellow-500/80 uppercase tracking-widest bg-yellow-500/10 px-2 py-1 rounded-full">Sur {stats.clicks.toLocaleString()} clics</span>
-                              </div>
-                           </div>
-                           
-                           <div className="w-full h-px sm:w-px sm:h-12 bg-white/10 shrink-0"></div>
-
-                           <div className="flex flex-col">
-                              <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Activity size={12} className="text-blue-400"/> Taux de Conversion</span>
-                              <div className="flex items-baseline gap-1">
-                                 <span className="text-4xl font-black text-white font-mono leading-none tracking-tighter drop-shadow-lg">
-                                    {stats.clicks > 0 ? ((stats.conversions / stats.clicks) * 100).toFixed(1) : "0"}
-                                 </span>
-                                 <span className="text-xl font-bold text-white/50">%</span>
-                              </div>
-                           </div>
-                        </div>
-
-                        <div className="pt-6 border-t border-white/5 relative">
-                           <div className="absolute top-0 right-10 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full pointer-events-none"></div>
-                           <div className="flex flex-col items-start bg-emerald-500/5 border border-emerald-500/10 p-5 md:p-6 rounded-2xl relative overflow-hidden group-hover:bg-emerald-500/10 transition-colors">
-                              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2 mb-2"><Coins size={12}/> Mes Gains Totaux</span>
-                              <span className="text-4xl md:text-5xl font-black text-emerald-400 font-mono italic tracking-tighter drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                                 +{totalEarned.toLocaleString()} <span className="text-lg md:text-2xl text-emerald-500/50">FCFA</span>
-                              </span>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
+                  </button>
                </motion.div>
+
 
             </div>
          </section>

@@ -239,7 +239,6 @@ export const GlobalView: React.FC<any> = ({
               className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]"
             />
           </div>
-          <p className="text-[11px] font-bold text-[#6B6050] uppercase tracking-[0.25em] opacity-100 italic">Prêt à conquérir le marché, MZ-Elite.</p>
         </div>
       </div>
 

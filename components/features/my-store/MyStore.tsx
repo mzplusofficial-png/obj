@@ -918,6 +918,8 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
             referralCode={profile?.referral_code || 'elite'} 
             onBack={() => setDetailViewProduct(null)} 
             index={0} 
+            isImported={storeProductIds.includes(detailViewProduct.id)}
+            onAddToStore={() => handleImport(detailViewProduct.id)}
           />
         )}
       </AnimatePresence>
