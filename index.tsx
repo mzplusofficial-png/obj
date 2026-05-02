@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import { AxisProvider } from './components/features/axis/AxisProvider.tsx';
+import { AxisEntity } from './components/features/axis/AxisEntity.tsx';
 
 console.log("MZ+ System: Starting initialization...");
 
@@ -67,7 +69,10 @@ const mountApp = () => {
     const root = createRoot(rootElement);
     root.render(
       <React.StrictMode>
-        <App />
+        <AxisProvider>
+          <App />
+          <AxisEntity />
+        </AxisProvider>
       </React.StrictMode>
     );
     console.log("MZ+ System: React rendered successfully.");

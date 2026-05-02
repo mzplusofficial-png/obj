@@ -44,6 +44,7 @@ import { WithdrawalForm as WithdrawalFormView } from './features/withdrawals/Wit
 import { LivePulse } from './features/LivePulse.tsx';
 import { CurrencyDisplay } from './ui/CurrencyDisplay.tsx';
 import { useCurrency } from '../hooks/useCurrency.ts';
+import { useAxis } from './features/axis/AxisProvider.tsx';
 
 type HubCategory = 'main' | 'business' | 'academy' | 'community';
 
@@ -58,6 +59,7 @@ export const GlobalView: React.FC<any> = ({
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const { convertAndFormat } = useCurrency();
+  const { triggerAxisMessage } = useAxis();
   const isMzPlus = profile?.user_level === 'niveau_mz_plus';
 
   const currentBalance = wallet?.balance || 0;
@@ -322,7 +324,10 @@ export const GlobalView: React.FC<any> = ({
       <motion.button 
         whileHover={{ scale: 1.01, boxShadow: '0 0 20px rgba(201,168,76,0.1)' }}
         whileTap={{ scale: 0.99 }}
-        onClick={() => setShowWithdrawForm(true)}
+        onClick={() => {
+          setShowWithdrawForm(true);
+          triggerAxisMessage('Vos gains. Mérités. Assurez-vous que vos coordonnées sont correctes.', 'guiding', 5000);
+        }}
         className="w-full py-3 bg-[var(--color-gold-main)] text-black rounded-xl font-black uppercase text-[9px] tracking-[0.3em] shadow-lg flex items-center justify-center gap-2 transition-all hover:bg-[var(--color-gold-light)]"
       >
         <span className="text-base">💸</span> Retirer mes gains
@@ -354,7 +359,19 @@ export const GlobalView: React.FC<any> = ({
               className="flex flex-col items-center gap-3 active:scale-95 transition-transform"
             >
               <button
-                onClick={() => cat.id === 'business' ? onSwitchTab('affiliation') : setActiveCategory(cat.id as any)}
+                onClick={() => {
+                  if (cat.id === 'business') {
+                    onSwitchTab('affiliation');
+                    triggerAxisMessage("Votre empire commence ici. Sécurisez vos ventes.", "action", 4500);
+                  } else {
+                    setActiveCategory(cat.id as any);
+                    if (cat.id === 'referral') {
+                      triggerAxisMessage("L'influence est un pouvoir. Invitez et étendez votre réseau.", "guiding", 4500);
+                    } else if (cat.id === 'academy') {
+                      triggerAxisMessage("La sagesse précède la richesse. Accédez à vos connaissances.", "progression", 4500);
+                    }
+                  }
+                }}
                 className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] flex items-center justify-center text-4xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative group transition-all hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]"
               >
                 <div className="absolute inset-0 rounded-full bg-[var(--color-gold-main)]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>

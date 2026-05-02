@@ -23,8 +23,13 @@ export const usePremiumAccess = () => {
 
         if (error) throw error;
         setConfig(data);
-      } catch (err) {
-        console.error('Error fetching premium access config:', err);
+      } catch (err: any) {
+        if (err?.code === 'PGRST303' || String(err).includes('PGRST303')) {
+          console.warn('JWT expired, signing out...');
+          supabase.auth.signOut().catch(() => {});
+        } else {
+          console.warn('Error fetching premium access config:', err);
+        }
         // Fallback default
         setConfig({ is_enabled: true, reopening_date: 'Dimanche 17 mars' });
       } finally {

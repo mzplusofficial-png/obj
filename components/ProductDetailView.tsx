@@ -4,6 +4,7 @@ import {
   ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon, Store 
 } from 'lucide-react';
 import { Product } from '../types.ts';
+import { useAxis } from './features/axis/AxisProvider.tsx';
 
 const ShareModal = ({ isOpen, onClose, product, link }: { isOpen: boolean, onClose: () => void, product: Product, link: string }) => {
   const [copied, setCopied] = useState(false);
@@ -222,6 +223,7 @@ export const getProductTrend = (product: Product, index: number) => {
 export const ProductDetailView = ({ product, stats, referralCode, onBack, index, onAddToStore, isImported = false }: { product: Product, stats: { clicks: number, conversions: number }, referralCode: string, onBack: () => void, index: number, onAddToStore?: () => void, isImported?: boolean }) => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const link = `${window.location.origin}/?ref=${referralCode}&prod=${product.id}`;
+  const { triggerAxisMessage } = useAxis();
   
   const initialTrend = getProductTrend(product, index);
   const [trend, setTrend] = React.useState(initialTrend);
@@ -366,35 +368,6 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
             <div className="absolute inset-0 bg-yellow-500/5 blur-[100px] -z-10"></div>
             
             <div className="flex flex-col items-center text-center space-y-14">
-               {/* Central Display */}
-               <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 className="relative"
-               >
-                  <div className="absolute inset-0 bg-yellow-500/10 blur-3xl rounded-full scale-150"></div>
-                  <div className="relative z-10 flex flex-col items-center">
-                     <div className={`text-[120px] md:text-[150px] font-black font-mono leading-none tracking-tighter drop-shadow-2xl group flex items-baseline gap-2 transition-all duration-300 ${liveSalesPulse ? 'text-emerald-400 scale-105 drop-shadow-[0_0_20px_#10b981]' : 'text-white'} `}>
-                        {trend.salesToday}
-                        <span className="text-xl text-yellow-500/50 animate-pulse">⚡</span>
-                     </div>
-                     <div className="space-y-4">
-                        <div className="flex flex-col items-center gap-1">
-                          <p className="text-xs font-black text-yellow-500 uppercase tracking-[0.5em] italic drop-shadow-lg flex items-center gap-2">
-                             Ventes Aujourd'hui
-                             {livePulse && <span className="text-[7px] bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded animate-pulse">LIVE</span>}
-                          </p>
-                          <div className={`flex items-center gap-2 mt-2 px-4 py-1.5 border rounded-full transition-all duration-700 ${liveSalesPulse ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-white/5 border-white/10'}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${livePulse ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-neutral-500'}`}></div>
-                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none flex items-center gap-1.5">
-                              Vendues <span className={`font-mono text-[11px] transition-colors ${liveSalesPulse ? 'text-white' : ''}`}>{trend.totalSales.toLocaleString()}</span> Fois Au Total
-                            </span>
-                          </div>
-                        </div>
-                     </div>
-                  </div>
-               </motion.div>
-
                {/* Strategic Ticker / Dynamic Phrase */}
                {trend.dynamicMessage && (
                   <motion.div 
@@ -423,6 +396,7 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
                     onClick={() => {
                        if (!isImported && onAddToStore) {
                            onAddToStore();
+                           triggerAxisMessage("Nouveau produit acquis. Votre empire s'étend.", "action", 4500);
                        } else if (!isImported) {
                            alert("Produit ajouté à votre boutique avec succès !");
                        }
@@ -457,7 +431,10 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
             >
                <div className="absolute -inset-4 bg-yellow-500/10 blur-3xl opacity-50 animate-pulse"></div>
                <button 
-                 onClick={() => setIsShareModalOpen(true)}
+                 onClick={() => {
+                   setIsShareModalOpen(true);
+                   triggerAxisMessage("Génération du lien affilié en cours. Votre influence commence ici.", "progression", 5000);
+                 }}
                  className="relative w-full py-8 bg-white text-black rounded-[2.5rem] font-black uppercase text-base tracking-[0.3em] shadow-[0_30px_60px_rgba(255,255,255,0.15)] hover:bg-yellow-500 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 flex flex-col items-center justify-center gap-1 group overflow-hidden"
                >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>

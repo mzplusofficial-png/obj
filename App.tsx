@@ -38,6 +38,7 @@ import { TeamGuide } from './components/guides/TeamGuide.tsx';
 import { PremiumPopup } from './components/PremiumPopup.tsx';
 import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate.tsx';
 import { requestNotificationPermission, onMessageListener } from './services/firebase.ts';
+import { useAxis } from './components/features/axis/AxisProvider.tsx';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -67,13 +68,20 @@ const App: React.FC = () => {
   const [notification, setNotification] = useState<{ title: string; body: string; type?: 'info' | 'error' | 'warning' } | null>(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [initSequence, setInitSequence] = useState(true);
+  
+  const { triggerAxisMessage } = useAxis();
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => setInitSequence(false), 3500);
+      const timer = setTimeout(() => {
+        setInitSequence(false);
+        if (session) {
+          triggerAxisMessage('Connexion établie. Votre progression est synchronisée.', 'progression', 6000);
+        }
+      }, 3500);
       return () => clearTimeout(timer);
     }
-  }, [loading]);
+  }, [loading, session, triggerAxisMessage]);
 
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
@@ -245,6 +253,11 @@ const App: React.FC = () => {
       setWallet(walletRes.data || { id: 'initial', user_id: userId, balance: 0 });
       setTeamCount(teamRes?.count || 0);
     } catch (error: any) {
+      if (error?.code === 'PGRST303' || error?.message?.includes('JWT expired')) {
+        console.warn('JWT expired during fetchUserData, signing out...');
+        supabase.auth.signOut();
+        return;
+      }
       console.error("Fetch data error:", error);
       if (retryCount < 2 && (error.message?.includes('fetch') || error.name === 'TypeError')) {
         console.log(`Retrying fetchUserData (${retryCount + 1})...`);
@@ -430,6 +443,7 @@ const App: React.FC = () => {
 
     // Redirection vers le lien final du produit
     setTimeout(() => {
+      triggerAxisMessage('Transaction validée. Un nouvel accomplissement pour votre ascension.', 'success', 6000);
       if (customerProduct?.final_link) {
         window.location.href = customerProduct.final_link;
       } else {
@@ -437,7 +451,7 @@ const App: React.FC = () => {
         alert("Lien de redirection manquant pour ce produit.");
       }
     }, 800); // Délai suffisant pour l'enregistrement et l'effet visuel
-  }, [customerProduct, referrerId]);
+  }, [customerProduct, referrerId, triggerAxisMessage]);
 
   if (loading || !isProductChecked || initSequence) {
     return <SystemInitiator loading={loading} />;

@@ -68,9 +68,9 @@ const generateSalesForDate = (date: Date, products: Product[]) => {
    let i = 0;
    
    while (currentTime < endOfDay) {
-      // Advance time by 1 to 25 minutes (in milliseconds)
-      const gapMinutes = Math.floor(rand() * 24) + 1;
-      const gapSeconds = Math.floor(rand() * 60);
+      // Advance time by 0 to 2 minutes (in milliseconds)
+      const gapMinutes = Math.floor(rand() * 3);
+      const gapSeconds = Math.floor(rand() * 60) + (gapMinutes === 0 ? 15 : 0); // min 15 seconds
       currentTime += gapMinutes * 60000 + gapSeconds * 1000;
       
       if (currentTime >= endOfDay) break;
