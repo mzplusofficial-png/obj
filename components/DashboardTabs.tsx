@@ -259,13 +259,17 @@ export const GlobalView: React.FC<any> = ({
         <div className="flex justify-between items-start relative z-10 mb-6">
           <div className="space-y-1.5">
             {/* Status Badge (REPOSITIONED & HIGH IMPACT) */}
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg ${
+            <div 
+              onClick={() => !isMzPlus && onSwitchTab('upgrade')}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg ${
+                !isMzPlus ? 'cursor-pointer hover:border-[#F9D074]/50 hover:bg-[#C9A84C]/20 hover:scale-105 active:scale-95' : ''
+              } ${
               isMzPlus 
                 ? 'bg-gradient-to-r from-purple-600 to-indigo-700 border-white/20 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)] scale-100' 
                 : 'bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/30 text-[var(--color-gold-main)] shadow-[0_0_15px_rgba(201,168,76,0.1)]'
             }`}>
               <Crown size={12} className={isMzPlus ? 'animate-pulse' : 'opacity-70'} />
-              <span className="text-[10px] font-black uppercase tracking-[0.1em] italic">
+              <span className="text-[10px] font-black uppercase tracking-[0.1em] italic select-none">
                 {isMzPlus ? 'ACCÈS PREMIUM' : 'COMPTE STANDARD'}
               </span>
             </div>

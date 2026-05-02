@@ -115,10 +115,10 @@ export const AxisEntity = () => {
       <AnimatePresence>
         {showMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 15, scale: 0.9, x: 15 }}
+            initial={{ opacity: 0, y: 15, scale: 0.95, x: 10 }}
             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.9, x: 15 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.95, x: 10 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="pointer-events-auto bg-[#0a0908]/95 backdrop-blur-3xl border-2 p-5 rounded-2xl max-w-[300px] sm:max-w-[340px] relative origin-bottom-right"
             style={{ borderColor: config.color, boxShadow: `0 15px 40px ${config.glow}` }}
           >
@@ -161,9 +161,10 @@ export const AxisEntity = () => {
       <AnimatePresence>
         {showOrb && (
           <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className="pointer-events-auto cursor-pointer"
             onClick={() => {
               if (showMessage) hideAxis();
