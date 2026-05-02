@@ -102,6 +102,8 @@ const AxisLogo = ({ state }: { state: AxisState }) => {
 
 export const AxisEntity = () => {
   const { axisState, axisMessage, axisAction, isVisible, hideAxis } = useAxis();
+  
+  const config = AXIS_CONFIG[axisState];
 
   const showMessage = isVisible && axisMessage !== null;
 
@@ -109,20 +111,24 @@ export const AxisEntity = () => {
   const showOrb = isVisible || axisState !== 'inactive';
 
   return (
-    <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[999] flex flex-col items-end gap-3 pointer-events-none">
+    <div className="fixed bottom-24 right-4 sm:bottom-12 sm:right-10 z-[999] flex flex-col items-end gap-5 pointer-events-none">
       <AnimatePresence>
         {showMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9, x: 10 }}
+            initial={{ opacity: 0, y: 15, scale: 0.9, x: 15 }}
             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.9, x: 10 }}
+            exit={{ opacity: 0, scale: 0.9, x: 15 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="pointer-events-auto bg-[#0a0908]/90 backdrop-blur-2xl border border-white/10 p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-[280px] sm:max-w-[320px] relative origin-bottom-right"
+            className="pointer-events-auto bg-[#0a0908]/95 backdrop-blur-3xl border-2 p-5 rounded-2xl max-w-[300px] sm:max-w-[340px] relative origin-bottom-right"
+            style={{ borderColor: config.color, boxShadow: `0 15px 40px ${config.glow}` }}
           >
              {/* Small triangle pointing to the orb */}
-             <div className="absolute -bottom-2 right-5 w-4 h-4 bg-[#0a0908]/90 border-r border-b border-white/10 transform rotate-45 backdrop-blur-xl z-[-1]"></div>
+             <div 
+                className="absolute -bottom-2.5 right-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]"
+                style={{ borderColor: config.color }}
+             ></div>
              
-             <div className="text-white/95 text-[13px] font-medium tracking-wide leading-relaxed whitespace-pre-wrap">
+             <div className="text-white text-[14px] sm:text-[15px] font-semibold tracking-wide leading-relaxed whitespace-pre-wrap">
                {axisMessage}
              </div>
 
@@ -132,20 +138,20 @@ export const AxisEntity = () => {
                     axisAction.action();
                     hideAxis();
                   }}
-                  className="mt-4 w-full py-2.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[12px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.5)] hover:from-yellow-300 hover:to-yellow-400 transition-all border border-yellow-300/50"
+                  className="mt-5 w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border border-yellow-300/50"
                   animate={{ 
-                    scale: [1, 1.03, 1],
+                    scale: [1, 1.02, 1],
                     boxShadow: [
-                      "0 0 20px rgba(250,204,21,0.4)",
-                      "0 0 35px rgba(250,204,21,0.7)",
-                      "0 0 20px rgba(250,204,21,0.4)"
+                      "0 0 20px rgba(250,204,21,0.5)",
+                      "0 0 35px rgba(250,204,21,0.8)",
+                      "0 0 20px rgba(250,204,21,0.5)"
                     ]
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                >
-                 {axisAction.label} <span className="text-[15px]">⚡</span>
+                 {axisAction.label} <span className="text-[16px]">⚡</span>
                </motion.button>
              )}
           </motion.div>

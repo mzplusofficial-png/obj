@@ -75,25 +75,48 @@ const App: React.FC = () => {
     if (!loading) {
       const timer = setTimeout(() => {
         setInitSequence(false);
-        if (session) {
-          const userName = userProfile?.full_name || session?.user?.user_metadata?.full_name?.split(' ')[0] || "partenaire";
-          
-          triggerAxisMessage(
-            `Salut ${userName}… moi c'est Axis. 👁️\nSi tu es ici, c'est que tu veux avancer. ⚡\nJe peux te guider… si tu es prêt.`,
-            'guiding',
-            0,
-            {
-              label: "Je suis prêt",
-              action: () => {
-                triggerAxisMessage("C'est noté. L'ascension commence maintenant. Ton interface est prête.", "success", 5000);
-              }
-            }
-          );
-        }
       }, 3500);
       return () => clearTimeout(timer);
     }
-  }, [loading, session, userProfile, triggerAxisMessage]);
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading || initSequence || !session) return;
+    
+    // Ensure we only show the greeting once per session to avoid spamming on reload
+    if (sessionStorage.getItem('mz_axis_welcomed') === 'true') return;
+
+    const showAxisGreeting = () => {
+      const userName = userProfile?.full_name || session?.user?.user_metadata?.full_name?.split(' ')[0] || "partenaire";
+      
+      setTimeout(() => {
+        sessionStorage.setItem('mz_axis_welcomed', 'true');
+        triggerAxisMessage(
+          `Salut ${userName}… moi c'est Axis. 👁️\nSi tu es ici, c'est que tu veux avancer. ⚡\nJe peux te guider… si tu es prêt.`,
+          'guiding',
+          0,
+          {
+            label: "Je suis prêt",
+            action: () => {
+              triggerAxisMessage("C'est noté. L'ascension commence maintenant. Ton interface est prête.", "success", 5000);
+            }
+          }
+        );
+      }, 1500);
+    };
+
+    const isInstalled = localStorage.getItem('mz_pwa_installed') === 'true' || window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
+    const recentlyPrompted = lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000;
+
+    if (isInstalled || recentlyPrompted) {
+       showAxisGreeting();
+    } else {
+       // Wait for the PWA banner to be handled before showing Axis
+       window.addEventListener('mz-pwa-handled', showAxisGreeting, { once: true });
+       return () => window.removeEventListener('mz-pwa-handled', showAxisGreeting);
+    }
+  }, [loading, initSequence, session, userProfile, triggerAxisMessage]);
 
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours

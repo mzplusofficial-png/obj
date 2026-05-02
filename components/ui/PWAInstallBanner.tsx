@@ -15,15 +15,23 @@ export const PWAInstallBanner = () => {
 
     const isInIframe = window.self !== window.top;
 
-    // Vérifier si déjà installed
     const checkIfInstalled = () => {
       return window.matchMedia('(display-mode: standalone)').matches || 
              (navigator as any).standalone || 
              localStorage.getItem('mz_pwa_installed') === 'true';
     };
 
-    if (checkIfInstalled()) {
+    const checkPromptDelay = () => {
+      const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
+      if (lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000) {
+        return true; // Too soon
+      }
+      return false;
+    };
+
+    if (checkIfInstalled() || checkPromptDelay()) {
       setIsInstalled(true);
+      window.dispatchEvent(new CustomEvent('mz-pwa-handled'));
       return;
     }
 
@@ -82,12 +90,14 @@ export const PWAInstallBanner = () => {
     }
     // Enregistrer l'action (même pour iOS guide)
     localStorage.setItem('mz_pwa_prompt_timestamp', Date.now().toString());
+    window.dispatchEvent(new CustomEvent('mz-pwa-handled'));
   };
 
   const closeBanner = () => {
     setIsVisible(false);
     // On repousse de 24h
     localStorage.setItem('mz_pwa_prompt_timestamp', Date.now().toString());
+    window.dispatchEvent(new CustomEvent('mz-pwa-handled'));
   };
 
   if (isInstalled || !isVisible) return null;
