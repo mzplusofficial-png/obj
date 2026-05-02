@@ -58,9 +58,20 @@ export const GlobalView: React.FC<any> = ({
 }) => {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [isShopHighlighted, setIsShopHighlighted] = useState(false);
   const { convertAndFormat } = useCurrency();
   const { triggerAxisMessage } = useAxis();
   const isMzPlus = profile?.user_level === 'niveau_mz_plus';
+
+  useEffect(() => {
+    const handleHighlight = () => {
+      setIsShopHighlighted(true);
+      window.scrollTo({ top: document.body.scrollHeight / 3, behavior: 'smooth' }); // Scroll slightly down to ensure it's in view
+      setTimeout(() => setIsShopHighlighted(false), 8000); // Remove after 8 seconds
+    };
+    window.addEventListener('mz-highlight-shop', handleHighlight);
+    return () => window.removeEventListener('mz-highlight-shop', handleHighlight);
+  }, []);
 
   const currentBalance = wallet?.balance || 0;
   const todayGain = wallet?.today_gain || 0;
@@ -366,6 +377,7 @@ export const GlobalView: React.FC<any> = ({
                 onClick={() => {
                   if (cat.id === 'business') {
                     onSwitchTab('affiliation');
+                    setIsShopHighlighted(false); // remove highlight on click
                     triggerAxisMessage("Votre empire commence ici. Sécurisez vos ventes.", "action", 4500);
                   } else {
                     setActiveCategory(cat.id as any);
@@ -376,7 +388,12 @@ export const GlobalView: React.FC<any> = ({
                     }
                   }
                 }}
-                className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] flex items-center justify-center text-4xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative group transition-all hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]"
+                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-500
+                  ${cat.id === 'business' && isShopHighlighted 
+                      ? 'bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/20 border-[3px] border-[#C9A84C] shadow-[0_0_50px_rgba(201,168,76,0.8)] scale-[1.12] animate-[pulse_1.5s_ease-in-out_infinite] z-50' 
+                      : 'bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]'
+                  }
+                `}
               >
                 <div className="absolute inset-0 rounded-full bg-[var(--color-gold-main)]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {cat.emoji}

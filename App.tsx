@@ -98,7 +98,8 @@ const App: React.FC = () => {
           {
             label: "Je suis prêt",
             action: () => {
-              triggerAxisMessage("C'est noté. L'ascension commence maintenant. Ton interface est prête.", "success", 5000);
+              triggerAxisMessage("Super 🔥\nOn commence simplement.\nEntre dans ta boutique… je vais te montrer. 🛒", "guiding", 7000);
+              window.dispatchEvent(new CustomEvent('mz-highlight-shop'));
             }
           }
         );
