@@ -76,12 +76,24 @@ const App: React.FC = () => {
       const timer = setTimeout(() => {
         setInitSequence(false);
         if (session) {
-          triggerAxisMessage('Connexion établie. Votre progression est synchronisée.', 'progression', 6000);
+          const userName = userProfile?.full_name || session?.user?.user_metadata?.full_name?.split(' ')[0] || "partenaire";
+          
+          triggerAxisMessage(
+            `Salut ${userName}… moi c'est Axis. 👁️\nSi tu es ici, c'est que tu veux avancer. ⚡\nJe peux te guider… si tu es prêt.`,
+            'guiding',
+            0,
+            {
+              label: "Je suis prêt",
+              action: () => {
+                triggerAxisMessage("C'est noté. L'ascension commence maintenant. Ton interface est prête.", "success", 5000);
+              }
+            }
+          );
         }
       }, 3500);
       return () => clearTimeout(timer);
     }
-  }, [loading, session, triggerAxisMessage]);
+  }, [loading, session, userProfile, triggerAxisMessage]);
 
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
@@ -272,7 +284,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const getInitialSession = async (retryCount = 0) => {
       try {
-        const { data: { session: s } } = await supabase.auth.getSession();
+        const { data: { session: s }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('Invalid Refresh Token')) {
+            await supabase.auth.signOut();
+          }
+          throw error;
+        }
+        
         setSession(s); 
         if (s) fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name); 
         else if (isProductChecked) setLoading(false);
@@ -280,8 +300,10 @@ const App: React.FC = () => {
         console.error("Initial session fetch error:", error);
         if (retryCount < 3 && (error.message?.includes('fetch') || error.name === 'TypeError')) {
           setTimeout(() => getInitialSession(retryCount + 1), 1000 * (retryCount + 1));
-        } else if (isProductChecked) {
-          setLoading(false);
+        } else {
+          // If we encounter a hard error (like invalid token), clear session UI state
+          setSession(null);
+          if (isProductChecked) setLoading(false);
         }
       }
     };

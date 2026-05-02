@@ -276,8 +276,10 @@ export const PushAdmin: React.FC = () => {
                     const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
                     const result = await requestNotificationPermission(VAPID_KEY);
                     if (result.token) {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (session?.user?.id) {
+                      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                      if (sessionError) {
+                        alert("Erreur de session: " + sessionError.message);
+                      } else if (session?.user?.id) {
                         const { error } = await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
                         if (error) alert("Erreur lors de la sauvegarde: " + error.message);
                         else {
