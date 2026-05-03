@@ -19,7 +19,8 @@ import {
   Calendar,
   Filter,
   Store,
-  Settings
+  Settings,
+  Check
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -40,6 +41,120 @@ import { StoreSettingsModal } from './StoreSettingsModal.tsx';
 import { StoreStats } from './StoreStats.tsx';
 
 import { StoreFAQ } from './StoreFAQ.tsx';
+
+const playDopamineHit = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    const now = ctx.currentTime;
+    
+    const playNote = (freq: number, start: number, dur: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.3, start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, start + dur);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(start);
+      osc.stop(start + dur);
+    };
+
+    playNote(523.25, now, 1.5); // C5
+    playNote(659.25, now + 0.1, 1.5); // E5
+    playNote(783.99, now + 0.15, 1.5); // G5
+    playNote(1046.50, now + 0.2, 2.0); // C6
+    
+  } catch (e) {
+    console.error("Audio playback error", e);
+  }
+};
+
+const CelebrationOverlay = ({ product, onClose }: { product: Product, onClose: () => void }) => {
+  useEffect(() => {
+    import('canvas-confetti').then((confetti) => {
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti.default({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#10b981', '#f59e0b', '#ffffff'] // Emerald, Amber, White
+        });
+        confetti.default({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#10b981', '#f59e0b', '#ffffff']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    });
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 via-black to-black"></div>
+      
+      <motion.div 
+        initial={{ scale: 0.8, y: 50, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: "spring", damping: 15, stiffness: 200, delay: 0.2 }}
+        className="relative z-10 flex flex-col items-center max-w-lg w-full px-4 text-center"
+      >
+        <div className="w-40 h-40 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(16,185,129,0.5)] border-4 border-emerald-400/50 relative mb-8">
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 to-transparent"></div>
+        </div>
+        
+        <div className="flex items-center justify-center gap-2 text-emerald-400 mb-3 font-black tracking-widest uppercase text-xs sm:text-sm">
+          <span className="text-lg relative"><div className="absolute inset-0 bg-emerald-400 blur-md opacity-30 rounded-full"></div>👁️</span> AXIS CONFIRME
+        </div>
+        
+        <h2 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-100 to-emerald-300 mb-4 animate-[pulse_2s_ease-in-out_infinite]">
+          FÉLICITATIONS ! 🎉
+        </h2>
+        
+        <p className="text-lg sm:text-xl text-emerald-100/90 font-medium leading-relaxed mb-6">
+          <span className="text-white font-bold">{product.name}</span> est maintenant en ligne dans ta boutique. 🚀
+        </p>
+
+        <p className="text-sm text-emerald-400 flex items-center justify-center gap-2 font-bold mb-8">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block shadow-[0_0_10px_#10b981]"></span>
+          Génération de revenus activée 💸
+        </p>
+
+        <button 
+          onClick={onClose}
+          className="px-8 py-4 bg-white text-black font-black uppercase tracking-widest text-sm rounded-full hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+        >
+          Prochaine étape
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 interface MyStoreProps {
   profile: UserProfile | null;
@@ -70,9 +185,12 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
   const [storePreferences, setStorePreferences] = useState<any>(profile?.store_preferences || null);
   const [customizationEnabled, setCustomizationEnabled] = useState(true);
   const [isAddProductHighlighted, setIsAddProductHighlighted] = useState(false);
+  const [addingProduct, setAddingProduct] = useState<Product | null>(null);
+  const [celebratedProduct, setCelebratedProduct] = useState<Product | null>(null);
 
   const [isAddFirstProductHighlighted, setIsAddFirstProductHighlighted] = useState(false);
   const [isAddProductToStoreHighlighted, setIsAddProductToStoreHighlighted] = useState(false);
+  const [isPromoteHighlighted, setIsPromoteHighlighted] = useState(false);
 
   useEffect(() => {
     const handleHighlightAddProduct = () => {
@@ -90,14 +208,28 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
       setTimeout(() => setIsAddProductToStoreHighlighted(false), 9000);
     };
 
+    const handleHighlightPromote = () => {
+      setIsPromoteHighlighted(true);
+      // scroll to the product list so it's clearly visible
+      setTimeout(() => {
+        const firstProduct = document.querySelector('[id^="store-product-"]');
+        if (firstProduct) {
+          firstProduct.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      setTimeout(() => setIsPromoteHighlighted(false), 15000); // Increased duration to match teaching step
+    };
+
     window.addEventListener('mz-highlight-add-product', handleHighlightAddProduct);
     window.addEventListener('mz-highlight-first-product', handleHighlightFirstProduct);
     window.addEventListener('mz-highlight-add-to-store', handleHighlightProductToStore);
+    window.addEventListener('mz-highlight-promote', handleHighlightPromote);
     
     return () => {
       window.removeEventListener('mz-highlight-add-product', handleHighlightAddProduct);
       window.removeEventListener('mz-highlight-first-product', handleHighlightFirstProduct);
       window.removeEventListener('mz-highlight-add-to-store', handleHighlightProductToStore);
+      window.removeEventListener('mz-highlight-promote', handleHighlightPromote);
     };
   }, []);
 
@@ -285,8 +417,9 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
 
     setImportingId(productId);
     
+    const addedProduct = products.find(p => p.id === productId);
+    
     try {
-      await new Promise(r => setTimeout(r, 600));
       const newStore = [...storeProductIds, productId];
       
       try {
@@ -296,9 +429,42 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
       localStorage.setItem(`mz_store_${profile.id}`, JSON.stringify(newStore));
       setStoreProductIds(newStore);
       
-      setFeedback("Propulsé dans ta boutique ! 🚀");
-      setTimeout(() => setFeedback(null), 2500);
-      setTimeout(() => setActiveSegment('my_products'), 800);
+      if (addedProduct) {
+        setActiveSegment('my_products');
+        setShowAllProducts(true); // Force show all to guarantee rendering
+        
+        // Wait for AnimatePresence mode="wait" to finish the exit animation of catalog
+        // We'll wait 500ms to be absolutely sure the DOM has remounted `myProducts`.
+        await new Promise(r => setTimeout(r, 500));
+        
+        setAddingProduct(addedProduct);
+        
+        setTimeout(() => {
+          const el = document.getElementById(`store-product-${addedProduct.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            window.scroll({ top: 300, behavior: 'smooth' });
+          }
+        }, 100);
+        
+        await new Promise(r => setTimeout(r, 4000));
+        setAddingProduct(null);
+        
+        // Let Axis show the final congrats if they need to, but also show the CelebrationOverlay
+        if (sessionStorage.getItem('mz_axis_guide_active') === 'true') {
+          playDopamineHit();
+          setCelebratedProduct(addedProduct);
+        } else {
+          setFeedback("Propulsé dans ta boutique ! 🚀");
+          setTimeout(() => setFeedback(null), 2500);
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 600));
+        setFeedback("Propulsé dans ta boutique ! 🚀");
+        setTimeout(() => setFeedback(null), 2500);
+        setTimeout(() => setActiveSegment('my_products'), 800);
+      }
     } finally {
       setImportingId(null);
     }
@@ -340,11 +506,24 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
     }
   };
 
-  const myProducts = products.filter(p => storeProductIds.includes(p.id));
+  const myProducts = storeProductIds
+    .map(id => products.find(p => p.id === id))
+    .filter((p): p is Product => p !== undefined);
   const availableToImport = products.filter(p => !storeProductIds.includes(p.id) && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="flex flex-col gap-10 animate-fade-in pb-24 bg-[#0f0f12] min-h-screen max-w-full overflow-x-hidden">
+      <AnimatePresence>
+        {celebratedProduct && (
+          <CelebrationOverlay 
+            product={celebratedProduct} 
+            onClose={() => {
+              setCelebratedProduct(null);
+              window.dispatchEvent(new CustomEvent('mz-product-added-to-store'));
+            }} 
+          />
+        )}
+      </AnimatePresence>
       {/* HEADER SECTION */}
       <div className="px-6 sm:px-8 pt-14 flex items-center justify-between">
         <div className="flex flex-col">
@@ -685,9 +864,25 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                      <span className="text-[10px] font-black uppercase tracking-[0.3em]">Mes Actifs Privés</span>
                      <span className="text-[10px] font-black italic">{myProducts.length} ARTICLES</span>
                   </div>
-                  {(showAllProducts ? myProducts : myProducts.slice(0, 3)).map((product) => (
-                    <div key={product.id} className="group transition-all pb-6 border-b border-white/[0.08] last:border-0 last:pb-0">
-                      <div className="flex gap-4 sm:gap-6 items-start">
+                  {(showAllProducts ? myProducts : myProducts.slice(0, 3)).map((product, idx) => (
+                    <motion.div 
+                      id={`store-product-${product.id}`} 
+                      key={product.id} 
+                      className={`group transition-all pb-6 border-b border-white/[0.08] last:border-0 last:pb-0 relative ${addingProduct?.id === product.id ? 'z-10 bg-emerald-900/20 p-4 rounded-3xl -mx-4' : ''}`}
+                      {...(addingProduct?.id === product.id ? {
+                        initial: { opacity: 0, scale: 0.8, x: -50 },
+                        animate: { opacity: 1, scale: 1, x: 0 },
+                        transition: { type: "spring", stiffness: 200, damping: 20 }
+                      } : {})}
+                    >
+                      {addingProduct?.id === product.id && (
+                        <div className="absolute -inset-1 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-3xl animate-[pulse_1.5s_ease-in-out_infinite] pointer-events-none flex items-center justify-end pr-4 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+                          <span className="text-emerald-400 font-black text-[12px] tracking-widest uppercase bg-emerald-900/80 px-3 py-1.5 rounded-full border border-emerald-500/50 shadow-xl flex items-center gap-2">
+                            Produit Ajouté <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex gap-4 sm:gap-6 items-start relative z-10">
                         <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-[18px] overflow-hidden bg-black shrink-0 border border-white/5 relative">
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
@@ -715,8 +910,15 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
 
                           <div className="flex gap-3 mt-2 sm:mt-0 max-w-sm">
                             <button 
-                              onClick={() => setShareProduct(product)} 
-                              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] bg-[#6366f1]/10 border border-[#6366f1]/20 text-[#818cf8] font-bold text-[13px] hover:bg-[#6366f1]/20 transition-all active:scale-95"
+                              onClick={() => {
+                                setShareProduct(product);
+                                setIsPromoteHighlighted(false);
+                              }} 
+                              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] font-bold text-[13px] transition-all active:scale-95 ${
+                                idx === 0 && isPromoteHighlighted
+                                  ? 'bg-[#10b981] border-2 border-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] ring-4 ring-[#10b981]/30 animate-[pulse_1.5s_ease-in-out_infinite] scale-[1.02] z-20 relative'
+                                  : 'bg-[#6366f1]/10 border border-[#6366f1]/20 text-[#818cf8] hover:bg-[#6366f1]/20'
+                              }`}
                             >
                               <Megaphone size={14} /> Promouvoir
                             </button>
@@ -732,7 +934,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
 
                   {myProducts.length > 3 && !showAllProducts && (
@@ -938,10 +1140,10 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                   <button 
                     id="add-to-my-store-btn"
                     onClick={() => {
+                      window.dispatchEvent(new CustomEvent('mz-product-adding-to-store'));
                       handleImport(selectedCatalogProduct.id);
                       setSelectedCatalogProduct(null);
                       setIsAddProductToStoreHighlighted(false);
-                      window.dispatchEvent(new CustomEvent('mz-product-added-to-store'));
                     }}
                     className={`w-full py-4 sm:py-5 rounded-[20px] font-black uppercase tracking-[0.2em] text-[12px] sm:text-[13px] flex items-center justify-center gap-3 transition-all min-h-[50px] relative ${
                       isAddProductToStoreHighlighted 

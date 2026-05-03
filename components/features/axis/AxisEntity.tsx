@@ -123,8 +123,12 @@ export const AxisEntity = () => {
     positionClasses = "fixed top-24 left-4 sm:top-24 sm:left-10 flex-col-reverse items-start";
     messageOriginClass = "origin-top-left";
     triangleClass = "absolute -top-2.5 left-6 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
-  } else if (axisPosition === 'center-modal') {
-    positionClasses = "fixed top-[5%] sm:top-[10%] left-1/2 -translate-x-1/2 flex-col-reverse items-center z-[9999]"; // very high z for modal
+  } else if (axisPosition === 'bottom-left') {
+    positionClasses = "fixed bottom-24 left-4 sm:bottom-12 sm:left-10 flex-col items-start";
+    messageOriginClass = "origin-bottom-left";
+    triangleClass = "absolute -bottom-2.5 left-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]";
+  } else if (axisPosition === 'top-center' || axisPosition === 'center-modal') {
+    positionClasses = "fixed top-[5%] sm:top-[10%] left-1/2 -translate-x-1/2 flex-col-reverse items-center z-[9999]"; // high z for modal
     messageOriginClass = "origin-top";
     triangleClass = "absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
   }
@@ -157,30 +161,48 @@ export const AxisEntity = () => {
              </div>
 
              {axisAction && (
-               <motion.button
-                  onClick={() => {
-                    hideAxis();
-                    setTimeout(() => {
-                      if (axisAction?.action) {
-                        axisAction.action();
-                      }
-                    }, 600);
-                  }}
-                  className="mt-5 w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border border-yellow-300/50"
-                  animate={{ 
-                    scale: [1, 1.02, 1],
-                    boxShadow: [
-                      "0 0 20px rgba(250,204,21,0.5)",
-                      "0 0 35px rgba(250,204,21,0.8)",
-                      "0 0 20px rgba(250,204,21,0.5)"
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-               >
-                 {axisAction.label} <span className="text-[16px]">⚡</span>
-               </motion.button>
+               <div className="mt-5 flex flex-col gap-3">
+                 <motion.button
+                    onClick={() => {
+                      hideAxis();
+                      setTimeout(() => {
+                        if (axisAction?.action) {
+                          axisAction.action();
+                        }
+                      }, 600);
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border border-yellow-300/50"
+                    animate={{ 
+                      scale: [1, 1.02, 1],
+                      boxShadow: [
+                        "0 0 20px rgba(250,204,21,0.5)",
+                        "0 0 35px rgba(250,204,21,0.8)",
+                        "0 0 20px rgba(250,204,21,0.5)"
+                      ]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                 >
+                   {axisAction.label} <span className="text-[16px]">⚡</span>
+                 </motion.button>
+
+                 {axisAction.secondaryLabel && axisAction.secondaryAction && (
+                   <button
+                      onClick={() => {
+                        hideAxis();
+                        setTimeout(() => {
+                          if (axisAction?.secondaryAction) {
+                            axisAction.secondaryAction();
+                          }
+                        }, 600);
+                      }}
+                      className="w-full py-2 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 font-bold text-[11px] rounded-xl uppercase tracking-widest transition-all border border-white/5"
+                   >
+                     {axisAction.secondaryLabel}
+                   </button>
+                 )}
+               </div>
              )}
           </motion.div>
         )}

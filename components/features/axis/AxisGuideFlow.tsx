@@ -16,22 +16,27 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
     // Étape 1 : Salutation
     setTimeout(() => {
       triggerAxisMessage(
-        `Salut ${userName}… moi c'est Axis. 👁️\nSi tu es ici, c'est que tu veux avancer. ⚡\nJe peux te guider… si tu es prêt.`,
+        `Salut ${userName}… moi c'est Axis. 👁️\nTu veux changer ta situation financiere … sinon tu ne serais pas ici.\nJe peux t'aider si Tu es prêt passer à l'action.?`,
         'guiding',
-        0, // Reste affiché jusqu'à ce que l'utilisateur clique
+        0, 
         {
           label: "Je suis prêt",
           action: () => {
-            // Lancer le scroll en premier
-            window.dispatchEvent(new CustomEvent('mz-scroll-to-shop'));
+            triggerAxisMessage("Initialisation...", "progression", 1500, undefined, "bottom-right");
             
-            // Attendre la fin du scroll avant d'afficher le message et de mettre en évidence la boutique
             setTimeout(() => {
-              triggerAxisMessage("Super. 🔥\nOn commence simplement.\nEntre dans ta boutique… je vais te montrer. 🛒", "guiding", 9000);
-              window.dispatchEvent(new CustomEvent('mz-highlight-shop'));
-            }, 1600);
+              // Lancer le scroll en premier
+              window.dispatchEvent(new CustomEvent('mz-scroll-to-shop'));
+              
+              // Attendre la fin du scroll avant d'afficher le message et de mettre en évidence la boutique
+              setTimeout(() => {
+                triggerAxisMessage("Super. 🔥\nOn commence simplement.\nEntre dans ta boutique… je vais te montrer. 🛒", "guiding", 9000, undefined, "bottom-left");
+                window.dispatchEvent(new CustomEvent('mz-highlight-shop'));
+              }, 1200);
+            }, 1000);
             
             window.addEventListener('mz-shop-opened', () => {
+              triggerAxisMessage("Scan de la boutique...", "progression", 1500, undefined, "bottom-left");
               setTimeout(() => {
                 const addBtn = document.getElementById('add-product-btn-empty') || document.getElementById('add-product-btn');
                 
@@ -57,19 +62,21 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
 
                   // Afficher le message après le scroll
                   setTimeout(() => {
-                    triggerAxisMessage("Tu y es… 👁️\nC’est ici que tout bascule.\nAjoute ton premier produit.", "guiding", 9000);
+                    triggerAxisMessage("Tu y es… 👁️\nC’est ici que tout bascule.\nAjoute ton premier produit.", "guiding", 9000, undefined, "bottom-right");
                     window.dispatchEvent(new CustomEvent('mz-highlight-add-product'));
                   }, 1600);
                 } else {
-                  triggerAxisMessage("Tu y es… 👁️\nC’est ici que tout bascule.\nAjoute ton premier produit.", "guiding", 9000);
+                  triggerAxisMessage("Tu y es… 👁️\nC’est ici que tout bascule.\nAjoute ton premier produit.", "guiding", 9000, undefined, "bottom-right");
                   window.dispatchEvent(new CustomEvent('mz-highlight-add-product'));
                 }
-              }, 500);
+              }, 1000);
             }, { once: true });
             
             // When they open the catalog, highlight the first product
             window.addEventListener('mz-catalog-opened', () => {
+               triggerAxisMessage("Recherche d'opportunités...", "progression", 1500, undefined, "bottom-right");
                setTimeout(() => {
+                 triggerAxisMessage("Voici les actifs disponibles.\nSélectionne le premier pour l'examiner. 🔍", "action", 8000, undefined, "bottom-left");
                  window.dispatchEvent(new CustomEvent('mz-highlight-first-product'));
                  
                  const btn = document.getElementById('first-catalog-product-btn');
@@ -89,22 +96,28 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                    };
                    window.requestAnimationFrame(step);
                  }
-               }, 600);
+               }, 1500);
             }, { once: true });
             
             // Final step: they open product details
             window.addEventListener('mz-product-details-opened', () => {
+               triggerAxisMessage("Calcul du rendement...", "progression", 1500, undefined, "top-center");
                setTimeout(() => {
                  window.dispatchEvent(new CustomEvent('mz-highlight-add-to-store'));
-                 // Use center-modal position
+                 // Use top-center position to be high above modal, don't overlap button
                  triggerAxisMessage(
-                   "On y est presque ⚡\nAjoute ce produit dans ta boutique maintenant\n\nUn simple clic…\net tu te rapproches de tes premiers revenus 💸",
+                   "Tu es à un pas. ⚡\nAjoute ce produit dans ta boutique.\nUn simple clic…\net tout démarre vraiment. 💸",
                    "success",
                    9000,
                    undefined,
-                   "center-modal"
+                   "top-center"
                  );
-               }, 500);
+               }, 1500);
+            }, { once: true });
+            
+            // They click add to store
+            window.addEventListener('mz-product-adding-to-store', () => {
+               triggerAxisMessage("Intégration de l'actif...", "progression", 2000, undefined, "top-center");
             }, { once: true });
             
             // Tutorial complete
@@ -112,14 +125,110 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                sessionStorage.setItem('mz_axis_guide_active', 'false');
                setTimeout(() => {
                  triggerAxisMessage(
-                   "Félicitations. 🏆\nTon premier produit est en ligne !\nTu es maintenant prêt à conquérir.",
+                   "Bien joué ⚡\nMaintenant… on passe à l’étape où tu vas gagner tes premiers gains 💸\nTu veux que je te montre comment ça marche ?",
                    "success",
-                   8000
-                 );
-               }, 800);
+                   15000,
+                   {
+                     label: "Let's go 💸",
+                     action: () => {
+                        const showStep4 = () => {
+                          triggerAxisMessage(
+                            <div className="flex flex-col gap-3">
+                              <span className="font-extrabold text-[#10b981] text-lg lg:text-xl">Et le meilleur ? 🎯</span>
+                              <span className="text-white text-[15px]">Ton argent s'affiche sur ton solde en <span className="text-[#10b981] font-bold">temps réel ⚡</span></span>
+                              <span className="text-white text-[15px]">Tu retires quand tu veux… directement sur ton <span className="text-[#f59e0b] font-black tracking-wide">Mobile Money 📱💸</span></span>
+                            </div>,
+                            "success",
+                            15000,
+                            {
+                              label: "C'est parti 🔥",
+                              action: () => {
+                                // Hide current axis for 5s, then show the final one
+                                setTimeout(() => {
+                                  triggerAxisMessage(
+                                    <div className="flex flex-col gap-3">
+                                      <span className="font-extrabold text-[#10b981] text-[16px] lg:text-lg">C’est le moment de faire exploser tes ventes ⚡</span>
+                                      <span className="text-white text-[14px]">Clique sur <span className="text-white font-black uppercase bg-[#6366f1] px-2 py-0.5 rounded shadow-sm">Promouvoir</span> et partage ton produit 📲💸</span>
+                                    </div>,
+                                    "action",
+                                    30000,
+                                    {
+                                      label: "J'ai compris",
+                                      action: () => {},
+                                      secondaryLabel: "Retour",
+                                      secondaryAction: showStep4
+                                    },
+                                    "top-center"
+                                  );
+                                  window.dispatchEvent(new CustomEvent('mz-highlight-promote'));
+                                }, 5000);
+                              },
+                              secondaryLabel: "Retour",
+                              secondaryAction: showStep3
+                            },
+                            "bottom-right"
+                          );
+                        };
+
+                        const showStep3 = () => {
+                          triggerAxisMessage(
+                            <div className="flex flex-col gap-3">
+                              <span className="text-white text-[15px]">Tu les partages autour de toi ou sur tes <span className="font-bold text-[#60a5fa]">réseaux sociaux 🌐</span>…</span>
+                              <span className="text-white text-[15px]">Chaque fois que quelqu’un achète grâce à toi…</span>
+                              <span className="font-black text-[#f59e0b] bg-[#f59e0b]/20 px-2 py-1 rounded text-lg w-fit">tu gagnes une commission 💰✨</span>
+                            </div>,
+                            "guiding",
+                            15000,
+                            {
+                              label: "Suivant ➔",
+                              action: showStep4,
+                              secondaryLabel: "Retour",
+                              secondaryAction: showStep2
+                            },
+                            "bottom-right"
+                          );
+                        };
+
+                        const showStep2 = () => {
+                          triggerAxisMessage(
+                            <div className="flex flex-col gap-3">
+                              <span className="font-extrabold text-[#10b981] text-lg lg:text-xl">Écoute bien ⚡</span>
+                              <span className="text-white text-[15px]">Le principe est simple…<br/>Le ou les produits que tu as ajoutés dans ta boutique…</span>
+                              <span className="font-bold text-[#10b981] bg-[#10b981]/20 px-2 py-1 rounded w-fit">vont travailler pour toi ⚙️</span>
+                            </div>,
+                            "guiding",
+                            15000,
+                            {
+                              label: "Suivant ➔",
+                              action: showStep3,
+                              secondaryLabel: "Retour",
+                              secondaryAction: () => {
+                                triggerAxisMessage(
+                                  "Bien joué ⚡\nMaintenant… on passe à l’étape où tu vas gagner tes premiers gains 💸\nTu veux que je te montre comment ça marche ?",
+                                  "success",
+                                  15000,
+                                  {
+                                    label: "Let's go 💸",
+                                    action: showStep2
+                                  },
+                                  "bottom-right"
+                                );
+                              }
+                            },
+                            "bottom-right"
+                          );
+                        };
+
+                        showStep2();
+                      }
+                    },
+                    "bottom-right"
+                  );
+                }, 10000);
             }, { once: true });
           }
-        }
+        },
+        "bottom-right"
       );
     }, 1500);
   }, [session, userProfile, triggerAxisMessage]);

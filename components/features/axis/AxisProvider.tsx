@@ -5,9 +5,11 @@ export type AxisState = 'idle' | 'guiding' | 'action' | 'progression' | 'success
 export interface AxisAction {
   label: string;
   action: () => void;
+  secondaryLabel?: string;
+  secondaryAction?: () => void;
 }
 
-export type AxisPosition = 'bottom-right' | 'top-right' | 'top-left' | 'center-modal';
+export type AxisPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center-modal' | 'top-center';
 
 interface AxisContextType {
   axisState: AxisState;
