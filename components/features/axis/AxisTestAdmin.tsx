@@ -73,6 +73,15 @@ export const AxisTestAdmin = () => {
              >
                Forcer la disparition
              </button>
+             <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mz-navigate-dashboard'));
+                setTimeout(() => window.dispatchEvent(new CustomEvent('mz-force-welcome-guide')), 100);
+              }}
+              className="px-6 py-3 bg-indigo-500/20 text-indigo-400 rounded-xl font-bold border border-indigo-500/50 hover:bg-indigo-500/30 transition-all"
+             >
+               Tester le Guide d'Accueil (Bot)
+             </button>
           </div>
         </div>
       </GoldBorderCard>

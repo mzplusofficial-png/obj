@@ -66,11 +66,36 @@ export const GlobalView: React.FC<any> = ({
   useEffect(() => {
     const handleHighlight = () => {
       setIsShopHighlighted(true);
-      window.scrollTo({ top: document.body.scrollHeight / 3, behavior: 'smooth' }); // Scroll slightly down to ensure it's in view
-      setTimeout(() => setIsShopHighlighted(false), 8000); // Remove after 8 seconds
+      setTimeout(() => setIsShopHighlighted(false), 9000); 
     };
+
+    const handleScroll = () => {
+      const shopBtn = document.getElementById('shop-category-btn');
+      const targetY = shopBtn ? shopBtn.getBoundingClientRect().top + window.scrollY - (window.innerHeight / 2) + 50 : 300;
+      
+      const startY = window.scrollY;
+      const difference = targetY - startY;
+      let startTime: number | null = null;
+      const duration = 1500; // 1.5 seconds
+
+      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const step = (now: number) => {
+        if (!startTime) startTime = now;
+        const time = now - startTime;
+        const fraction = easeInOutCubic(Math.min(time / duration, 1));
+        window.scrollTo(0, startY + difference * fraction);
+        if (time < duration) window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    };
+
     window.addEventListener('mz-highlight-shop', handleHighlight);
-    return () => window.removeEventListener('mz-highlight-shop', handleHighlight);
+    window.addEventListener('mz-scroll-to-shop', handleScroll);
+    return () => {
+      window.removeEventListener('mz-highlight-shop', handleHighlight);
+      window.removeEventListener('mz-scroll-to-shop', handleScroll);
+    };
   }, []);
 
   const currentBalance = wallet?.balance || 0;
@@ -374,11 +399,16 @@ export const GlobalView: React.FC<any> = ({
               className="flex flex-col items-center gap-3 active:scale-95 transition-transform"
             >
               <button
+                id={cat.id === 'business' ? 'shop-category-btn' : undefined}
                 onClick={() => {
                   if (cat.id === 'business') {
                     onSwitchTab('affiliation');
                     setIsShopHighlighted(false); // remove highlight on click
-                    triggerAxisMessage("Votre empire commence ici. Sécurisez vos ventes.", "action", 4500);
+                    window.dispatchEvent(new CustomEvent('mz-shop-opened'));
+                    
+                    if (sessionStorage.getItem('mz_axis_guide_active') !== 'true') {
+                      triggerAxisMessage("Votre empire commence ici. Sécurisez vos ventes.", "action", 4500);
+                    }
                   } else {
                     setActiveCategory(cat.id as any);
                     if (cat.id === 'referral') {
@@ -388,13 +418,30 @@ export const GlobalView: React.FC<any> = ({
                     }
                   }
                 }}
-                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-500
+                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-700 ease-out
                   ${cat.id === 'business' && isShopHighlighted 
-                      ? 'bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/20 border-[3px] border-[#C9A84C] shadow-[0_0_50px_rgba(201,168,76,0.8)] scale-[1.12] animate-[pulse_1.5s_ease-in-out_infinite] z-50' 
+                      ? 'bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/30 border-[3px] border-[#C9A84C] shadow-[0_0_60px_rgba(201,168,76,0.8)] scale-110 z-50 ring-4 ring-[#C9A84C]/50 ring-offset-4 ring-offset-[#0A0908]' 
                       : 'bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]'
                   }
                 `}
               >
+                {/* Ping effect when highlighted */}
+                {cat.id === 'business' && isShopHighlighted && (
+                  <>
+                    <div className="absolute inset-0 rounded-full border-[2px] border-[#C9A84C] animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
+                    <motion.div 
+                      className="absolute -top-16 flex flex-col items-center pointer-events-none"
+                      initial={{ y: -10, opacity: 0 }}
+                      animate={{ y: [0, 8, 0], opacity: 1 }}
+                      transition={{ y: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.3 } }}
+                    >
+                      <div className="bg-[#C9A84C] text-black font-black text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(201,168,76,0.6)]">
+                        Clique ici
+                      </div>
+                      <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#C9A84C] mt-1"></div>
+                    </motion.div>
+                  </>
+                )}
                 <div className="absolute inset-0 rounded-full bg-[var(--color-gold-main)]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {cat.emoji}
                 {cat.badge && (

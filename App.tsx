@@ -39,6 +39,7 @@ import { PremiumPopup } from './components/PremiumPopup.tsx';
 import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate.tsx';
 import { requestNotificationPermission, onMessageListener } from './services/firebase.ts';
 import { useAxis } from './components/features/axis/AxisProvider.tsx';
+import { AxisGuideFlow } from './components/features/axis/AxisGuideFlow.tsx';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -81,43 +82,12 @@ const App: React.FC = () => {
   }, [loading]);
 
   useEffect(() => {
-    if (loading || initSequence || !session) return;
-    
-    // Ensure we only show the greeting once per session to avoid spamming on reload
-    if (sessionStorage.getItem('mz_axis_welcomed') === 'true') return;
-
-    const showAxisGreeting = () => {
-      const userName = userProfile?.full_name || session?.user?.user_metadata?.full_name?.split(' ')[0] || "partenaire";
-      
-      setTimeout(() => {
-        sessionStorage.setItem('mz_axis_welcomed', 'true');
-        triggerAxisMessage(
-          `Salut ${userName}… moi c'est Axis. 👁️\nSi tu es ici, c'est que tu veux avancer. ⚡\nJe peux te guider… si tu es prêt.`,
-          'guiding',
-          0,
-          {
-            label: "Je suis prêt",
-            action: () => {
-              triggerAxisMessage("Super 🔥\nOn commence simplement.\nEntre dans ta boutique… je vais te montrer. 🛒", "guiding", 7000);
-              window.dispatchEvent(new CustomEvent('mz-highlight-shop'));
-            }
-          }
-        );
-      }, 1500);
+    const handleNavigateDashboard = () => {
+      setActiveTab('dashboard');
     };
-
-    const isInstalled = localStorage.getItem('mz_pwa_installed') === 'true' || window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-    const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
-    const recentlyPrompted = lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000;
-
-    if (isInstalled || recentlyPrompted) {
-       showAxisGreeting();
-    } else {
-       // Wait for the PWA banner to be handled before showing Axis
-       window.addEventListener('mz-pwa-handled', showAxisGreeting, { once: true });
-       return () => window.removeEventListener('mz-pwa-handled', showAxisGreeting);
-    }
-  }, [loading, initSequence, session, userProfile, triggerAxisMessage]);
+    window.addEventListener('mz-navigate-dashboard', handleNavigateDashboard);
+    return () => window.removeEventListener('mz-navigate-dashboard', handleNavigateDashboard);
+  }, []);
 
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
@@ -664,6 +634,7 @@ const App: React.FC = () => {
       {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
       {activeTab === 'sql_console' && isAdmin && <SQLConsole profile={userProfile} />}
       {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
+      <AxisGuideFlow session={session} userProfile={userProfile} isReady={!loading && !initSequence} />
       <PWAInstallBanner />
     </DashboardLayout>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
@@ -69,6 +69,37 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
   const [showManageDropdown, setShowManageDropdown] = useState(false);
   const [storePreferences, setStorePreferences] = useState<any>(profile?.store_preferences || null);
   const [customizationEnabled, setCustomizationEnabled] = useState(true);
+  const [isAddProductHighlighted, setIsAddProductHighlighted] = useState(false);
+
+  const [isAddFirstProductHighlighted, setIsAddFirstProductHighlighted] = useState(false);
+  const [isAddProductToStoreHighlighted, setIsAddProductToStoreHighlighted] = useState(false);
+
+  useEffect(() => {
+    const handleHighlightAddProduct = () => {
+      setIsAddProductHighlighted(true);
+      setTimeout(() => setIsAddProductHighlighted(false), 9000);
+    };
+
+    const handleHighlightFirstProduct = () => {
+      setIsAddFirstProductHighlighted(true);
+      setTimeout(() => setIsAddFirstProductHighlighted(false), 9000);
+    };
+
+    const handleHighlightProductToStore = () => {
+      setIsAddProductToStoreHighlighted(true);
+      setTimeout(() => setIsAddProductToStoreHighlighted(false), 9000);
+    };
+
+    window.addEventListener('mz-highlight-add-product', handleHighlightAddProduct);
+    window.addEventListener('mz-highlight-first-product', handleHighlightFirstProduct);
+    window.addEventListener('mz-highlight-add-to-store', handleHighlightProductToStore);
+    
+    return () => {
+      window.removeEventListener('mz-highlight-add-product', handleHighlightAddProduct);
+      window.removeEventListener('mz-highlight-first-product', handleHighlightFirstProduct);
+      window.removeEventListener('mz-highlight-add-to-store', handleHighlightProductToStore);
+    };
+  }, []);
 
   // Fetch platform settings
   useEffect(() => {
@@ -630,10 +661,22 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                   </p>
 
                   <button 
-                    onClick={() => setActiveSegment('import_catalog')}
-                    className="w-full max-w-[320px] py-[18px] rounded-[30px] bg-[#d5aa52] text-[#121212] font-black text-[16px] flex items-center justify-center gap-3 transition-all active:scale-95 hover:bg-[#ebd281]"
+                    id="add-product-btn-empty"
+                    onClick={() => {
+                      setActiveSegment('import_catalog');
+                      setIsAddProductHighlighted(false);
+                      window.dispatchEvent(new CustomEvent('mz-catalog-opened'));
+                    }}
+                    className={`w-full max-w-[320px] py-[18px] rounded-[30px] font-black text-[16px] flex items-center justify-center gap-3 transition-all duration-700 active:scale-95 ${
+                      isAddProductHighlighted 
+                        ? 'bg-[#d5aa52]/20 text-[#d5aa52] border-2 border-[#d5aa52] ring-4 ring-[#d5aa52]/40 ring-offset-4 ring-offset-[#050505] shadow-[0_0_50px_rgba(213,170,82,0.8)] scale-105 animate-[pulse_1.5s_ease-in-out_infinite] z-50'
+                        : 'bg-[#d5aa52] text-[#121212] hover:bg-[#ebd281]'
+                    }`}
                   >
-                    <Plus size={22} strokeWidth={3} /> Ajouter un produit
+                    {isAddProductHighlighted && (
+                      <div className="absolute inset-0 rounded-[30px] border border-[#d5aa52] animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
+                    )}
+                    <Plus size={22} strokeWidth={3} className={isAddProductHighlighted ? "text-[#d5aa52]" : ""} /> Ajouter un produit
                   </button>
                 </div>
               ) : (
@@ -703,10 +746,22 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
 
                   {/* ADD PRODUCT BUTTON AT THE END OF LIST */}
                   <button 
-                    onClick={() => setActiveSegment('import_catalog')}
-                    className="w-full h-24 rounded-[32px] bg-white/[0.02] border-2 border-dashed border-white/[0.05] flex items-center justify-center gap-4 text-white/20 hover:text-emerald-500 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group active:scale-[0.98]"
+                    id="add-product-btn"
+                    onClick={() => {
+                      setActiveSegment('import_catalog');
+                      setIsAddProductHighlighted(false);
+                      window.dispatchEvent(new CustomEvent('mz-catalog-opened'));
+                    }}
+                    className={`w-full h-24 rounded-[32px] flex items-center justify-center gap-4 transition-all duration-700 group active:scale-[0.98] ${
+                      isAddProductHighlighted
+                        ? 'bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 ring-4 ring-emerald-500/40 ring-offset-4 ring-offset-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.8)] scale-[1.02] z-50 animate-[pulse_1.5s_ease-in-out_infinite]'
+                        : 'bg-white/[0.02] border-2 border-dashed border-white/[0.05] text-white/20 hover:text-emerald-500 hover:border-emerald-500/30 hover:bg-emerald-500/5'
+                    }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-black transition-all">
+                    {isAddProductHighlighted && (
+                      <div className="absolute inset-0 rounded-[32px] border border-emerald-500 animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
+                    )}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isAddProductHighlighted ? 'bg-emerald-500 text-black' : 'bg-white/5 group-hover:bg-emerald-500 group-hover:text-black'}`}>
                       <Plus size={20} strokeWidth={3} />
                     </div>
                     <span className="text-[11px] font-black uppercase tracking-[0.3em]">Ajouter un produit</span>
@@ -758,8 +813,11 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableToImport.map((product) => (
-                    <div key={product.id} className="flex gap-4 items-center bg-[#12121a] p-4 rounded-3xl border border-white/5 group hover:bg-white/5 hover:border-white/10 transition-all cursor-pointer" onClick={() => setSelectedCatalogProduct(product)}>
+                  {availableToImport.map((product, idx) => (
+                    <div key={product.id} className="flex gap-4 items-center bg-[#12121a] p-4 rounded-3xl border border-white/5 group hover:bg-white/5 hover:border-white/10 transition-all cursor-pointer" onClick={() => {
+                      setSelectedCatalogProduct(product);
+                      window.dispatchEvent(new CustomEvent('mz-product-details-opened'));
+                    }}>
                       <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black shrink-0 shadow-lg relative">
                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
@@ -770,13 +828,22 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                           +<CurrencyDisplay amount={product.commission_amount} className="inline px-1" /> COM
                         </p>
                         <button 
+                          id={idx === 0 ? "first-catalog-product-btn" : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCatalogProduct(product);
+                            window.dispatchEvent(new CustomEvent('mz-product-details-opened'));
                           }}
                           disabled={importingId === product.id}
-                          className="w-full py-2 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all active:scale-95"
+                          className={`w-full py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                            idx === 0 && isAddFirstProductHighlighted
+                              ? 'bg-[#10b981] text-black border-2 border-[#10b981] ring-4 ring-[#10b981]/40 ring-offset-4 ring-offset-[#050505] shadow-[0_0_30px_rgba(16,185,129,0.8)] scale-[1.02] animate-[pulse_1.5s_ease-in-out_infinite]'
+                              : 'border border-white/10 text-white hover:bg-emerald-500 hover:text-black hover:border-emerald-500'
+                          }`}
                         >
+                          {idx === 0 && isAddFirstProductHighlighted && (
+                            <div className="absolute inset-0 rounded-xl border border-emerald-500 animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
+                          )}
                           {importingId === product.id ? (
                             <Loader2 size={14} className="animate-spin" />
                           ) : (
@@ -869,12 +936,22 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
 
                 <div className="flex flex-col gap-3 mt-2 flex-shrink-0">
                   <button 
+                    id="add-to-my-store-btn"
                     onClick={() => {
                       handleImport(selectedCatalogProduct.id);
                       setSelectedCatalogProduct(null);
+                      setIsAddProductToStoreHighlighted(false);
+                      window.dispatchEvent(new CustomEvent('mz-product-added-to-store'));
                     }}
-                    className="w-full py-4 sm:py-5 rounded-[20px] bg-emerald-500 text-black font-black uppercase tracking-[0.2em] text-[12px] sm:text-[13px] flex items-center justify-center gap-3 hover:bg-emerald-400 active:scale-95 transition-all shadow-[0_10px_30px_rgba(16,185,129,0.3)] min-h-[50px]"
+                    className={`w-full py-4 sm:py-5 rounded-[20px] font-black uppercase tracking-[0.2em] text-[12px] sm:text-[13px] flex items-center justify-center gap-3 transition-all min-h-[50px] relative ${
+                      isAddProductToStoreHighlighted 
+                        ? 'bg-[#10b981] text-black border-2 border-[#10b981] ring-4 ring-[#10b981]/40 ring-offset-4 ring-offset-[#16161a] shadow-[0_0_50px_rgba(16,185,129,0.8)] scale-105 animate-[pulse_1.5s_ease-in-out_infinite] z-50'
+                        : 'bg-emerald-500 text-black shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:bg-emerald-400 active:scale-95'
+                    }`}
                   >
+                    {isAddProductToStoreHighlighted && (
+                      <div className="absolute inset-0 rounded-[20px] border-2 border-emerald-500 animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
+                    )}
                     <Plus size={20} strokeWidth={3} /> Ajouter à ma boutique
                   </button>
                   

@@ -7,12 +7,15 @@ export interface AxisAction {
   action: () => void;
 }
 
+export type AxisPosition = 'bottom-right' | 'top-right' | 'top-left' | 'center-modal';
+
 interface AxisContextType {
   axisState: AxisState;
   axisMessage: string | ReactNode | null;
   axisAction: AxisAction | null;
+  axisPosition: AxisPosition;
   setAxisState: (state: AxisState) => void;
-  triggerAxisMessage: (message: string | ReactNode, state?: AxisState, duration?: number, action?: AxisAction) => void;
+  triggerAxisMessage: (message: string | ReactNode, state?: AxisState, duration?: number, action?: AxisAction, position?: AxisPosition) => void;
   hideAxis: () => void;
   isVisible: boolean;
 }
@@ -23,16 +26,24 @@ export function AxisProvider({ children }: { children: ReactNode }) {
   const [axisState, setAxisState] = useState<AxisState>('inactive');
   const [axisMessage, setAxisMessage] = useState<string | ReactNode | null>(null);
   const [axisAction, setAxisAction] = useState<AxisAction | null>(null);
+  const [axisPosition, setAxisPosition] = useState<AxisPosition>('bottom-right');
   const [isVisible, setIsVisible] = useState(false);
 
-  const triggerAxisMessage = useCallback((message: string | ReactNode, state: AxisState = 'guiding', duration = 5000, action?: AxisAction) => {
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const triggerAxisMessage = useCallback((message: string | ReactNode, state: AxisState = 'guiding', duration = 5000, action?: AxisAction, position: AxisPosition = 'bottom-right') => {
     setAxisState(state);
     setAxisMessage(message);
     setAxisAction(action || null);
+    setAxisPosition(position);
     setIsVisible(true);
     
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
     if (duration > 0) {
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setAxisMessage(null);
         setAxisAction(null);
         setAxisState('inactive');
@@ -42,6 +53,9 @@ export function AxisProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const hideAxis = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     setIsVisible(false);
     setAxisMessage(null);
     setAxisAction(null);
@@ -53,6 +67,7 @@ export function AxisProvider({ children }: { children: ReactNode }) {
       axisState,
       axisMessage,
       axisAction,
+      axisPosition,
       setAxisState,
       triggerAxisMessage,
       hideAxis,

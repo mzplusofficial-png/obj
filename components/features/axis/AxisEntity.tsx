@@ -101,7 +101,7 @@ const AxisLogo = ({ state }: { state: AxisState }) => {
 };
 
 export const AxisEntity = () => {
-  const { axisState, axisMessage, axisAction, isVisible, hideAxis } = useAxis();
+  const { axisState, axisMessage, axisAction, axisPosition, isVisible, hideAxis } = useAxis();
   
   const config = AXIS_CONFIG[axisState];
 
@@ -110,23 +110,46 @@ export const AxisEntity = () => {
   // The orb is always there as an ambient companion, unless it's explicitly 'inactive' without being visible.
   const showOrb = isVisible || axisState !== 'inactive';
 
+  let positionClasses = "fixed bottom-24 right-4 sm:bottom-12 sm:right-10 flex-col items-end";
+  let messageOriginClass = "origin-bottom-right";
+  let triangleClass = "absolute -bottom-2.5 right-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]";
+  let triangleStyle = { borderColor: config.color };
+
+  if (axisPosition === 'top-right') {
+    positionClasses = "fixed top-24 right-4 sm:top-24 sm:right-10 flex-col-reverse items-end";
+    messageOriginClass = "origin-top-right";
+    triangleClass = "absolute -top-2.5 right-6 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
+  } else if (axisPosition === 'top-left') {
+    positionClasses = "fixed top-24 left-4 sm:top-24 sm:left-10 flex-col-reverse items-start";
+    messageOriginClass = "origin-top-left";
+    triangleClass = "absolute -top-2.5 left-6 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
+  } else if (axisPosition === 'center-modal') {
+    positionClasses = "fixed top-[5%] sm:top-[10%] left-1/2 -translate-x-1/2 flex-col-reverse items-center z-[9999]"; // very high z for modal
+    messageOriginClass = "origin-top";
+    triangleClass = "absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
+  }
+
   return (
-    <div className="fixed bottom-24 right-4 sm:bottom-12 sm:right-10 z-[999] flex flex-col items-end gap-5 pointer-events-none">
+    <motion.div 
+      layout 
+      className={`${positionClasses} z-[999] flex gap-5 pointer-events-none`}
+      transition={{ type: "spring", stiffness: 100, damping: 20 }}
+    >
       <AnimatePresence mode="wait">
         {showMessage && (
           <motion.div
             key="axis-message"
-            initial={{ opacity: 0, y: 10, scale: 0.98, x: 5 }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 5 }}
-            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            className="pointer-events-auto bg-[#0a0908]/95 backdrop-blur-3xl border-2 p-5 rounded-2xl max-w-[300px] sm:max-w-[340px] relative origin-bottom-right"
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className={`pointer-events-auto bg-[#0a0908]/95 backdrop-blur-3xl border-2 p-5 rounded-2xl max-w-[300px] sm:max-w-[340px] relative ${messageOriginClass}`}
             style={{ borderColor: config.color, boxShadow: `0 15px 40px ${config.glow}` }}
           >
              {/* Small triangle pointing to the orb */}
              <div 
-                className="absolute -bottom-2.5 right-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]"
-                style={{ borderColor: config.color }}
+                className={triangleClass}
+                style={triangleStyle}
              ></div>
              
              <div className="text-white text-[14px] sm:text-[15px] font-semibold tracking-wide leading-relaxed whitespace-pre-wrap">
@@ -136,8 +159,12 @@ export const AxisEntity = () => {
              {axisAction && (
                <motion.button
                   onClick={() => {
-                    axisAction.action();
                     hideAxis();
+                    setTimeout(() => {
+                      if (axisAction?.action) {
+                        axisAction.action();
+                      }
+                    }, 600);
                   }}
                   className="mt-5 w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border border-yellow-300/50"
                   animate={{ 
@@ -163,10 +190,10 @@ export const AxisEntity = () => {
         {showOrb && (
           <motion.div
             key="axis-orb"
-            initial={{ opacity: 0, scale: 0.9, y: 5 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 5 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
             className="pointer-events-auto cursor-pointer"
             onClick={() => {
               if (showMessage) hideAxis();
@@ -176,6 +203,6 @@ export const AxisEntity = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
