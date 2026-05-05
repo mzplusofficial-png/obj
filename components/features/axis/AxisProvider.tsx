@@ -9,7 +9,7 @@ export interface AxisAction {
   secondaryAction?: () => void;
 }
 
-export type AxisPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center-modal' | 'top-center';
+export type AxisPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center-modal' | 'top-center' | 'smart';
 
 interface AxisContextType {
   axisState: AxisState;

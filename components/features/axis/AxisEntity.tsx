@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAxis, AxisState } from './AxisProvider';
 
@@ -103,6 +103,31 @@ const AxisLogo = ({ state }: { state: AxisState }) => {
 export const AxisEntity = () => {
   const { axisState, axisMessage, axisAction, axisPosition, isVisible, hideAxis } = useAxis();
   
+  const [smartPosition, setSmartPosition] = useState<'top-right' | 'bottom-right'>('bottom-right');
+
+  useEffect(() => {
+    if (axisPosition === 'smart' && isVisible) {
+      const checkPosition = () => {
+        // Look for any highlighted element
+        const highlighted = document.querySelector('.mz-highlighted-btn') || 
+                            document.querySelector('.animate-\\[pulse_1\\.5s_ease-in-out_infinite\\]') || 
+                            document.querySelector('.ring-4.ring-\\[\\#10b981\\]\\/30');
+        if (highlighted) {
+          const rect = highlighted.getBoundingClientRect();
+          // If the element is in the bottom half of the screen, put Axis at the top.
+          if (rect.top > window.innerHeight / 2) {
+            setSmartPosition('top-right');
+          } else {
+            setSmartPosition('bottom-right');
+          }
+        }
+      };
+      checkPosition();
+      const interval = setInterval(checkPosition, 500);
+      return () => clearInterval(interval);
+    }
+  }, [axisPosition, isVisible]);
+
   const config = AXIS_CONFIG[axisState];
 
   const showMessage = isVisible && axisMessage !== null;
@@ -110,24 +135,26 @@ export const AxisEntity = () => {
   // The orb is always there as an ambient companion, unless it's explicitly 'inactive' without being visible.
   const showOrb = isVisible || axisState !== 'inactive';
 
+  const effectivePosition = axisPosition === 'smart' ? smartPosition : axisPosition;
+
   let positionClasses = "fixed bottom-24 right-4 sm:bottom-12 sm:right-10 flex-col items-end";
   let messageOriginClass = "origin-bottom-right";
   let triangleClass = "absolute -bottom-2.5 right-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]";
-  let triangleStyle = { borderColor: config.color };
+  const triangleStyle = { borderColor: config.color };
 
-  if (axisPosition === 'top-right') {
+  if (effectivePosition === 'top-right') {
     positionClasses = "fixed top-24 right-4 sm:top-24 sm:right-10 flex-col-reverse items-end";
     messageOriginClass = "origin-top-right";
     triangleClass = "absolute -top-2.5 right-6 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
-  } else if (axisPosition === 'top-left') {
+  } else if (effectivePosition === 'top-left') {
     positionClasses = "fixed top-24 left-4 sm:top-24 sm:left-10 flex-col-reverse items-start";
     messageOriginClass = "origin-top-left";
     triangleClass = "absolute -top-2.5 left-6 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";
-  } else if (axisPosition === 'bottom-left') {
+  } else if (effectivePosition === 'bottom-left') {
     positionClasses = "fixed bottom-24 left-4 sm:bottom-12 sm:left-10 flex-col items-start";
     messageOriginClass = "origin-bottom-left";
     triangleClass = "absolute -bottom-2.5 left-6 w-5 h-5 bg-[#0a0908] border-r-2 border-b-2 transform rotate-45 z-[-1]";
-  } else if (axisPosition === 'top-center' || axisPosition === 'center-modal') {
+  } else if (effectivePosition === 'top-center' || effectivePosition === 'center-modal') {
     positionClasses = "fixed top-[5%] sm:top-[10%] left-1/2 -translate-x-1/2 flex-col-reverse items-center z-[9999]"; // high z for modal
     messageOriginClass = "origin-top";
     triangleClass = "absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 bg-[#0a0908] border-l-2 border-t-2 transform rotate-45 z-[-1]";

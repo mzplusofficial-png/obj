@@ -758,7 +758,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                                    <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981]"></div> Active
                                </span>
                                <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider py-1 px-2 rounded bg-white/5 border border-white/10">
-                                   <CurrencyDisplay amount={analyzedProduct.commission_amount} /> / vente
+                                   Tu gagnes <CurrencyDisplay amount={analyzedProduct.commission_amount} /> par vente
                                </span>
                            </div>
                        </div>
@@ -901,7 +901,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                           
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-4">
                              <span className="text-[13px] font-bold text-[#d5aa52]">
-                               Gagne jusqu'à <CurrencyDisplay amount={product.commission_amount} className="inline" />
+                               Gagne jusqu'à <CurrencyDisplay amount={product.commission_amount} className="inline" /> par vente
                              </span>
                              <span className="inline-flex items-center gap-1.5 w-fit px-2 py-0.5 rounded-full bg-[#10b981]/10 border border-[#10b981]/20 text-[10px] font-bold text-[#10b981]">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></div>Actif
@@ -916,7 +916,7 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
                               }} 
                               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[12px] font-bold text-[13px] transition-all active:scale-95 ${
                                 idx === 0 && isPromoteHighlighted
-                                  ? 'bg-[#10b981] border-2 border-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] ring-4 ring-[#10b981]/30 animate-[pulse_1.5s_ease-in-out_infinite] scale-[1.02] z-20 relative'
+                                  ? 'mz-highlighted-btn bg-[#10b981] border-2 border-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] ring-4 ring-[#10b981]/30 animate-[pulse_1.5s_ease-in-out_infinite] scale-[1.02] z-20 relative'
                                   : 'bg-[#6366f1]/10 border border-[#6366f1]/20 text-[#818cf8] hover:bg-[#6366f1]/20'
                               }`}
                             >

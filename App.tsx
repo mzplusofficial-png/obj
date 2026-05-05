@@ -40,6 +40,9 @@ import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate
 import { requestNotificationPermission, onMessageListener } from './services/firebase.ts';
 import { useAxis } from './components/features/axis/AxisProvider.tsx';
 import { AxisGuideFlow } from './components/features/axis/AxisGuideFlow.tsx';
+import { XPRewardModal } from './components/features/gamification/XPRewardModal.tsx';
+import { ChallengePresentation } from './components/features/challenges/ChallengePresentation.tsx';
+import { rewardUserXP } from './services/gamification.ts';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -69,8 +72,35 @@ const App: React.FC = () => {
   const [notification, setNotification] = useState<{ title: string; body: string; type?: 'info' | 'error' | 'warning' } | null>(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [initSequence, setInitSequence] = useState(true);
+  const [showXpReward, setShowXpReward] = useState(false);
+  const [xpRewardAmount, setXpRewardAmount] = useState(0);
+  const [xpRewardTitle, setXpRewardTitle] = useState("");
+  const [xpRewardDesc, setXpRewardDesc] = useState("");
+  
+  // Défis "3 Jours" Trigger States
+  const [showChallenge, setShowChallenge] = useState(false);
+  const [challengeEligible, setChallengeEligible] = useState(false);
+  const [challengeTriggered, setChallengeTriggered] = useState(false);
   
   const { triggerAxisMessage } = useAxis();
+
+  useEffect(() => {
+    const handleXpReward = async (e: Event) => {
+      const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string}>;
+      setXpRewardAmount(customEvent.detail.amount);
+      if (customEvent.detail.title) setXpRewardTitle(customEvent.detail.title);
+      if (customEvent.detail.description) setXpRewardDesc(customEvent.detail.description);
+      setShowXpReward(true);
+      
+      if (session?.user?.id) {
+        await rewardUserXP(session.user.id, customEvent.detail.amount);
+        triggerRefresh();
+      }
+    };
+    
+    window.addEventListener('mz-xp-reward', handleXpReward);
+    return () => window.removeEventListener('mz-xp-reward', handleXpReward);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!loading) {
@@ -80,6 +110,33 @@ const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [loading]);
+
+  // Challenge Trigger Effect
+  useEffect(() => {
+    if (challengeEligible && !challengeTriggered) {
+      let activeSeconds = 0;
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          activeSeconds += 1;
+          if (activeSeconds >= 15) {
+            clearInterval(interval);
+            setChallengeTriggered(true);
+            setShowChallenge(true);
+            localStorage.setItem('mz_challenge_3j_presented', 'true');
+          }
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [challengeEligible, challengeTriggered]);
+
+  useEffect(() => {
+    const handleForceChallenge = () => {
+      setShowChallenge(true);
+    };
+    window.addEventListener('mz-trigger-3j-challenge', handleForceChallenge);
+    return () => window.removeEventListener('mz-trigger-3j-challenge', handleForceChallenge);
+  }, []);
 
   useEffect(() => {
     const handleNavigateDashboard = () => {
@@ -245,6 +302,7 @@ const App: React.FC = () => {
         admin_role: profile?.admin_role || (isHardcodedAdmin ? 'super_admin' : null),
         rpa_balance: Number(profile?.rpa_balance || 0), 
         rpa_points: Number(profile?.rpa_points || 0), 
+        xp: Number(profile?.xp || 0),
         user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
         created_at: profile?.created_at,
         store_preferences: profile?.store_preferences
@@ -635,6 +693,23 @@ const App: React.FC = () => {
       {activeTab === 'sql_console' && isAdmin && <SQLConsole profile={userProfile} />}
       {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
       <AxisGuideFlow session={session} userProfile={userProfile} isReady={!loading && !initSequence} />
+      <XPRewardModal 
+        isVisible={showXpReward} 
+        amount={xpRewardAmount} 
+        title={xpRewardTitle}
+        description={xpRewardDesc}
+        onComplete={() => {
+          setShowXpReward(false);
+          const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
+          if (!hasSeenChallenge) {
+             setChallengeEligible(true);
+          }
+        }} 
+      />
+      <ChallengePresentation 
+        isVisible={showChallenge} 
+        onAccept={() => setShowChallenge(false)} 
+      />
       <PWAInstallBanner />
     </DashboardLayout>
   );

@@ -63,6 +63,27 @@ export const GlobalView: React.FC<any> = ({
   const { triggerAxisMessage } = useAxis();
   const isMzPlus = profile?.user_level === 'niveau_mz_plus';
 
+  const [loginCount, setLoginCount] = useState(1);
+  const [isChallengeActive, setIsChallengeActive] = useState(false);
+
+  useEffect(() => {
+    const savedCount = parseInt(localStorage.getItem('mz_login_count') || '0');
+    if (!sessionStorage.getItem('mz_session_counted_gv')) {
+      const newCount = savedCount + 1;
+      localStorage.setItem('mz_login_count', newCount.toString());
+      sessionStorage.setItem('mz_session_counted_gv', 'true');
+      setLoginCount(newCount);
+    } else {
+      setLoginCount(savedCount);
+    }
+    setIsChallengeActive(localStorage.getItem('mz_challenge_3j_presented') === 'true');
+    
+    // Listen to custom event for challenge start
+    const handleChallengeChange = () => setIsChallengeActive(true);
+    window.addEventListener('mz-challenge-3j-started', handleChallengeChange);
+    return () => window.removeEventListener('mz-challenge-3j-started', handleChallengeChange);
+  }, []);
+
   useEffect(() => {
     const handleHighlight = () => {
       setIsShopHighlighted(true);
@@ -366,7 +387,6 @@ export const GlobalView: React.FC<any> = ({
         whileTap={{ scale: 0.99 }}
         onClick={() => {
           setShowWithdrawForm(true);
-          triggerAxisMessage('Vos gains. Mérités. Assurez-vous que vos coordonnées sont correctes.', 'guiding', 5000);
         }}
         className="w-full py-3 bg-[var(--color-gold-main)] text-black rounded-xl font-black uppercase text-[9px] tracking-[0.3em] shadow-lg flex items-center justify-center gap-2 transition-all hover:bg-[var(--color-gold-light)]"
       >
@@ -380,6 +400,52 @@ export const GlobalView: React.FC<any> = ({
           onClose={() => setShowWithdrawForm(false)}
           onSuccess={() => setShowWithdrawForm(false)}
         />
+      )}
+
+      {/* MISSION DU JOUR (Only after 2nd connection) */}
+      {loginCount >= 2 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full bg-gradient-to-r from-neutral-900 via-[#1A1814] to-neutral-900 border border-[var(--color-border-gold)] rounded-2xl p-4 shadow-[0_10px_30px_rgba(201,168,76,0.1)] relative overflow-hidden mt-4"
+        >
+          <div className="absolute inset-0 bg-[var(--color-gold-main)]/5 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-gold-main)]/10 to-transparent pointer-events-none" />
+          
+          <div className="flex items-center gap-4 mb-4 relative z-10">
+            <div className="w-10 h-10 rounded-full bg-[var(--color-gold-main)]/20 border border-[var(--color-gold-main)]/30 flex items-center justify-center flex-shrink-0 animate-pulse shadow-[0_0_15px_rgba(201,168,76,0.5)]">
+              <Target size={20} className="text-[var(--color-gold-main)] drop-shadow-[0_0_8px_rgba(201,168,76,0.8)]" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-[0.2em] drop-shadow-md">Ta mission aujourd'hui</h3>
+              <p className="text-[var(--color-gold-main)] text-[9px] font-bold uppercase tracking-widest mt-1 drop-shadow-sm">
+                {isChallengeActive ? "Défi 3 jours - Actif" : "Action Flash"}
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-black/60 rounded-xl p-3 mb-4 border border-[var(--color-border-gold)]/30 relative z-10 shadow-inner">
+            <div className="text-[12px] font-bold text-white flex items-start gap-2 leading-tight">
+              <Sparkles size={14} className="text-[var(--color-gold-main)] flex-shrink-0 mt-0.5" />
+              {isChallengeActive ? "Continuer la phase 1 du défi : Choisir ton produit gagnant." : "Découvre un produit à succès dans le catalogue et partage ton lien !"}
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => {
+              if (isChallengeActive) {
+                onSwitchTab('affiliation');
+                window.dispatchEvent(new CustomEvent('mz-shop-opened'));
+              } else {
+                window.dispatchEvent(new Event('mz-trigger-3j-challenge'));
+              }
+            }}
+            className="w-full bg-gradient-to-r from-[var(--color-gold-main)] to-[#fcd34d] hover:from-[#fcd34d] hover:to-[var(--color-gold-main)] text-black transition-all rounded-xl py-3 text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_8px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_0_30px_rgba(201,168,76,0.6)] flex items-center justify-center gap-2 relative z-10 group overflow-hidden"
+          >
+            {isChallengeActive ? 'Continuer 👉' : 'Commencer 👉'}
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 transition-opacity" />
+          </button>
+        </motion.div>
       )}
 
       {/* 4. ACTIONS (NEW CIRCULAR ALIGNMENT) */}
@@ -405,17 +471,8 @@ export const GlobalView: React.FC<any> = ({
                     onSwitchTab('affiliation');
                     setIsShopHighlighted(false); // remove highlight on click
                     window.dispatchEvent(new CustomEvent('mz-shop-opened'));
-                    
-                    if (sessionStorage.getItem('mz_axis_guide_active') !== 'true') {
-                      triggerAxisMessage("Votre empire commence ici. Sécurisez vos ventes.", "action", 4500);
-                    }
                   } else {
                     setActiveCategory(cat.id as any);
-                    if (cat.id === 'referral') {
-                      triggerAxisMessage("L'influence est un pouvoir. Invitez et étendez votre réseau.", "guiding", 4500);
-                    } else if (cat.id === 'academy') {
-                      triggerAxisMessage("La sagesse précède la richesse. Accédez à vos connaissances.", "progression", 4500);
-                    }
                   }
                 }}
                 className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-700 ease-out
@@ -1007,6 +1064,23 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
                </div>
 
                <div className="w-full h-[1px] bg-white/5"></div>
+               
+               <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                   <div className="p-2.5 rounded-xl bg-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                     <Trophy size={20} />
+                   </div>
+                   <div className="text-left">
+                     <p className="text-[8px] font-black text-yellow-500/80 uppercase tracking-widest drop-shadow-md">Niveau d'expérience</p>
+                     <h4 className="text-xl font-black text-white drop-shadow-lg">{profile?.xp || 0} XP</h4>
+                   </div>
+                 </div>
+                 <div className="text-right flex items-center justify-center">
+                   <div className="px-3 py-1 bg-yellow-500/20 rounded-full text-[10px] font-black text-yellow-500 uppercase tracking-wider border border-yellow-500/30">
+                     Débutant
+                   </div>
+                 </div>
+               </div>
 
                <div className="grid grid-cols-2 w-full gap-4">
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">

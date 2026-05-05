@@ -82,6 +82,14 @@ export const AxisTestAdmin = () => {
              >
                Tester le Guide d'Accueil (Bot)
              </button>
+             <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mz-trigger-3j-challenge'));
+              }}
+              className="px-6 py-3 bg-amber-500/20 text-[var(--color-gold-main)] rounded-xl font-bold border border-[var(--color-gold-main)]/50 hover:bg-[var(--color-gold-main)]/20 transition-all"
+             >
+               Défi 3 Jours
+             </button>
           </div>
         </div>
       </GoldBorderCard>

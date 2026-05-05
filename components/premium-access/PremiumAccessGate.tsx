@@ -22,7 +22,7 @@ export const PremiumAccessGate: React.FC = () => {
 
     const handleGlobalClick = (e: MouseEvent) => {
       // Find if the clicked element or its parents is a checkout link
-      let target = e.target as HTMLElement;
+      const target = e.target as HTMLElement;
       
       const isCheckoutLink = (el: HTMLElement) => {
         if (el.tagName === 'A') {

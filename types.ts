@@ -10,6 +10,7 @@ export interface UserProfile {
   admin_role?: 'super_admin' | 'marketing_admin' | null;
   rpa_balance?: number;
   rpa_points?: number;
+  xp?: number;
   user_level: 'standard' | 'niveau_mz_plus';
   created_at?: string;
   store_preferences?: any;

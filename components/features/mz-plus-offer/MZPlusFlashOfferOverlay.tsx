@@ -53,18 +53,35 @@ export const MZPlusFlashOfferOverlay: React.FC<MZPlusFlashOfferOverlayProps> = (
   };
 
   useEffect(() => {
-    if (isVisible && profile?.id && !isDismissed) {
-      const sendHeartbeat = async () => {
+    if (isVisible && !isDismissed) {
+      // Play premium sound effect
+      const playPremiumSound = async () => {
         try {
-          const { error } = await supabase.rpc('mz_track_offer_heartbeat', { p_user_id: profile.id });
-          if (error) console.warn("Heartbeat RPC error:", error.message);
+          const { data, error } = await supabase.from('mz_sound_effects').select('url').eq('category', 'premium_offer').maybeSingle();
+          if (data && data.url) {
+            const audio = new Audio(data.url);
+            audio.volume = 0.7;
+            audio.play().catch(e => console.warn("Could not play premium sound", e));
+          }
         } catch (e) {
-          console.warn("Heartbeat RPC not available");
+            console.error("Sound playback error:", e);
         }
       };
-      sendHeartbeat();
-      const interval = setInterval(sendHeartbeat, 10000);
-      return () => clearInterval(interval);
+      playPremiumSound();
+
+      if (profile?.id) {
+        const sendHeartbeat = async () => {
+          try {
+            const { error } = await supabase.rpc('mz_track_offer_heartbeat', { p_user_id: profile.id });
+            if (error) console.warn("Heartbeat RPC error:", error.message);
+          } catch (e) {
+            console.warn("Heartbeat RPC not available");
+          }
+        };
+        sendHeartbeat();
+        const interval = setInterval(sendHeartbeat, 10000);
+        return () => clearInterval(interval);
+      }
     }
   }, [isVisible, profile?.id, isDismissed]);
 

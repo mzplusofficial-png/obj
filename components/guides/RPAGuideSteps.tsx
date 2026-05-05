@@ -31,7 +31,7 @@ export const RPAGuideSteps: React.FC<RPAGuideStepsProps> = ({
 
   // Position calculation
   let top: number | string = 'auto';
-  let bottom: number | string = 'auto';
+  const bottom: number | string = 'auto';
   let left: number | string = '50%';
   let x: string | number = '-50%';
   let arrowLeft: number | string = '50%';

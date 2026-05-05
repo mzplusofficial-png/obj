@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon, Store 
@@ -226,12 +226,12 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
   const { triggerAxisMessage } = useAxis();
   
   const initialTrend = getProductTrend(product, index);
-  const [trend, setTrend] = React.useState(initialTrend);
-  const [livePulse, setLivePulse] = React.useState(false);
-  const [liveSalesPulse, setLiveSalesPulse] = React.useState(false);
+  const [trend, setTrend] = useState(initialTrend);
+  const [livePulse, setLivePulse] = useState(false);
+  const [liveSalesPulse, setLiveSalesPulse] = useState(false);
 
   // Live simulation effect
-  React.useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setLivePulse(true);
       
@@ -248,7 +248,7 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
            newSalesToday += 1;
            newTotalSales += 1;
            setLiveSalesPulse(true);
-           setTimeout(() => setLiveSalesPulse(false), 1000);
+           setTimeout(() => setLiveSalesPulse(false), 2000);
         }
 
         return { ...prev, viewersNow: newViewers, salesToday: newSalesToday, totalSales: newTotalSales };
@@ -396,7 +396,7 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
                     onClick={() => {
                        if (!isImported && onAddToStore) {
                            onAddToStore();
-                           triggerAxisMessage("Nouveau produit acquis. Votre empire s'étend.", "action", 4500);
+                           // triggerAxisMessage removed
                        } else if (!isImported) {
                            alert("Produit ajouté à votre boutique avec succès !");
                        }
@@ -433,7 +433,6 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
                <button 
                  onClick={() => {
                    setIsShareModalOpen(true);
-                   triggerAxisMessage("Génération du lien affilié en cours. Votre influence commence ici.", "progression", 5000);
                  }}
                  className="relative w-full py-8 bg-white text-black rounded-[2.5rem] font-black uppercase text-base tracking-[0.3em] shadow-[0_30px_60px_rgba(255,255,255,0.15)] hover:bg-yellow-500 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 flex flex-col items-center justify-center gap-1 group overflow-hidden"
                >

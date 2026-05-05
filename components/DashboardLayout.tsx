@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
 import { 
   X, 
   LogOut, 
@@ -14,7 +13,6 @@ import {
   User,
   Coins
 } from 'lucide-react';
-import { GoldText, EliteBadge } from './UI.tsx';
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { CurrencySelector } from './ui/CurrencyDisplay.tsx';
@@ -29,11 +27,15 @@ interface DashboardLayoutProps {
   setIsMenuOpen?: (open: boolean) => void;
 }
 
-const NavButton = ({ active, onClick, emoji, label }: any) => (
+const NavButton = ({ active, onClick, emoji, label, id, showBadge }: { active: boolean, onClick: () => void, emoji: string, label: string, id?: string, showBadge?: boolean }) => (
   <button 
+    id={id}
     onClick={onClick}
-    className={`flex flex-col items-center gap-0.5 transition-all outline-none ${active ? 'scale-105' : 'opacity-40 hover:opacity-100'}`}
+    className={`relative flex flex-col items-center gap-0.5 transition-all outline-none ${active ? 'scale-105' : 'opacity-40 hover:opacity-100'}`}
   >
+    {showBadge && (
+      <span className="absolute -top-1 -right-2 w-3 h-3 bg-red-500 rounded-full border border-black animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-10 block"></span>
+    )}
     <span className="text-xl leading-none">{emoji}</span>
     <span className={`text-[8px] font-bold tracking-widest uppercase ${active ? 'text-[var(--color-gold-main)]' : 'text-[var(--color-text-gray)]'}`}>{label}</span>
   </button>
@@ -46,9 +48,22 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   isAdmin = false, 
   profile,
   isMenuOpen = false,
-  setIsMenuOpen = (_open: boolean) => {}
+  setIsMenuOpen = (open: boolean) => {}
 }) => {
   const [activeMembers, setActiveMembers] = useState(() => Math.floor(Math.random() * (1500 - 800) + 800));
+  const [showProfileBadge, setShowProfileBadge] = useState(false);
+
+  useEffect(() => {
+    const handleProfileBadge = () => setShowProfileBadge(true);
+    window.addEventListener('mz-profile-badge', handleProfileBadge);
+    return () => window.removeEventListener('mz-profile-badge', handleProfileBadge);
+  }, []);
+
+  // When clicking profile tab, clear badge
+  const handleTabClick = (tabId: TabId) => {
+    if (tabId === 'profile') setShowProfileBadge(false);
+    setActiveTab(tabId);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -106,11 +121,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
 
           {/* COMMUNITY PULSE (EXACT STYLING) */}
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-[rgba(201,168,76,0.08)] rounded-[100px] border border-[rgba(201,168,76,0.2)]">
-            <div className="w-[7px] h-[7px] rounded-full bg-[#4CAF50] animate-pulse-dot shadow-[0_0_8px_rgba(76,175,80,0.4)]"></div>
-            <span className="text-[13px] font-light text-[#F0EBE0] tracking-tight font-sans">
-              {activeMembers.toLocaleString()} en ligne maintenant
-            </span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1 sm:py-1.5 bg-[rgba(201,168,76,0.08)] rounded-[100px] border border-[rgba(201,168,76,0.2)]">
+              <div className="w-1.5 h-1.5 sm:w-[7px] sm:h-[7px] rounded-full bg-[#4CAF50] animate-pulse-dot shadow-[0_0_8px_rgba(76,175,80,0.4)]"></div>
+              <span className="text-[10px] sm:text-[13px] font-light text-[#F0EBE0] tracking-tight font-sans whitespace-nowrap">
+                {activeMembers.toLocaleString()} membres en ligne
+              </span>
+            </div>
           </div>
 
           <button 
@@ -160,8 +177,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 <button
                   id={`nav-${item.id}`}
                   key={item.id}
-                  onClick={() => { setActiveTab(item.id); setIsMenuOpen(false); }}
-                  className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${
+                  onClick={() => { handleTabClick(item.id); setIsMenuOpen(false); }}
+                  className={`relative w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${
                     activeTab === item.id ? 'bg-[var(--color-gold-main)] text-black shadow-lg scale-[1.02]' : 'text-[#6B6050] hover:bg-white/5 hover:text-white'
                   }`}
                 >
@@ -169,6 +186,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <item.icon size={16} />
                     {item.label}
                   </span>
+                  {item.id === 'profile' && showProfileBadge && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                  )}
                 </button>
               ))}
             </div>
@@ -203,27 +223,29 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <nav className="fixed bottom-0 left-0 right-0 z-[150] bg-[var(--color-card-start)]/90 backdrop-blur-xl border-t border-[var(--color-border-gold)] h-16 flex items-center justify-around md:hidden px-4">
         <NavButton 
           active={activeTab === 'dashboard'} 
-          onClick={() => setActiveTab('dashboard')} 
+          onClick={() => handleTabClick('dashboard')} 
           emoji="🏠" 
           label="Home" 
         />
         <NavButton 
           active={activeTab === 'affiliation'} 
-          onClick={() => setActiveTab('affiliation')} 
+          onClick={() => handleTabClick('affiliation')} 
           emoji="🏪" 
           label="Boutique" 
         />
         <NavButton 
           active={activeTab === 'team'} 
-          onClick={() => setActiveTab('team')} 
+          onClick={() => handleTabClick('team')} 
           emoji="👥" 
           label="Team" 
         />
         <NavButton 
+          id="nav-profile"
           active={activeTab === 'profile'} 
-          onClick={() => setActiveTab('profile')} 
+          onClick={() => handleTabClick('profile')} 
           emoji="👤" 
           label="Profil" 
+          showBadge={showProfileBadge}
         />
       </nav>
 

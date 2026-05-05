@@ -2,8 +2,8 @@ import React, { useEffect, useCallback } from 'react';
 import { useAxis } from './AxisProvider';
 
 interface AxisGuideFlowProps {
-  session: any;
-  userProfile: any;
+  session: { user?: { user_metadata?: { full_name?: string } } } | null;
+  userProfile: { full_name?: string } | null;
   isReady: boolean;
 }
 
@@ -134,9 +134,9 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                         const showStep4 = () => {
                           triggerAxisMessage(
                             <div className="flex flex-col gap-3">
-                              <span className="font-extrabold text-[#10b981] text-lg lg:text-xl">Et le meilleur ? 🎯</span>
-                              <span className="text-white text-[15px]">Ton argent s'affiche sur ton solde en <span className="text-[#10b981] font-bold">temps réel ⚡</span></span>
-                              <span className="text-white text-[15px]">Tu retires quand tu veux… directement sur ton <span className="text-[#f59e0b] font-black tracking-wide">Mobile Money 📱💸</span></span>
+                              <span className="font-extrabold text-white text-lg lg:text-xl">Et le meilleur ? 🎯</span>
+                              <span className="text-white text-[15px]">Ton argent s'affiche sur ton solde en <span className="font-bold">temps réel ⚡</span></span>
+                              <span className="text-white text-[15px]">Tu retires quand tu veux… directement sur ton <span className="font-black tracking-wide">Mobile Money 📱💸</span></span>
                             </div>,
                             "success",
                             15000,
@@ -145,20 +145,36 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                               action: () => {
                                 // Hide current axis for 5s, then show the final one
                                 setTimeout(() => {
+                                  window.dispatchEvent(new CustomEvent('mz-highlight-promote'));
                                   triggerAxisMessage(
                                     <div className="flex flex-col gap-3">
-                                      <span className="font-extrabold text-[#10b981] text-[16px] lg:text-lg">C’est le moment de faire exploser tes ventes ⚡</span>
-                                      <span className="text-white text-[14px]">Clique sur <span className="text-white font-black uppercase bg-[#6366f1] px-2 py-0.5 rounded shadow-sm">Promouvoir</span> et partage ton produit 📲💸</span>
+                                      <span className="font-extrabold text-white text-[16px] lg:text-lg">C’est le moment de faire exploser tes ventes ⚡</span>
+                                      <span className="text-white text-[14px]">Clique sur <span className="font-black uppercase px-2 py-0.5 rounded shadow-sm">Promouvoir</span> et partage ton produit 📲💸</span>
                                     </div>,
                                     "action",
                                     30000,
                                     {
                                       label: "J'ai compris",
-                                      action: () => {},
+                                      action: () => {
+                                        let remaining = 7; // 7 seconds
+                                        const timerInterval = setInterval(() => {
+                                          if (document.visibilityState === 'visible') {
+                                            remaining -= 1;
+                                            if (remaining <= 0) {
+                                              clearInterval(timerInterval);
+                                              window.dispatchEvent(new CustomEvent('mz-xp-reward', { detail: { 
+                                                amount: 100,
+                                                title: "PREMIER PRODUIT IMPORTÉ",
+                                                description: "XP ACCÉLÉRATEUR"
+                                              } }));
+                                            }
+                                          }
+                                        }, 1000);
+                                      },
                                       secondaryLabel: "Retour",
                                       secondaryAction: showStep4
                                     },
-                                    "top-center"
+                                    "smart"
                                   );
                                   window.dispatchEvent(new CustomEvent('mz-highlight-promote'));
                                 }, 5000);
@@ -173,9 +189,9 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                         const showStep3 = () => {
                           triggerAxisMessage(
                             <div className="flex flex-col gap-3">
-                              <span className="text-white text-[15px]">Tu les partages autour de toi ou sur tes <span className="font-bold text-[#60a5fa]">réseaux sociaux 🌐</span>…</span>
+                              <span className="text-white text-[15px]">Tu les partages autour de toi ou sur tes <span className="font-bold">réseaux sociaux 🌐</span>…</span>
                               <span className="text-white text-[15px]">Chaque fois que quelqu’un achète grâce à toi…</span>
-                              <span className="font-black text-[#f59e0b] bg-[#f59e0b]/20 px-2 py-1 rounded text-lg w-fit">tu gagnes une commission 💰✨</span>
+                              <span className="font-black text-white px-2 py-1 rounded text-lg w-fit">tu gagnes une commission 💰✨</span>
                             </div>,
                             "guiding",
                             15000,
@@ -192,9 +208,9 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                         const showStep2 = () => {
                           triggerAxisMessage(
                             <div className="flex flex-col gap-3">
-                              <span className="font-extrabold text-[#10b981] text-lg lg:text-xl">Écoute bien ⚡</span>
+                              <span className="font-extrabold text-white text-lg lg:text-xl">Écoute bien ⚡</span>
                               <span className="text-white text-[15px]">Le principe est simple…<br/>Le ou les produits que tu as ajoutés dans ta boutique…</span>
-                              <span className="font-bold text-[#10b981] bg-[#10b981]/20 px-2 py-1 rounded w-fit">vont travailler pour toi ⚙️</span>
+                              <span className="font-bold text-white px-2 py-1 rounded w-fit">vont travailler pour toi ⚙️</span>
                             </div>,
                             "guiding",
                             15000,
@@ -248,7 +264,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
     if (sessionStorage.getItem('mz_axis_welcomed') !== 'true') {
       const isInstalled = localStorage.getItem('mz_pwa_installed') === 'true' || 
                           window.matchMedia('(display-mode: standalone)').matches || 
-                          (navigator as any).standalone;
+                          ('standalone' in navigator && (navigator as unknown as { standalone: boolean }).standalone);
                           
       const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
       const recentlyPrompted = lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000;

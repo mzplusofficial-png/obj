@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   ShieldCheck, 
@@ -39,7 +39,7 @@ export const ProductSalesPage: React.FC<ProductSalesPageProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
-  React.useEffect(() => {
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

@@ -6,7 +6,7 @@ import {
   History, GraduationCap, Plus, Trash2, Edit3, Save, ListPlus, AlertTriangle, 
   RefreshCw, UserCog, ExternalLink, ShieldCheck, Loader2, Target, Image as ImageIcon,
   Home, Monitor, Globe, Code, Info, Upload, FileVideo, UserPlus, Clock, Eye, Activity, MousePointer2,
-  Crown, Settings, Store, Zap
+  Crown, Settings, Store, Zap, Volume2
 } from 'lucide-react';
 
 import { supabase } from '../services/supabase.ts';
@@ -25,8 +25,9 @@ import { AdminStoreSettings } from './features/my-store/AdminStoreSettings.tsx';
 import { AxisTestAdmin } from './features/axis/AxisTestAdmin.tsx';
 
 import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
+import { SoundEffectsAdmin } from './features/gamification/SoundEffectsAdmin.tsx';
 
-type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test';
+type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects';
 
 export const AdminPanel: React.FC<{ 
   adminProfile: UserProfile | null; 
@@ -53,6 +54,9 @@ export const AdminPanel: React.FC<{
     if (retryCount === 0) setLoading(true);
     setError(null);
     try {
+      // Ensure session is fresh before making multiple concurrent requests
+      await supabase.auth.getSession();
+
       const queries = [
         supabase.from('users').select('*, wallets(balance)').order('created_at', { ascending: false }),
         supabase.from('commissions').select('*, products(name), users:user_id(full_name)').order('created_at', { ascending: false }),
@@ -87,9 +91,16 @@ export const AdminPanel: React.FC<{
       });
     } catch (e: any) { 
       console.error("Admin Fetch Error:", e);
-      if (retryCount < 3 && (e.message?.includes('fetch') || e.name === 'TypeError')) {
+      const isJwtExpired = e.code === 'PGRST303' || e.message?.includes('JWT expired');
+      if (retryCount < 3 && (e.message?.includes('fetch') || e.name === 'TypeError' || isJwtExpired)) {
         const delay = 1000 * (retryCount + 1);
-        console.log(`Retrying admin fetch in ${delay}ms...`);
+        console.log(`Retrying admin fetch in ${delay}ms${isJwtExpired ? ' (refreshing session)' : ''}...`);
+        
+        if (isJwtExpired) {
+          // Explicitly try to refresh the session
+          await supabase.auth.refreshSession();
+        }
+
         setTimeout(() => fetchAdminData(retryCount + 1), delay);
         return;
       }
@@ -137,6 +148,7 @@ export const AdminPanel: React.FC<{
           <TabButton active={activeSubTab === 'flash_offer'} onClick={() => setActiveSubTab('flash_offer')} icon={Flame} label="PASSEZ AU NIVEAU SUPÉRIEUR" />
           <TabButton active={activeSubTab === 'pwa_branding'} onClick={() => setActiveSubTab('pwa_branding')} icon={Settings} label="PWA & Branding" color="text-emerald-500" />
           <TabButton active={activeSubTab === 'store_settings'} onClick={() => setActiveSubTab('store_settings')} icon={Store} label="Boutique" color="text-orange-500" />
+          <TabButton active={activeSubTab === 'sound_effects'} onClick={() => setActiveSubTab('sound_effects')} icon={Volume2} label="Effets Sonores" color="text-cyan-400" />
           <TabButton active={activeSubTab === 'axis_test'} onClick={() => setActiveSubTab('axis_test')} icon={Zap} label="AXIS Intelligence" color="text-purple-500" />
         </div>
       </div>
@@ -226,6 +238,7 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'flash_offer' && <MZPlusFlashOfferAdmin />}
         {activeSubTab === 'pwa_branding' && <PWABrandingAdmin />}
         {activeSubTab === 'store_settings' && <AdminStoreSettings />}
+        {activeSubTab === 'sound_effects' && <SoundEffectsAdmin />}
         {activeSubTab === 'axis_test' && <AxisTestAdmin />}
         {activeSubTab === 'activity_audit' && isAnyAdmin && <AdminActivityAudit />}
       </div>

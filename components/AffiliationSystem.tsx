@@ -58,6 +58,7 @@ import { supabase } from '../services/supabase.ts';
 import { Product, Commission, UserProfile, ProductStat, TabId } from '../types.ts';
 import { GoldBorderCard, PrimaryButton, SectionTitle, GoldText } from './UI.tsx';
 import { ProductDetailView, getProductTrend, ShareModal } from './ProductDetailView.tsx';
+import { CurrencyDisplay } from './ui/CurrencyDisplay.tsx';
 
 interface AffiliationSystemProps {
   profile: UserProfile | null;
@@ -832,7 +833,8 @@ export const AffiliationSystem: React.FC<AffiliationSystemProps> = ({
 
 
 const ProductCard = ({ product, clicks, referralCode, index }: any) => {
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const isShareModalOpen = false;
+  const setIsShareModalOpen = (val: boolean) => {};
   const link = `${window.location.origin}/?ref=${referralCode}&prod=${product.id}`;
   const trend = getProductTrend(product, index);
 
