@@ -85,8 +85,65 @@ const App: React.FC = () => {
   const [showChallenge, setShowChallenge] = useState(false);
   const [challengeEligible, setChallengeEligible] = useState(false);
   const [challengeTriggered, setChallengeTriggered] = useState(false);
+  const [showChallengeCelebration, setShowChallengeCelebration] = useState(false);
+  const [challengeCelebratedStep, setChallengeCelebratedStep] = useState(1);
   
   const { triggerAxisMessage, hideAxis } = useAxis();
+
+  // Handle Challenge Progression / Completion (J1)
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const checkDailyChallenge = () => {
+      const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
+      const j1Completed = localStorage.getItem('mz_challenge_3j_j1_completed');
+      if (!hasSeenChallenge || j1Completed) return;
+      
+      const storeData = localStorage.getItem(`mz_store_${userProfile.id}`);
+      const products = storeData ? JSON.parse(storeData) : [];
+      
+      if (products.length > 0) {
+        const startedAt = localStorage.getItem('mz_challenge_3j_started_at');
+        if (!startedAt) {
+          localStorage.setItem('mz_challenge_3j_started_at', new Date().toISOString());
+        } else {
+          const startDay = new Date(startedAt).getDate();
+          const currentDay = new Date().getDate();
+          if (currentDay !== startDay) {
+            localStorage.setItem('mz_challenge_3j_j1_completed', 'true');
+            setChallengeCelebratedStep(1);
+            setShowChallengeCelebration(true);
+          }
+        }
+      }
+    };
+
+    checkDailyChallenge();
+    const interval = setInterval(checkDailyChallenge, 60000);
+    return () => clearInterval(interval);
+  }, [userProfile]);
+
+  useEffect(() => {
+    const handleProductAdded = () => {
+      const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
+      const j1Completed = localStorage.getItem('mz_challenge_3j_j1_completed');
+      
+      // Also register the start time if not present
+      if (!localStorage.getItem('mz_challenge_3j_started_at') && hasSeenChallenge) {
+         localStorage.setItem('mz_challenge_3j_started_at', new Date().toISOString());
+      }
+      
+      if (hasSeenChallenge && !j1Completed) {
+        localStorage.setItem('mz_challenge_3j_j1_completed', 'true');
+        setChallengeCelebratedStep(1);
+        setTimeout(() => {
+          setShowChallengeCelebration(true);
+        }, 800); 
+      }
+    };
+    window.addEventListener('mz-product-added-to-store', handleProductAdded);
+    return () => window.removeEventListener('mz-product-added-to-store', handleProductAdded);
+  }, []);
 
   useEffect(() => {
     const handleXpReward = async (e: Event) => {
@@ -775,6 +832,14 @@ const App: React.FC = () => {
             );
           }, 800);
         }} 
+      />
+      <ChallengePresentation 
+        isVisible={showChallengeCelebration}
+        mode="celebration"
+        completedStep={challengeCelebratedStep}
+        onAccept={() => {
+          setShowChallengeCelebration(false);
+        }}
       />
       <PWAInstallBanner />
     </DashboardLayout>

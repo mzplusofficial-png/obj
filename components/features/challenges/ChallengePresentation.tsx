@@ -1,70 +1,97 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Target, Zap, Rocket, X, ChevronRight, CheckCircle2, Flame, Droplets } from 'lucide-react';
-import { GoldBorderCard, PrimaryButton } from '../../UI.tsx';
+import { Target, Zap, Rocket, X, CheckCircle2, Flame, Droplets } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
 
 interface ChallengePresentationProps {
   isVisible: boolean;
   onAccept: () => void;
   onClose?: () => void;
+  mode?: 'intro' | 'celebration';
+  completedStep?: number;
 }
 
-export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ isVisible, onAccept, onClose }) => {
+export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ isVisible, onAccept, onClose, mode = 'intro', completedStep = 1 }) => {
   const [typedText, setTypedText] = useState("");
   const fullText = "Hey 🙋‍♂️..j'ai un défi pour toi ";
   const [showContent, setShowContent] = useState(false);
-  const [step, setStep] = useState<'intro'>('intro');
-  const [modalStep, setModalStep] = useState<'intro'|'timeline'>('intro');
+  const [modalStep, setModalStep] = useState<'intro'|'timeline'>(mode === 'celebration' ? 'timeline' : 'intro');
   const [surpriseSoundUrl, setSurpriseSoundUrl] = useState<string | null>(null);
+  const [levelUpSoundUrl, setLevelUpSoundUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSurpriseSound = async () => {
+    const fetchSounds = async () => {
       try {
-        const { data, error } = await supabase.from('mz_sound_effects').select('*').eq('category', 'surprise').single();
-        if (!error && data?.url) {
-          setSurpriseSoundUrl(data.url);
+        const { data, error } = await supabase.from('mz_sound_effects').select('*').in('category', ['surprise', 'level_up']);
+        if (!error && data) {
+          const surprise = data.find(d => d.category === 'surprise');
+          if (surprise) setSurpriseSoundUrl(surprise.url);
+          const levelUp = data.find(d => d.category === 'level_up');
+          if (levelUp) setLevelUpSoundUrl(levelUp.url);
         }
-      } catch (e) {}
+      } catch {
+        // Silent catch
+      }
     };
-    fetchSurpriseSound();
+    fetchSounds();
   }, []);
 
   useEffect(() => {
     if (isVisible) {
-      setTypedText("");
-      setShowContent(false);
-      setModalStep('intro');
-      let currentIndex = 0;
-      let timeoutId: NodeJS.Timeout;
-      
-      const typeNextChar = () => {
-        if (currentIndex <= fullText.length) {
-          setTypedText(fullText.slice(0, currentIndex));
-          currentIndex++;
-          // Randomize typing speed for a more natural feel
-          const delay = Math.random() * 40 + 30; // 30ms to 70ms
-          timeoutId = setTimeout(typeNextChar, delay);
-        } else {
-          timeoutId = setTimeout(() => {
-            setShowContent(true);
-            // Play surprise sound
-            try {
-              if (surpriseSoundUrl) {
-                const audio = new Audio(surpriseSoundUrl);
-                audio.volume = 0.5;
-                audio.play().catch(() => {});
-              }
-            } catch (e) {}
-          }, 3000); // 3s pause before showing the rest
+      if (mode === 'celebration') {
+        setModalStep('timeline');
+        // Play level up sound
+        try {
+          if (levelUpSoundUrl) {
+            const audio = new Audio(levelUpSoundUrl);
+            audio.volume = 0.6;
+            audio.play().catch(() => {});
+          } else {
+             // Fallback sound if not loaded
+             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+             audio.volume = 0.5;
+             audio.play().catch(() => {});
+          }
+        } catch {
+          // Silent catch
         }
-      };
+      } else {
+        setTypedText("");
+        setShowContent(false);
+        setModalStep('intro');
+        let currentIndex = 0;
+        let timeoutId: NodeJS.Timeout;
+        
+        const typeNextChar = () => {
+          if (currentIndex <= fullText.length) {
+            setTypedText(fullText.slice(0, currentIndex));
+            currentIndex++;
+            // Randomize typing speed for a more natural feel
+            const delay = Math.random() * 40 + 30; // 30ms to 70ms
+            timeoutId = setTimeout(typeNextChar, delay);
+          } else {
+            timeoutId = setTimeout(() => {
+              setShowContent(true);
+              // Play surprise sound
+              try {
+                if (surpriseSoundUrl) {
+                  const audio = new Audio(surpriseSoundUrl);
+                  audio.volume = 0.5;
+                  audio.play().catch(() => {});
+                }
+              } catch {
+                // Silent catch
+              }
+            }, 3000); // 3s pause before showing the rest
+          }
+        };
 
-      typeNextChar();
+        typeNextChar();
 
-      return () => clearTimeout(timeoutId);
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [isVisible, surpriseSoundUrl]);
+  }, [isVisible, surpriseSoundUrl, levelUpSoundUrl, mode]);
 
   const handleRelèveDefi = () => {
     try {
@@ -72,7 +99,9 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
       audio.volume = 0.5;
       audio.play().catch(() => {});
-    } catch(e) {}
+    } catch {
+      // Silent catch
+    }
     setModalStep('timeline');
   };
 
@@ -310,8 +339,8 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                         
                         {/* Liquid Fill / Progress Bar */}
                         <motion.div 
-                          initial={{ width: '0%' }}
-                          animate={{ width: '12%' }} // A small amount to show it has started, but not reaching J1 completely
+                          initial={{ width: mode === 'celebration' ? '12%' : '0%' }}
+                          animate={{ width: mode === 'celebration' ? `${completedStep * 50}%` : '12%' }}
                           transition={{ duration: 2, ease: "easeOut", delay: 0.5 }}
                           className="absolute top-[35px] left-8 h-3 bg-gradient-to-r from-red-600 via-amber-500 to-[var(--color-gold-main)] rounded-full shadow-[0_0_20px_rgba(201,168,76,0.6)] z-0 overflow-hidden"
                         >
@@ -326,6 +355,10 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                         <div className="relative z-10 flex justify-between items-start">
                           {challengeSteps.map((stepData, idx) => {
                             const isFirst = idx === 0;
+                            const isCompleted = idx < completedStep;
+                            const isCurrent = idx === completedStep;
+                            const isActive = isCompleted || isCurrent || (mode === 'intro' && isFirst);
+                            
                             return (
                               <div key={idx} className="flex flex-col items-center flex-1 relative group">
                                 {/* Date Box */}
@@ -338,8 +371,8 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                                   {dates[idx]}
                                 </motion.div>
 
-                                {/* Connecting Line Glow (if first) */}
-                                {isFirst && (
+                                {/* Connecting Line Glow */}
+                                {(isActive && idx < challengeSteps.length - 1) && (
                                   <motion.div 
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -356,12 +389,12 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                                   className="relative mt-8"
                                 >
                                   <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center border-2 z-10 relative cursor-default
-                                    ${isFirst 
+                                    ${isActive 
                                       ? 'bg-gradient-to-br from-[#2A2416] to-[#1A1814] border-[var(--color-gold-main)] shadow-[0_0_30px_rgba(201,168,76,0.4)]' 
                                       : 'bg-black/60 border-neutral-700/50 backdrop-blur-md transition-all group-hover:border-[var(--color-gold-main)]/30 group-hover:shadow-[0_0_20px_rgba(201,168,76,0.1)]'
                                     }`}
                                   >
-                                    {isFirst && (
+                                    {isActive && (
                                       <motion.div 
                                         animate={{ opacity: [0.3, 0.7, 0.3], scale: [1, 1.1, 1] }}
                                         transition={{ duration: 2, repeat: Infinity }}
@@ -369,14 +402,24 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                                       />
                                     )}
                                     <div className="flex flex-col items-center justify-center relative z-10">
-                                      <span className={`font-black text-xl sm:text-2xl ${isFirst ? 'text-[var(--color-gold-main)]' : 'text-neutral-500'}`}>
-                                        {stepData.day}
-                                      </span>
+                                      {isCompleted ? (
+                                        <motion.div
+                                          initial={{ scale: 0 }}
+                                          animate={{ scale: 1 }}
+                                          transition={{ type: "spring", delay: 1 }}
+                                        >
+                                          <CheckCircle2 size={32} className="text-[#10b981] drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                                        </motion.div>
+                                      ) : (
+                                        <span className={`font-black text-xl sm:text-2xl ${isActive ? 'text-[var(--color-gold-main)]' : 'text-neutral-500'}`}>
+                                          {stepData.day}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
 
-                                  {/* Animated drop entering the node (first one only) */}
-                                  {isFirst && (
+                                  {/* Animated drop entering the node */}
+                                  {isActive && !isCompleted && (
                                     <motion.div 
                                       initial={{ y: -20, opacity: 0 }}
                                       animate={{ y: 0, opacity: [0, 1, 0] }}
@@ -395,12 +438,12 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                                   transition={{ delay: 0.6 + idx * 0.2 }}
                                   className="mt-6 flex flex-col items-center gap-2 max-w-[120px]"
                                 >
-                                  <stepData.icon className={`w-6 h-6 ${isFirst ? 'text-[var(--color-gold-main)]' : 'text-neutral-600'}`} />
+                                  <stepData.icon className={`w-6 h-6 ${isActive ? 'text-[var(--color-gold-main)]' : 'text-neutral-600'}`} />
                                   <div className="text-center">
-                                    <div className={`text-xs sm:text-sm font-black uppercase leading-tight ${isFirst ? 'text-white' : 'text-neutral-400'}`}>
+                                    <div className={`text-xs sm:text-sm font-black uppercase leading-tight ${isActive ? 'text-white' : 'text-neutral-400'}`}>
                                       {stepData.title}
                                     </div>
-                                    <div className={`text-[10px] sm:text-xs font-bold leading-tight ${isFirst ? 'text-[var(--color-gold-main)]' : 'text-neutral-600'}`}>
+                                    <div className={`text-[10px] sm:text-xs font-bold leading-tight ${isActive ? 'text-[var(--color-gold-main)]' : 'text-neutral-600'}`}>
                                       {stepData.subtitle}
                                     </div>
                                   </div>
@@ -420,14 +463,16 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                         <div className="absolute inset-0 bg-[var(--color-gold-main)] blur-xl opacity-20 rounded-2xl transition-all group-hover:opacity-40 group-hover:blur-2xl" />
                         <button
                           onClick={() => {
-                            window.dispatchEvent(new Event('mz-challenge-3j-started'));
-                            localStorage.setItem('mz_challenge_3j_presented', 'true');
+                            if (mode === 'intro') {
+                              window.dispatchEvent(new Event('mz-challenge-3j-started'));
+                              localStorage.setItem('mz_challenge_3j_presented', 'true');
+                            }
                             onAccept();
                           }}
                           className="relative w-full py-5 rounded-2xl bg-[var(--color-gold-main)] text-black font-black text-lg md:text-xl uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden shadow-[0_10px_20px_rgba(0,0,0,0.5)] transform-gpu hover:shadow-[0_0_30px_rgba(201,168,76,0.6)]"
                         >
                           <span className="relative z-10 drop-shadow-sm flex items-center gap-2">
-                            👉 Commencer le défi
+                            {mode === 'celebration' ? '👉 Continuer' : '👉 Commencer le défi'}
                           </span>
                           
                           {/* Gliding shine effect */}

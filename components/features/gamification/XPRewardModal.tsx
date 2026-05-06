@@ -35,12 +35,9 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
       setShowFlyingCoins(false);
       setShockwave(false);
       
-      // Play sound immediately when the modal state is visible
+      // Play sounds immediately to sync perfectly with animation start
       playSound('reward_appear');
-      
-      timeout = setTimeout(() => {
-        playSound('gift');
-      }, 700);
+      playSound('gift');
       
       // Start counting up right after initial appearance starts
       let startTimestamp: number;
@@ -56,7 +53,7 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
       };
       
       // A tiny delay before counting so the number doesn't pop in mid-animation
-      setTimeout(() => window.requestAnimationFrame(step), 150);
+      timeout = setTimeout(() => window.requestAnimationFrame(step), 150);
       
     } else {
       setDisplayAmount(0);
