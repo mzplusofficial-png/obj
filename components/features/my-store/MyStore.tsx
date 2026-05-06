@@ -451,19 +451,24 @@ export const MyStore: React.FC<MyStoreProps> = ({ profile, onSwitchTab, onRefres
         await new Promise(r => setTimeout(r, 4000));
         setAddingProduct(null);
         
-        // Let Axis show the final congrats if they need to, but also show the CelebrationOverlay
-        if (sessionStorage.getItem('mz_axis_guide_active') === 'true') {
+        // Let Axis show the final congrats if they need to, but also show the CelebrationOverlay (only once)
+        if (sessionStorage.getItem('mz_axis_guide_active') === 'true' && !sessionStorage.getItem('mz_celebration_shown_once')) {
+          sessionStorage.setItem('mz_celebration_shown_once', 'true');
           playDopamineHit();
           setCelebratedProduct(addedProduct);
         } else {
           setFeedback("Propulsé dans ta boutique ! 🚀");
           setTimeout(() => setFeedback(null), 2500);
+          window.dispatchEvent(new CustomEvent('mz-product-added-to-store'));
         }
       } else {
         await new Promise(r => setTimeout(r, 600));
         setFeedback("Propulsé dans ta boutique ! 🚀");
         setTimeout(() => setFeedback(null), 2500);
-        setTimeout(() => setActiveSegment('my_products'), 800);
+        setTimeout(() => {
+          setActiveSegment('my_products');
+          window.dispatchEvent(new CustomEvent('mz-product-added-to-store'));
+        }, 800);
       }
     } finally {
       setImportingId(null);

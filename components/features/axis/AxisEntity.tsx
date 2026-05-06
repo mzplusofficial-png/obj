@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAxis, AxisState } from './AxisProvider';
+import { useAxis, AxisState } from './AxisProvider.tsx';
 
 // Configuration as per MZ+ Identity
 const AXIS_CONFIG: Record<AxisState, {
@@ -163,7 +163,7 @@ export const AxisEntity = () => {
   return (
     <motion.div 
       layout 
-      className={`${positionClasses} z-[999] flex gap-5 pointer-events-none`}
+      className={`${positionClasses} z-[99999] flex gap-5 pointer-events-none`}
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
     >
       <AnimatePresence mode="wait">

@@ -6,32 +6,27 @@ import {
   Crown, 
   Zap, 
   ShieldCheck, 
-  ChevronRight, 
   Loader2, 
-  Star,
   Target,
   Rocket,
   ArrowRight,
   ArrowDown,
-  Film,
   Sparkles,
   CheckCircle2,
   DollarSign,
   TrendingUp,
   Unlock,
   Eye,
-  Trophy,
   ArrowUpRight
 } from 'lucide-react';
 import { useAxis } from '../axis/AxisProvider.tsx';
 import { supabase } from '../../../services/supabase.ts';
-import { UserProfile, Formation } from '../../../types.ts';
-import { SectionTitle, GoldText } from '../../UI.tsx';
+import { UserProfile, Formation, TabId } from '../../../types.ts';
 import { TextFormationReader } from './TextFormationReader.tsx';
 
 interface AcademieMainProps {
   profile: UserProfile | null;
-  onSwitchTab: (id: any) => void;
+  onSwitchTab: (id: TabId) => void;
 }
 
 const PurpleText: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
@@ -66,9 +61,9 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
     
     // Inject default free text formation if not in DB
     const hasDefaultFree = finalData.some(f => f.id === 'default-free-text');
+    const defaultInjections = [];
     if (!hasDefaultFree) {
-       finalData = [
-         {
+       defaultInjections.push({
            id: 'default-free-text',
            title: 'Comment choisir son produit ?',
            description: 'La méthode pour trouver le produit parfait pour commencer en affiliation',
@@ -79,10 +74,25 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
            is_free: true,
            content_type: 'text',
            text_content: `Félicitations à toi.\n\nSi tu es arrivé jusqu’ici…\nc’est que tu veux vraiment passer à un autre niveau.\n\nMais écoute bien…\n\nLa volonté seule ne suffit pas.\n\nÀ un moment, il faut passer à l’action.\n\nEt ça tombe bien…\n\nParce qu’ici, tu es au bon endroit.\nLe bon business.\nLa bonne communauté.\n\nUne communauté qui ne te motive pas juste…\nmais qui te fait agir.\n\n👉 La MZ+.\n\nMaintenant, parlons d’affiliation.\n\nÉcoute bien…\n\nLa plupart des gens ne gagnent pas en affiliation…\npas parce qu’ils sont incapables.\n\nMais parce qu’ils choisissent des produits qui ne leur correspondent pas.\n\nIci, dans la MZ+, on ne fait pas ça.\n\nOn choisit un produit qui nous correspond.\n\nUn produit que tu comprends.\nUn produit dont tu peux parler facilement.\nUn produit qui résout un vrai problème.\n\nParce que la vérité est simple :\n\n👉 Si tu ne comprends pas ce que tu vends… personne n’achète.\n\nDonc avant d’ajouter n’importe quel produit dans ta boutique…\n\nPrends le temps de regarder les détails.\nDe vraiment le comprendre.\n\nEt pose-toi cette question :\n\n“Est-ce que je peux recommander ce produit à quelqu’un de proche ?”\n\nSi la réponse est non…\n\nLaisse tomber.\n\nEt retiens bien ça :\n\nTu n’as pas besoin du produit parfait.\n\nTu as besoin d’un produit simple…\npour faire ta première vente.\n\nParce qu’ici…\n\nOn commence petit.\n\nMais on joue pour devenir grand.\n\nEt le jour où tu fais ta première vente…\n\nTout change.\n\nParce que tu comprends enfin le principe.\n\nImagine que tu vende\n\nUn produit qui te génère 2500 de comission …  10 fois en une semaine.\n\nC’est ça, le pouvoir.`
-         },
-         ...finalData
-       ];
+       });
     }
+
+    const hasDefaultFreeVideo = finalData.some(f => f.id === 'default-free-video');
+    if (!hasDefaultFreeVideo) {
+      defaultInjections.push({
+           id: 'default-free-video',
+           title: 'La méthode en vidéo',
+           description: 'Lancer son premier business avec les bonnes bases',
+           thumbnail_url: 'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?q=80&w=2070&auto=format&fit=crop',
+           preview_url: 'https://www.youtube.com/watch?v=TaKS_28uuWg',
+           max_preview_seconds: 0,
+           created_at: new Date().toISOString(),
+           is_free: true,
+           content_type: 'video'
+      });
+    }
+
+    finalData = [...defaultInjections, ...finalData];
     setFormations(finalData);
     setLoading(false);
   };
@@ -242,6 +252,14 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
 
   const hasVideo = Boolean(formation.preview_url);
 
+  const isYouTube = hasVideo && (formation.preview_url.includes('youtube.com') || formation.preview_url.includes('youtu.be'));
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+  const youtubeId = isYouTube ? getYouTubeId(formation.preview_url) : null;
+
   const getChapters = () => {
     if (formation.chapters && formation.chapters.length > 0) {
       const icons = [Target, Sparkles, TrendingUp, DollarSign, Rocket, Zap, ShieldCheck];
@@ -357,7 +375,7 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
             </div>
           )}
 
-          {hasVideo && !isTextBased && (
+          {hasVideo && !isTextBased && !isYouTube && (
             <video 
               ref={videoRef}
               src={formation.preview_url}
@@ -365,6 +383,17 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
               onEnded={handleVideoEnded}
               controls={isPlaying && !showPaywall}
               playsInline
+            />
+          )}
+
+          {hasVideo && !isTextBased && isYouTube && isPlaying && !showPaywall && (
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+              title={formation.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className={`w-full h-full absolute inset-0 z-10 border-0 ${showPaywall ? 'blur-3xl grayscale scale-110' : ''} transition-all duration-1000`}
             />
           )}
 

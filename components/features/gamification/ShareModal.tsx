@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Share2, X, Gift, Users, Copy, CheckCircle } from 'lucide-react';
 import { GoldBorderCard, PrimaryButton, GoldText } from '../../UI.tsx';
 
-export const ShareModal = ({ isVisible, onClose }: { isVisible: boolean, onClose: () => void }) => {
+export const ShareModal = ({ isVisible, onClose, referralCode }: { isVisible: boolean, onClose: () => void, referralCode?: string }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = window.location.origin;
-  const shareText = `Je viens de tomber sur MZ+.\nC’est un système en ligne qui permettrait de générer des revenus en ligne assez simplement.\nJ'ai deja commnecz et franchement ça a l’air intéressant.\nSi tu veux jeter un œil 👇\n\n${shareUrl}`;
+  const baseUrl = window.location.origin;
+  const shareUrl = referralCode ? `${baseUrl}/register?ref=${referralCode}` : baseUrl;
+  const shareText = `Je viens de tomber sur MZ+.\nC’est un système en ligne qui permettrait de générer des revenus en ligne assez simplement.\nJ'ai déjà commencé et franchement ça a l’air intéressant.\nSi tu veux jeter un œil 👇\n\n${shareUrl}`;
 
   const handleShare = (platform: string) => {
     if (platform === 'whatsapp') {

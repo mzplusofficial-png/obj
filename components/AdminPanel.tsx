@@ -23,11 +23,12 @@ import { UserBehaviorAdmin } from './features/admin-behavior/UserBehaviorAdmin.t
 import { PremiumWelcomeAdmin } from './features/premium-welcome/PremiumWelcomeAdmin.tsx';
 import { AdminStoreSettings } from './features/my-store/AdminStoreSettings.tsx';
 import { AxisTestAdmin } from './features/axis/AxisTestAdmin.tsx';
+import { Challenge3JAdmin } from './features/challenges/Challenge3JAdmin.tsx';
 
 import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
 import { SoundEffectsAdmin } from './features/gamification/SoundEffectsAdmin.tsx';
 
-type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects';
+type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j';
 
 export const AdminPanel: React.FC<{ 
   adminProfile: UserProfile | null; 
@@ -123,33 +124,69 @@ export const AdminPanel: React.FC<{
 
   return (
     <div className="space-y-10 animate-fade-in pb-24 text-white">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-12">
+      <div className="flex flex-col gap-8 mb-12">
         <SectionTitle 
             title={isSuperAdmin ? "Cercle Décisionnel" : "Marketing Console"} 
             subtitle={isSuperAdmin ? "Gestion intégrale de l'écosystème MZ+" : "Gestion des contenus et de la communication"} 
         />
-        <div className="flex flex-wrap bg-neutral-900 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-2xl overflow-x-auto max-w-full">
-          <TabButton active={activeSubTab === 'stats'} onClick={() => setActiveSubTab('stats')} icon={LayoutGrid} label="Synthèse" />
-          <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'user_behavior'} onClick={() => setActiveSubTab('user_behavior')} icon={MousePointer2} label="Comportement" color="text-emerald-400" />
-          <TabButton active={activeSubTab === 'home_landing'} onClick={() => setActiveSubTab('home_landing')} icon={Home} label="Landing Page" color="text-yellow-500" />
-          <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'users'} onClick={() => setActiveSubTab('users')} icon={Users} label="Membres" />
-          <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'withdrawals'} onClick={() => setActiveSubTab('withdrawals')} icon={Wallet} label="Retraits" badge={stats.pendingWithdrawals} />
-          <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'validation'} onClick={() => setActiveSubTab('validation')} icon={ClipboardList} label="Ventes" badge={stats.pendingSales} />
-          <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'rpa_validations'} onClick={() => setActiveSubTab('rpa_validations')} icon={Video} label="RPA" badge={stats.pendingRpa} />
-          <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'activity_audit'} onClick={() => setActiveSubTab('activity_audit')} icon={History} label="Audit Temps" />
-          <TabButton active={activeSubTab === 'formations'} onClick={() => setActiveSubTab('formations')} icon={GraduationCap} label="Académie" color="text-purple-400" />
-          <TabButton active={activeSubTab === 'coaching'} onClick={() => setActiveSubTab('coaching')} icon={Target} label="Coaching" badge={stats.pendingCoaching} />
-          <TabButton active={activeSubTab === 'catalog'} onClick={() => setActiveSubTab('catalog')} icon={Package} label="Catalogue" />
-          <TabButton active={activeSubTab === 'admin_push'} onClick={() => setActiveSubTab('admin_push')} icon={BellRing} label="Push" />
-          <TabButton active={activeSubTab === 'marketing_announcements'} onClick={() => setActiveSubTab('marketing_announcements')} icon={Megaphone} label="Pop-ups" />
-          <TabButton active={activeSubTab === 'premium_welcome'} onClick={() => setActiveSubTab('premium_welcome')} icon={Crown} label="Accueil Premium" color="text-purple-500" />
-          <TabButton active={activeSubTab === 'premium_access'} onClick={() => setActiveSubTab('premium_access')} icon={ShieldCheck} label="Accès Premium" color="text-red-500" />
-          <TabButton active={activeSubTab === 'mz_presentation'} onClick={() => setActiveSubTab('mz_presentation')} icon={Video} label="Offre MZ+" color="text-blue-400" />
-          <TabButton active={activeSubTab === 'flash_offer'} onClick={() => setActiveSubTab('flash_offer')} icon={Flame} label="PASSEZ AU NIVEAU SUPÉRIEUR" />
-          <TabButton active={activeSubTab === 'pwa_branding'} onClick={() => setActiveSubTab('pwa_branding')} icon={Settings} label="PWA & Branding" color="text-emerald-500" />
-          <TabButton active={activeSubTab === 'store_settings'} onClick={() => setActiveSubTab('store_settings')} icon={Store} label="Boutique" color="text-orange-500" />
-          <TabButton active={activeSubTab === 'sound_effects'} onClick={() => setActiveSubTab('sound_effects')} icon={Volume2} label="Effets Sonores" color="text-cyan-400" />
-          <TabButton active={activeSubTab === 'axis_test'} onClick={() => setActiveSubTab('axis_test')} icon={Zap} label="AXIS Intelligence" color="text-purple-500" />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          {/* Tableau de bord / App */}
+          <div className="space-y-3">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Tableau de Bord</h3>
+             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+               <TabButton active={activeSubTab === 'stats'} onClick={() => setActiveSubTab('stats')} icon={LayoutGrid} label="Synthèse" />
+               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'user_behavior'} onClick={() => setActiveSubTab('user_behavior')} icon={MousePointer2} label="Comportement" color="text-emerald-400" />
+               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'users'} onClick={() => setActiveSubTab('users')} icon={Users} label="Membres" />
+               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'activity_audit'} onClick={() => setActiveSubTab('activity_audit')} icon={History} label="Audit Temps" />
+               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'challenge_3j'} onClick={() => setActiveSubTab('challenge_3j')} icon={CheckCircle2} label="Défis 3J" color="text-amber-400" />
+             </div>
+          </div>
+
+          {/* Ventes & Finances */}
+          <div className="space-y-3">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">E-Commerce & Finances</h3>
+             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+                <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'validation'} onClick={() => setActiveSubTab('validation')} icon={ClipboardList} label="Ventes" badge={stats.pendingSales} color="text-green-400" />
+                <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'withdrawals'} onClick={() => setActiveSubTab('withdrawals')} icon={Wallet} label="Retraits" badge={stats.pendingWithdrawals} color="text-teal-400" />
+                <TabButton active={activeSubTab === 'catalog'} onClick={() => setActiveSubTab('catalog')} icon={Package} label="Catalogue" />
+                <TabButton active={activeSubTab === 'store_settings'} onClick={() => setActiveSubTab('store_settings')} icon={Store} label="Boutique" color="text-orange-500" />
+             </div>
+          </div>
+
+          {/* Académie & Formations */}
+           <div className="space-y-3">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Acquisition & Apprentissage</h3>
+             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+               <TabButton active={activeSubTab === 'formations'} onClick={() => setActiveSubTab('formations')} icon={GraduationCap} label="Académie" color="text-purple-400" />
+               <TabButton active={activeSubTab === 'coaching'} onClick={() => setActiveSubTab('coaching')} icon={Target} label="Coaching" badge={stats.pendingCoaching} />
+               <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'rpa_validations'} onClick={() => setActiveSubTab('rpa_validations')} icon={Video} label="RPA" badge={stats.pendingRpa} color="text-cyan-400" />
+             </div>
+          </div>
+
+          {/* Marketing & Premium */}
+          <div className="space-y-3">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Conversion & Marketing</h3>
+             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+                <TabButton active={activeSubTab === 'home_landing'} onClick={() => setActiveSubTab('home_landing')} icon={Home} label="Landing Page" color="text-yellow-500" />
+                <TabButton active={activeSubTab === 'marketing_announcements'} onClick={() => setActiveSubTab('marketing_announcements')} icon={Megaphone} label="Pop-ups" />
+                <TabButton active={activeSubTab === 'admin_push'} onClick={() => setActiveSubTab('admin_push')} icon={BellRing} label="Push" />
+                <TabButton active={activeSubTab === 'mz_presentation'} onClick={() => setActiveSubTab('mz_presentation')} icon={Video} label="Offre MZ+" color="text-blue-400" />
+                <TabButton active={activeSubTab === 'flash_offer'} onClick={() => setActiveSubTab('flash_offer')} icon={Flame} label="Flash Offer" color="text-red-500" />
+             </div>
+          </div>
+
+          {/* Premium & System */}
+           <div className="space-y-3 lg:col-span-2">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Système & Premium</h3>
+             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+               <TabButton active={activeSubTab === 'premium_welcome'} onClick={() => setActiveSubTab('premium_welcome')} icon={Crown} label="Accueil Premium" color="text-purple-500" />
+               <TabButton active={activeSubTab === 'premium_access'} onClick={() => setActiveSubTab('premium_access')} icon={ShieldCheck} label="Accès Premium" color="text-red-500" />
+               <TabButton active={activeSubTab === 'axis_test'} onClick={() => setActiveSubTab('axis_test')} icon={Zap} label="AXIS Intelligence" color="text-amber-400" />
+               <TabButton active={activeSubTab === 'pwa_branding'} onClick={() => setActiveSubTab('pwa_branding')} icon={Settings} label="PWA & Branding" color="text-emerald-500" />
+               <TabButton active={activeSubTab === 'sound_effects'} onClick={() => setActiveSubTab('sound_effects')} icon={Volume2} label="Effets Sonores" color="text-cyan-400" />
+             </div>
+          </div>
         </div>
       </div>
 
@@ -224,6 +261,7 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'user_behavior' && <UserBehaviorAdmin />}
         {activeSubTab === 'home_landing' && <HomeLandingAdmin />}
         {activeSubTab === 'users' && isAnyAdmin && <AdminUserManagement users={users} activitySummary={activitySummary} searchTerm={searchTerm} setSearchTerm={setSearchTerm} onRefresh={fetchAdminData} />}
+        {activeSubTab === 'challenge_3j' && isAnyAdmin && <Challenge3JAdmin users={users} onRefresh={fetchAdminData} />}
         {activeSubTab === 'formations' && <FormationAdmin />}
         {activeSubTab === 'withdrawals' && isSuperAdmin && <AdminWithdrawalRequests withdrawals={withdrawals} onRefresh={fetchAdminData} />}
         {activeSubTab === 'rpa_validations' && isSuperAdmin && <AdminRPASubmissions submissions={submissions} onRefresh={fetchAdminData} />}
