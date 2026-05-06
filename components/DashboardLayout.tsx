@@ -11,7 +11,8 @@ import {
   Zap,
   HelpCircle,
   User,
-  Coins
+  Coins,
+  ArrowDown
 } from 'lucide-react';
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
@@ -27,17 +28,22 @@ interface DashboardLayoutProps {
   setIsMenuOpen?: (open: boolean) => void;
 }
 
-const NavButton = ({ active, onClick, emoji, label, id, showBadge }: { active: boolean, onClick: () => void, emoji: string, label: string, id?: string, showBadge?: boolean }) => (
+const NavButton = ({ active, onClick, emoji, label, id, showBadge, highlighted }: { active: boolean, onClick: () => void, emoji: string, label: string, id?: string, showBadge?: boolean, highlighted?: boolean }) => (
   <button 
     id={id}
     onClick={onClick}
-    className={`relative flex flex-col items-center gap-0.5 transition-all outline-none ${active ? 'scale-105' : 'opacity-40 hover:opacity-100'}`}
+    className={`relative flex flex-col items-center gap-0.5 transition-all outline-none ${active ? 'scale-105' : 'opacity-40 hover:opacity-100'} ${highlighted ? 'animate-pulse scale-110 drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]' : ''}`}
   >
+    {highlighted && (
+      <span className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-20">
+        <ArrowDown size={16} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,1)]" />
+      </span>
+    )}
     {showBadge && (
       <span className="absolute -top-1 -right-2 w-3 h-3 bg-red-500 rounded-full border border-black animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-10 block"></span>
     )}
     <span className="text-xl leading-none">{emoji}</span>
-    <span className={`text-[8px] font-bold tracking-widest uppercase ${active ? 'text-[var(--color-gold-main)]' : 'text-[var(--color-text-gray)]'}`}>{label}</span>
+    <span className={`text-[8px] font-bold tracking-widest uppercase ${active ? 'text-[var(--color-gold-main)]' : 'text-[var(--color-text-gray)]'} ${highlighted ? 'text-yellow-400' : ''}`}>{label}</span>
   </button>
 );
 
@@ -95,6 +101,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     await supabase.auth.signOut();
     window.location.reload();
   };
+
+  const [isBoutiqueHighlighted, setIsBoutiqueHighlighted] = useState(false);
+
+  useEffect(() => {
+    const handleHighlight = () => {
+      setIsBoutiqueHighlighted(true);
+      setTimeout(() => setIsBoutiqueHighlighted(false), 8000);
+    };
+    window.addEventListener('highlight-boutique', handleHighlight);
+    return () => window.removeEventListener('highlight-boutique', handleHighlight);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-main-bg)] text-[var(--color-text-main)] flex flex-col font-sans overflow-hidden selection:bg-[var(--color-gold-main)] selection:text-black">
@@ -232,6 +249,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           onClick={() => handleTabClick('affiliation')} 
           emoji="🏪" 
           label="Boutique" 
+          highlighted={isBoutiqueHighlighted}
         />
         <NavButton 
           active={activeTab === 'team'} 

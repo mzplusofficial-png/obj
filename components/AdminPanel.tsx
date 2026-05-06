@@ -543,7 +543,7 @@ const AdminUserManagement = ({ users, activitySummary, searchTerm, setSearchTerm
 const FormationAdmin = () => {
   const [formations, setFormations] = useState<Formation[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<any>({ title: '', description: '', thumbnail_url: '', preview_url: '', order_index: 0 });
+  const [formData, setFormData] = useState<any>({ title: '', description: '', thumbnail_url: '', preview_url: '', order_index: 0, is_free: false });
 
   const fetchFormations = async () => {
     const { data } = await supabase.from('mz_formations').select('*').order('order_index');
@@ -556,7 +556,7 @@ const FormationAdmin = () => {
     e.preventDefault();
     await supabase.from('mz_formations').upsert(formData);
     setShowForm(false);
-    setFormData({ title: '', description: '', thumbnail_url: '', preview_url: '', order_index: 0 });
+    setFormData({ title: '', description: '', thumbnail_url: '', preview_url: '', order_index: 0, is_free: false });
     fetchFormations();
   };
 
@@ -576,6 +576,15 @@ const FormationAdmin = () => {
             <textarea required className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white h-24" placeholder="Description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             <input className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white" placeholder="URL Miniature" value={formData.thumbnail_url} onChange={e => setFormData({...formData, thumbnail_url: e.target.value})} />
             <input className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white" placeholder="URL Vidéo Preview" value={formData.preview_url} onChange={e => setFormData({...formData, preview_url: e.target.value})} />
+            
+            <label className="flex items-center gap-3 p-4 border border-white/5 bg-black/50 rounded-xl cursor-pointer hover:bg-white/5 transition-colors">
+              <input type="checkbox" checked={formData.is_free} onChange={e => setFormData({...formData, is_free: e.target.checked})} className="w-4 h-4 rounded bg-black border-white/20 text-yellow-500 focus:ring-yellow-500" />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-white">Formation Gratuite</span>
+                <span className="text-[10px] text-neutral-500">Accessible à tous les utilisateurs (même non-MZ+)</span>
+              </div>
+            </label>
+
             <PrimaryButton type="submit" fullWidth size="lg">Enregistrer le module</PrimaryButton>
           </form>
         </GoldBorderCard>
@@ -583,12 +592,17 @@ const FormationAdmin = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {formations.map(f => (
-          <div key={f.id} className="p-4 md:p-5 bg-[#0a0a0a] border border-white/5 rounded-2xl flex justify-between items-center group hover:border-yellow-600/20 transition-all">
+           <div key={f.id} className="p-4 md:p-5 bg-[#0a0a0a] border border-white/5 rounded-2xl flex justify-between items-center group hover:border-yellow-600/20 transition-all cursor-pointer" onClick={() => { setFormData(f); setShowForm(true); }}>
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neutral-900 overflow-hidden shrink-0"><img src={f.thumbnail_url} className="w-full h-full object-cover opacity-50" /></div>
-              <span className="font-bold uppercase text-[11px] md:text-xs text-white truncate max-w-[150px] sm:max-w-none">{f.title}</span>
+              <div className="flex flex-col">
+                <span className="font-bold uppercase text-[11px] md:text-xs text-white truncate max-w-[150px] sm:max-w-none">{f.title}</span>
+                <span className={`text-[9px] font-black uppercase ${f.is_free ? 'text-emerald-500' : 'text-purple-500'}`}>
+                  {f.is_free ? 'Gratuite' : 'Premium'}
+                </span>
+              </div>
             </div>
-            <button onClick={async () => { if(confirm("Supprimer ?")) { await supabase.from('mz_formations').delete().eq('id', f.id); fetchFormations(); } }} className="p-2 text-neutral-600 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+            <button onClick={async (e) => { e.stopPropagation(); if(confirm("Supprimer ?")) { await supabase.from('mz_formations').delete().eq('id', f.id); fetchFormations(); } }} className="p-2 text-neutral-600 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
           </div>
         ))}
       </div>

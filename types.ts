@@ -26,6 +26,9 @@ export interface Formation {
   created_at: string;
   chapters?: { title: string }[];
   order_index?: number;
+  is_free?: boolean;
+  content_type?: 'video' | 'text';
+  text_content?: string;
 }
 
 export interface UserSuggestion {

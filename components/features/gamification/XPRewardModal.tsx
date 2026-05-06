@@ -29,30 +29,42 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
   }, []);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     if (isVisible) {
-      playSound('reward_appear');
-      setTimeout(() => playSound('gift'), 600);
       setIsClaimed(false);
       setShowFlyingCoins(false);
       setShockwave(false);
       
+      // Play sound immediately when the modal state is visible
+      playSound('reward_appear');
+      
+      timeout = setTimeout(() => {
+        playSound('gift');
+      }, 700);
+      
+      // Start counting up right after initial appearance starts
       let startTimestamp: number;
-      const duration = 1500;
+      const duration = 1200;
       const step = (timestamp: number) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        setDisplayAmount(Math.floor(progress * amount));
+        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        setDisplayAmount(Math.floor(easeProgress * amount));
         if (progress < 1) {
           window.requestAnimationFrame(step);
         }
       };
-      window.requestAnimationFrame(step);
+      
+      // A tiny delay before counting so the number doesn't pop in mid-animation
+      setTimeout(() => window.requestAnimationFrame(step), 150);
+      
     } else {
       setDisplayAmount(0);
       setIsClaimed(false);
       setShowFlyingCoins(false);
       setShockwave(false);
     }
+    return () => clearTimeout(timeout);
   }, [isVisible, amount]);
 
   const [shockwave, setShockwave] = useState(false);
@@ -102,20 +114,20 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
           const osc1 = ctx.createOscillator();
           const gain = ctx.createGain();
           
-          osc1.type = 'square';
-          osc1.frequency.setValueAtTime(400, ctx.currentTime);
-          osc1.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
-          osc1.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.3);
+          osc1.type = 'sine'; // Lighter sound
+          osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+          osc1.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+          osc1.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.3); // C6
           
           gain.gain.setValueAtTime(0, ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
           
           osc1.connect(gain);
           gain.connect(ctx.destination);
           
           osc1.start(ctx.currentTime);
-          osc1.stop(ctx.currentTime + 0.5);
+          osc1.stop(ctx.currentTime + 0.7);
       } else if (type === 'gift') {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -180,7 +192,7 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="absolute inset-0 bg-black/90 backdrop-blur-xl pointer-events-auto"
               />
             )}
@@ -189,10 +201,10 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
           <AnimatePresence>
             {!isClaimed && (
               <motion.div
-                initial={{ scale: 0.1, opacity: 0, y: 0 }}
-                animate={{ scale: [1.2, 0.95, 1], opacity: 1, y: 0 }}
+                initial={{ scale: 0.95, opacity: 0, y: 15 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.8, opacity: 0, filter: "blur(10px)" }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                 className="pointer-events-auto max-w-[340px] w-full mx-4"
               >
                 <GoldBorderCard className="relative flex flex-col items-center overflow-hidden !p-8 shadow-[0_30px_100px_rgba(0,0,0,1)] bg-black/90 backdrop-blur-2xl">
@@ -237,12 +249,18 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
 
                     {/* Title & Subtitle */}
                     <div className="text-center w-full mb-8">
-                      <GoldText className="text-2xl sm:text-3xl font-black uppercase tracking-tight drop-shadow-sm mb-2 block">
-                        Félicitations !
+                      <GoldText className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm mb-2 block">
+                        {title || "Félicitations !"}
                       </GoldText>
-                      <p className="text-[#a19d93] text-xs sm:text-sm font-bold italic uppercase tracking-widest px-2">
-                        {title || "Bonus MZ+"}
-                      </p>
+                      {description ? (
+                        <p className="text-[#a19d93] text-sm font-bold mt-2 leading-relaxed px-2 whitespace-pre-wrap">
+                          {description}
+                        </p>
+                      ) : (
+                        <p className="text-[#a19d93] text-xs sm:text-sm font-bold italic uppercase tracking-widest px-2">
+                          Bonus MZ+
+                        </p>
+                      )}
                     </div>
 
                     {/* Points Section */}
@@ -255,7 +273,7 @@ export const XPRewardModal = ({ isVisible, amount, title, description, onComplet
                         +{displayAmount}
                       </span>
                       <span className="relative text-[#a19d93] text-[11px] font-bold italic tracking-widest uppercase">
-                        {description || "XP MZ+"}
+                        XP MZ+
                       </span>
                     </div>
                   </div>

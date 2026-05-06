@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
-  ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon, Store 
+  ArrowLeft, Zap, TrendingUp, User, Coins, Target, MessageCircle, Activity, Sparkles, Clock, Share2, X, Facebook, Check, Link as LinkIcon, Store, Eye 
 } from 'lucide-react';
 import { Product } from '../types.ts';
 import { useAxis } from './features/axis/AxisProvider.tsx';
@@ -368,6 +368,43 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
             <div className="absolute inset-0 bg-yellow-500/5 blur-[100px] -z-10"></div>
             
             <div className="flex flex-col items-center text-center space-y-14">
+               
+               <div className="flex items-end justify-center w-full max-w-sm mx-auto">
+                 <div className="flex-1 text-center">
+                    <p className="text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1">Total</p>
+                    <motion.span 
+                      key={trend.totalSales}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-3xl font-black text-white italic tracking-tighter"
+                    >
+                       {trend.totalSales}
+                    </motion.span>
+                 </div>
+                 
+                 <div className="w-px h-12 bg-white/10 mx-2"></div>
+
+                 <div className="flex-1 text-center relative">
+                    <p className="text-[8px] font-black uppercase text-emerald-500 tracking-widest mb-1 flex items-center justify-center gap-1">
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                       Aujourd'hui
+                    </p>
+                    <motion.span 
+                      key={trend.salesToday}
+                      initial={{ scale: 1.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-4xl font-black text-emerald-500 italic tracking-tighter drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                    >
+                       {trend.salesToday}
+                    </motion.span>
+                 </div>
+               </div>
+
+               <div className="bg-white/5 border border-white/5 rounded-full px-4 py-2 flex items-center justify-center gap-2 text-[9px] font-black text-white/70 uppercase tracking-widest shadow-[0_5px_20px_rgba(0,0,0,0.3)]">
+                  <Activity size={12} className={livePulse ? 'text-blue-400 animate-pulse' : 'text-neutral-500'} />
+                  {trend.viewersNow} personnes sur cette page
+               </div>
+
                {/* Strategic Ticker / Dynamic Phrase */}
                {trend.dynamicMessage && (
                   <motion.div 
@@ -459,10 +496,13 @@ export const ProductDetailView = ({ product, stats, referralCode, onBack, index,
       <div className="fixed pb-safe pb-8 pt-10 bottom-0 left-0 w-full px-6 bg-gradient-to-t from-black via-black/95 to-transparent flex justify-center z-[650] pointer-events-none">
           <motion.button 
             whileTap={{ scale: 0.9 }}
-            onClick={() => onBack()}
-            className="w-full max-w-md bg-white/5 backdrop-blur-md border border-white/10 py-5 rounded-[20px] text-[10px] font-black uppercase tracking-[0.4em] text-neutral-300 hover:text-white hover:bg-white/10 transition-all shadow-2xl pointer-events-auto"
+            onClick={() => {
+               window.open(link, '_blank');
+            }}
+            className="w-full max-w-md bg-white/5 backdrop-blur-md border border-white/10 py-5 rounded-[20px] text-[10px] font-black uppercase tracking-[0.4em] text-neutral-300 hover:text-white hover:bg-white/10 transition-all shadow-2xl pointer-events-auto flex items-center justify-center gap-2"
           >
-            ← Fermer & Agir
+            <Eye size={16} />
+            Prévisualiser le produit
           </motion.button>
       </div>
     </div>

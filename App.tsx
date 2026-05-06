@@ -41,6 +41,7 @@ import { requestNotificationPermission, onMessageListener } from './services/fir
 import { useAxis } from './components/features/axis/AxisProvider.tsx';
 import { AxisGuideFlow } from './components/features/axis/AxisGuideFlow.tsx';
 import { XPRewardModal } from './components/features/gamification/XPRewardModal.tsx';
+import { ShareModal } from './components/features/gamification/ShareModal.tsx';
 import { ChallengePresentation } from './components/features/challenges/ChallengePresentation.tsx';
 import { rewardUserXP } from './services/gamification.ts';
 
@@ -76,20 +77,25 @@ const App: React.FC = () => {
   const [xpRewardAmount, setXpRewardAmount] = useState(0);
   const [xpRewardTitle, setXpRewardTitle] = useState("");
   const [xpRewardDesc, setXpRewardDesc] = useState("");
+  const [xpRewardSource, setXpRewardSource] = useState("");
+  const [showSharePopup, setShowSharePopup] = useState(false);
   
   // Défis "3 Jours" Trigger States
+
   const [showChallenge, setShowChallenge] = useState(false);
   const [challengeEligible, setChallengeEligible] = useState(false);
   const [challengeTriggered, setChallengeTriggered] = useState(false);
   
-  const { triggerAxisMessage } = useAxis();
+  const { triggerAxisMessage, hideAxis } = useAxis();
 
   useEffect(() => {
     const handleXpReward = async (e: Event) => {
-      const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string}>;
+      const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string, source?: string}>;
       setXpRewardAmount(customEvent.detail.amount);
       if (customEvent.detail.title) setXpRewardTitle(customEvent.detail.title);
       if (customEvent.detail.description) setXpRewardDesc(customEvent.detail.description);
+      if (customEvent.detail.source) setXpRewardSource(customEvent.detail.source);
+      else setXpRewardSource("");
       setShowXpReward(true);
       
       if (session?.user?.id) {
@@ -540,6 +546,35 @@ const App: React.FC = () => {
 
   const isAdmin = userProfile?.is_admin === true || !!userProfile?.admin_role;
 
+  const handleShareClose = () => {
+    setShowSharePopup(false);
+    if (xpRewardSource === 'formation_complete') {
+      let remaining7s = 7;
+      const interval7s = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          remaining7s -= 1;
+          if (remaining7s <= 0) {
+            clearInterval(interval7s);
+            triggerAxisMessage(
+              "Allô, c'est moi, Axis 👁️\nMaintenant que tu as suivi la formation, il est temps de passer à l'action 🚀\nVa choisir ton produit 💰",
+              'progression',
+              15000,
+              {
+                label: "OK",
+                action: () => {
+                  hideAxis();
+                  window.dispatchEvent(new CustomEvent('highlight-boutique'));
+                }
+              },
+              'smart'
+            );
+          }
+        }
+      }, 1000);
+      setXpRewardSource(""); // Clear to prevent double triggering
+    }
+  };
+
   return (
     <DashboardLayout 
       activeTab={activeTab} 
@@ -549,6 +584,7 @@ const App: React.FC = () => {
       isMenuOpen={isMenuOpen}
       setIsMenuOpen={setIsMenuOpen}
     >
+      <ShareModal isVisible={showSharePopup} onClose={handleShareClose} />
       <PremiumAccessGate />
       
       <PushDisplay profile={userProfile} />
@@ -700,6 +736,18 @@ const App: React.FC = () => {
         description={xpRewardDesc}
         onComplete={() => {
           setShowXpReward(false);
+          if (xpRewardSource === 'formation_complete') {
+            let remaining5s = 5;
+            const interval5s = setInterval(() => {
+              if (document.visibilityState === 'visible') {
+                remaining5s -= 1;
+                if (remaining5s <= 0) {
+                  clearInterval(interval5s);
+                  setShowSharePopup(true);
+                }
+              }
+            }, 1000);
+          }
           const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
           if (!hasSeenChallenge) {
              setChallengeEligible(true);
@@ -708,7 +756,25 @@ const App: React.FC = () => {
       />
       <ChallengePresentation 
         isVisible={showChallenge} 
-        onAccept={() => setShowChallenge(false)} 
+        onAccept={() => {
+          setShowChallenge(false);
+          setActiveTab('formation');
+          setTimeout(() => {
+            triggerAxisMessage(
+               "👉 \"Bravo ! pour ton engagement ! 🎉🎉 Juste avant de te lancer, il est important que tu suives cette formation.\"",
+               'progression',
+               15000,
+               {
+                 label: "Voir la formation",
+                 action: () => {
+                   hideAxis();
+                   window.dispatchEvent(new CustomEvent('open-formation', { detail: { id: 'default-free-text' } }));
+                 }
+               },
+               'smart'
+            );
+          }, 800);
+        }} 
       />
       <PWAInstallBanner />
     </DashboardLayout>
