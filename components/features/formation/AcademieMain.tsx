@@ -88,7 +88,8 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
            max_preview_seconds: 0,
            created_at: new Date().toISOString(),
            is_free: true,
-           content_type: 'video'
+           content_type: 'text',
+           text_content: `Dans cette formation, tu vas comprendre une chose essentielle :\n\nVendre, ce n’est pas forcer…\nc’est faire comprendre.\n\nTu vas apprendre à transformer un produit en solution,\net donner envie d’acheter naturellement.\n\nMais si tu veux aller plus loin…\n\nPasse en MZ+ Premium.\nLà où tu ne regardes plus… tu gagnes.`
       });
     }
 
@@ -234,8 +235,20 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
            content={activeTextFormation.text_content || ''}
            formationId={activeTextFormation.id}
            isAdmin={isAdmin}
-           onClose={() => setActiveTextFormation(null)}
-           onComplete={() => setActiveTextFormation(null)}
+           previewUrl={activeTextFormation.preview_url}
+           onUpgrade={() => onSwitchTab('flash_offer')}
+           onClose={() => {
+             if (activeTextFormation.id === 'default-free-video') {
+                window.dispatchEvent(new CustomEvent('mz-day2-formation-read'));
+             }
+             setActiveTextFormation(null);
+           }}
+           onComplete={() => {
+             if (activeTextFormation.id === 'default-free-video') {
+                window.dispatchEvent(new CustomEvent('mz-day2-formation-read'));
+             }
+             setActiveTextFormation(null);
+           }}
         />
       )}
     </div>
@@ -244,21 +257,9 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
 
 const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium: boolean; isFree?: boolean; onUpgrade: () => void; onReadClick?: () => void }> = ({ formation, index, isPremium, isFree = false, onUpgrade, onReadClick }) => {
   const { axisState, hideAxis } = useAxis();
-  const [isPlaying, setIsPlaying] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isHighlighted = formation.id === 'default-free-text' && axisState === 'progression';
-
-  const hasVideo = Boolean(formation.preview_url);
-
-  const isYouTube = hasVideo && (formation.preview_url.includes('youtube.com') || formation.preview_url.includes('youtu.be'));
-  const getYouTubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-  const youtubeId = isYouTube ? getYouTubeId(formation.preview_url) : null;
 
   const getChapters = () => {
     if (formation.chapters && formation.chapters.length > 0) {
@@ -280,21 +281,14 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
   const handlePlay = () => {
     if (isHighlighted) hideAxis();
     if (showPaywall) return;
-    if (formation.content_type === 'text' && onReadClick) {
-      if (!isPremium && !isFree) {
-        setShowPaywall(true);
-      } else {
-        onReadClick();
-      }
-      return;
-    }
-    if (!hasVideo && !isPremium && !isFree) {
+    
+    if (!isPremium && !isFree) {
       setShowPaywall(true);
       return;
     }
-    if (hasVideo) {
-      setIsPlaying(true);
-      videoRef.current?.play();
+
+    if (onReadClick) {
+      onReadClick();
     }
   };
 
@@ -338,7 +332,7 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
         )}
         <div className={`relative aspect-video rounded-[3rem] overflow-hidden border bg-[#050505] shadow-[0_50px_100px_rgba(0,0,0,0.8)] transition-all duration-1000 group-hover:border-purple-600/20 ${isHighlighted ? 'border-emerald-500 ring-4 ring-[#10b981]/30 shadow-[0_0_50px_rgba(16,185,129,0.4)] animate-pulse mz-highlighted-btn' : 'border-white/10'}`}>
           
-          {!isPlaying && !showPaywall && (
+          {!showPaywall && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center cursor-pointer group/overlay" onClick={handlePlay}>
               <img 
                 src={formation.thumbnail_url} 
@@ -362,39 +356,11 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
 
               {/* Bouton de lecture minimaliste */}
               <div className="relative z-10">
-                 {isTextBased ? (
-                    <div className="px-8 py-4 rounded-full border border-white/20 flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl font-black tracking-widest uppercase text-xs text-white bg-black/40 backdrop-blur-md group-hover/overlay:bg-emerald-600 group-hover/overlay:border-emerald-400 group-hover/overlay:scale-105">
-                       Lire Maintenant <ArrowUpRight size={16} />
-                    </div>
-                 ) : (
-                    <div className={`w-24 h-24 rounded-full border border-white/20 flex items-center justify-center transition-all duration-500 shadow-2xl relative text-white bg-black/40 backdrop-blur-md group-hover/overlay:bg-purple-600 group-hover/overlay:border-purple-400 group-hover/overlay:scale-110`}>
-                       {hasVideo ? <Play size={32} fill="currentColor" className="ml-1.5" /> : <Lock size={32} strokeWidth={2.5} />}
-                    </div>
-                 )}
+                 <div className="px-8 py-4 rounded-full border border-white/20 flex items-center justify-center gap-3 transition-all duration-500 shadow-2xl font-black tracking-widest uppercase text-xs text-white bg-black/40 backdrop-blur-md group-hover/overlay:bg-emerald-600 group-hover/overlay:border-emerald-400 group-hover/overlay:scale-105">
+                    Voir <ArrowUpRight size={16} />
+                 </div>
               </div>
             </div>
-          )}
-
-          {hasVideo && !isTextBased && !isYouTube && (
-            <video 
-              ref={videoRef}
-              src={formation.preview_url}
-              className={`w-full h-full object-cover ${showPaywall ? 'blur-3xl grayscale scale-110' : ''} transition-all duration-1000`}
-              onEnded={handleVideoEnded}
-              controls={isPlaying && !showPaywall}
-              playsInline
-            />
-          )}
-
-          {hasVideo && !isTextBased && isYouTube && isPlaying && !showPaywall && (
-            <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-              title={formation.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              className={`w-full h-full absolute inset-0 z-10 border-0 ${showPaywall ? 'blur-3xl grayscale scale-110' : ''} transition-all duration-1000`}
-            />
           )}
 
           {/* PAYWALL INTÉGRÉ - Uniquement si clic Standard */}

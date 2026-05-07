@@ -166,8 +166,40 @@ const App: React.FC = () => {
         }, 800); 
       }
     };
+    
+    const handleDay2FormationRead = () => {
+       setTimeout(() => {
+          triggerAxisMessage(
+             "👉 Maintenant que tu as suivi la formation, il est temps de faire ta première vente ! Vas-y, tu peux le faire !",
+             'progression',
+             15000,
+             undefined,
+             'smart'
+          );
+       }, 3000);
+    };
+
+    const handleNewSale = () => {
+       const j2Presented = localStorage.getItem('mz_challenge_3j_j2_presented');
+       const j2Completed = localStorage.getItem('mz_challenge_3j_j2_completed');
+       if (j2Presented && !j2Completed) {
+          localStorage.setItem('mz_challenge_3j_j2_completed', 'true');
+          setChallengeCelebratedStep(2);
+          setTimeout(() => {
+            setShowChallengeCelebration(true);
+          }, 800);
+       }
+    };
+
     window.addEventListener('mz-product-added-to-store', handleProductAdded);
-    return () => window.removeEventListener('mz-product-added-to-store', handleProductAdded);
+    window.addEventListener('mz-day2-formation-read', handleDay2FormationRead);
+    window.addEventListener('mz-new-sale', handleNewSale);
+    
+    return () => {
+       window.removeEventListener('mz-product-added-to-store', handleProductAdded);
+       window.removeEventListener('mz-day2-formation-read', handleDay2FormationRead);
+       window.removeEventListener('mz-new-sale', handleNewSale);
+    };
   }, []);
 
   useEffect(() => {
@@ -953,8 +985,12 @@ const App: React.FC = () => {
         mode="day2_intro"
         onAccept={() => {
           setShowChallengeDay2(false);
+          setActiveTab('formation');
           localStorage.setItem('mz_challenge_3j_j2_presented', 'true');
           localStorage.setItem('mz_challenge_3j_j2_started_at', new Date().toISOString());
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('open-formation', { detail: { id: 'default-free-video' } }));
+          }, 400);
         }}
         onClose={() => {
           setShowChallengeDay2(false);

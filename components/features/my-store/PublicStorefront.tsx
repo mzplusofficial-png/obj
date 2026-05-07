@@ -21,7 +21,7 @@ export function PublicStorefront({ products, onClose, storeName = "Ma Boutique O
   const handleCheckout = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (selectedProduct) {
-      // Use affiliate link structure if referralCode is present, otherwise fallback to product's final_link
+      window.dispatchEvent(new CustomEvent('mz-new-sale'));
       const link = referralCode ? `${window.location.origin}/?ref=${referralCode}&prod=${selectedProduct.id}` : selectedProduct.final_link;
       if (link) {
         window.open(link, '_blank', 'noopener,noreferrer');
@@ -31,6 +31,7 @@ export function PublicStorefront({ products, onClose, storeName = "Ma Boutique O
 
   const handleBuyNow = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('mz-new-sale'));
     const link = referralCode ? `${window.location.origin}/?ref=${referralCode}&prod=${product.id}` : product.final_link;
     if (link) {
       window.open(link, '_blank', 'noopener,noreferrer');

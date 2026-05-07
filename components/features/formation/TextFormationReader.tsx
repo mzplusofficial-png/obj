@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MessageCircle, Share2, Copy, Check } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
 import { QuestionAnswerSection } from './QuestionAnswerSection.tsx';
 
@@ -12,10 +12,13 @@ interface TextFormationReaderProps {
   onComplete: () => void;
   formationId?: string;
   isAdmin?: boolean;
+  previewUrl?: string;
+  onUpgrade?: () => void;
 }
 
-export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title, content, onClose, onComplete, formationId, isAdmin }) => {
+export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title, content, onClose, onComplete, formationId, isAdmin, previewUrl, onUpgrade }) => {
   const [markedAsDone, setMarkedAsDone] = useState(false);
+  const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const qaSectionRef = useRef<HTMLDivElement>(null);
@@ -27,6 +30,12 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
       if (data.user) setCurrentUserId(data.user.id);
     });
   }, []);
+
+  const handleShare = () => {
+    navigator.clipboard.writeText('Rejoins-moi sur la MZ+ ! https://mzplus.app');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleScrollToQA = () => {
     if (qaSectionRef.current) {
@@ -90,7 +99,6 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
   };
 
   const handleClose = () => {
-    triggerXPIfNeeded();
     onClose();
   };
 
@@ -151,6 +159,41 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
               {title}
             </h1>
 
+            {previewUrl && (
+              <div className="mb-16 w-full aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative">
+                {(previewUrl.includes('youtube.com') || previewUrl.includes('youtu.be')) ? (() => {
+                  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                  const match = previewUrl.match(regExp);
+                  const youtubeId = (match && match[2].length === 11) ? match[2] : null;
+                  
+                  if (youtubeId) {
+                    return (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                        title={title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                        className="w-full h-full absolute inset-0 z-10 border-0 bg-[#050505]"
+                      />
+                    );
+                  }
+                  
+                  return (
+                      <div className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: previewUrl }} />
+                  );
+                })() : (
+                  <video 
+                    src={previewUrl}
+                    className="w-full h-full object-cover bg-[#050505]"
+                    controls
+                    playsInline
+                    autoPlay
+                  />
+                )}
+              </div>
+            )}
+
             <div className="space-y-8">
               {content.split('\n\n').map((paragraph, idx) => {
               if (paragraph.startsWith('👉')) {
@@ -169,6 +212,32 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
                      {paragraph}
                    </blockquote>
                 )
+              }
+
+              const iframeRegex = /(<iframe[\s\S]*?<\/iframe>)/i;
+              if (iframeRegex.test(paragraph)) {
+                const parts = paragraph.split(iframeRegex);
+                return (
+                  <div key={idx} className="tracking-wide">
+                    {parts.map((part, i) => {
+                      if (part.toLowerCase().startsWith('<iframe')) {
+                        return (
+                          <div key={i} className="my-10 aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: part }} />
+                        );
+                      }
+                      return part.trim() ? (
+                        <p key={i} className="my-4">
+                          {part.split('\n').map((line, j, arr) => (
+                            <React.Fragment key={j}>
+                              {line}
+                              {j < arr.length - 1 && <br />}
+                            </React.Fragment>
+                          ))}
+                        </p>
+                      ) : null;
+                    })}
+                  </div>
+                );
               }
 
               return (
@@ -231,6 +300,20 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
                  <div className="absolute inset-0 bg-neutral-200 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-0"></div>
                )}
             </button>
+
+            {formationId === 'default-free-video' && onUpgrade && (
+               <button
+                 onClick={() => {
+                   onUpgrade();
+                   if (onClose) onClose();
+                 }}
+                 className="mt-6 relative px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-500 shadow-2xl overflow-hidden group w-full max-w-sm bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(168,85,247,0.4)]"
+               >
+                 <div className="flex items-center justify-center gap-3 relative z-10 w-full">
+                    <span>Passer au niveau supérieur</span>
+                 </div>
+               </button>
+            )}
           </motion.div>
 
           {/* Section Q&A */}
