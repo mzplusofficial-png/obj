@@ -84,6 +84,7 @@ const App: React.FC = () => {
 
   const [showChallenge, setShowChallenge] = useState(false);
   const [showChallengeDay2, setShowChallengeDay2] = useState(false);
+  const [showChallengeDay3, setShowChallengeDay3] = useState(false);
   const [challengeEligible, setChallengeEligible] = useState(false);
   const [challengeTriggered, setChallengeTriggered] = useState(false);
   const [showChallengeCelebration, setShowChallengeCelebration] = useState(false);
@@ -91,53 +92,55 @@ const App: React.FC = () => {
   
   const { triggerAxisMessage, hideAxis } = useAxis();
 
+  // DB-Backed Challenge Update Helper
+  const updateChallengeDB = async (updates: any) => {
+    if (!userProfile) return;
+    const currentState = userProfile.store_preferences?.challenge_3j || {};
+    const newState = { ...currentState, ...updates };
+    const newPrefs = { ...(userProfile.store_preferences || {}), challenge_3j: newState };
+    
+    // Optimistic UI Update
+    setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+    // Push DB
+    try {
+      await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Handle Challenge Progression / Completion (J1 & J2)
   useEffect(() => {
     if (!userProfile) return;
 
+    const challengeState = userProfile.store_preferences?.challenge_3j || {};
+    
     const checkDailyChallenge = () => {
-      const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
-      if (!hasSeenChallenge) return;
-
-      const j1Completed = localStorage.getItem('mz_challenge_3j_j1_completed');
-      const startedAtStr = localStorage.getItem('mz_challenge_3j_started_at');
+      if (!challengeState.presented) return;
 
       // Check for Day 2 eligibility
-      if (startedAtStr && j1Completed) {
-        const startedAtDate = new Date(startedAtStr);
+      if (challengeState.startedAt && challengeState.j1Completed) {
+        const startedAtDate = new Date(challengeState.startedAt);
         const currentDate = new Date();
-
-        // Local Date Strings to handle 00:00 local time correctly
         const startDayLocal = startedAtDate.getFullYear() + '-' + String(startedAtDate.getMonth() + 1).padStart(2, '0') + '-' + String(startedAtDate.getDate()).padStart(2, '0');
         const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
 
         if (currentDayLocal > startDayLocal) {
-          const j2Presented = localStorage.getItem('mz_challenge_3j_j2_presented');
-          const j2Completed = localStorage.getItem('mz_challenge_3j_j2_completed');
-          if (!j2Presented && !j2Completed) {
+          if (!challengeState.j2Presented && !challengeState.j2Completed) {
             setShowChallengeDay2(true);
           }
         }
       }
       
-      if (!j1Completed) {
-        const storeData = localStorage.getItem(`mz_store_${userProfile.id}`);
-        const products = storeData ? JSON.parse(storeData) : [];
+      if (challengeState.j2CompletedAtStr) {
+        const j2CompDate = new Date(challengeState.j2CompletedAtStr);
+        const currentDate = new Date();
+        const j2CompLocal = j2CompDate.getFullYear() + '-' + String(j2CompDate.getMonth() + 1).padStart(2, '0') + '-' + String(j2CompDate.getDate()).padStart(2, '0');
+        const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
         
-        if (products.length > 0) {
-          if (!startedAtStr) {
-            localStorage.setItem('mz_challenge_3j_started_at', new Date().toISOString());
-          } else {
-            const startedAtDate = new Date(startedAtStr);
-            const currentDate = new Date();
-            const startDayLocal = startedAtDate.getFullYear() + '-' + String(startedAtDate.getMonth() + 1).padStart(2, '0') + '-' + String(startedAtDate.getDate()).padStart(2, '0');
-            const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
-
-            if (currentDayLocal !== startDayLocal) {
-              localStorage.setItem('mz_challenge_3j_j1_completed', 'true');
-              setChallengeCelebratedStep(1);
-              setShowChallengeCelebration(true);
-            }
+        if (currentDayLocal > j2CompLocal) {
+          if (!challengeState.j3Presented && !challengeState.j3Completed) {
+              window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
           }
         }
       }
@@ -146,27 +149,58 @@ const App: React.FC = () => {
     checkDailyChallenge();
     const interval = setInterval(checkDailyChallenge, 60000);
     return () => clearInterval(interval);
-  }, [userProfile]);
+  }, [userProfile]); // Runs when userProfile (and nested challengeState) changes
 
   useEffect(() => {
     const handleProductAdded = () => {
-      const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
-      const j1Completed = localStorage.getItem('mz_challenge_3j_j1_completed');
+      const challengeState = userProfile?.store_preferences?.challenge_3j || {};
       
-      // Also register the start time if not present
-      if (!localStorage.getItem('mz_challenge_3j_started_at') && hasSeenChallenge) {
-         localStorage.setItem('mz_challenge_3j_started_at', new Date().toISOString());
+      if (!challengeState.presented) return;
+      
+      const updates: any = {};
+      
+      // Register the start time if not present
+      if (!challengeState.startedAt) {
+         updates.startedAt = new Date().toISOString();
       }
       
-      if (hasSeenChallenge && !j1Completed) {
-        localStorage.setItem('mz_challenge_3j_j1_completed', 'true');
+      if (!challengeState.j1Completed) {
+        updates.j1Completed = true;
         setChallengeCelebratedStep(1);
         setTimeout(() => {
           setShowChallengeCelebration(true);
-        }, 800); 
+        }, 800);
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        updateChallengeDB(updates);
       }
     };
     
+    const handleNewSale = () => {
+       const challengeState = userProfile?.store_preferences?.challenge_3j || {};
+       const updates: any = {};
+       
+       if (challengeState.j2Presented && !challengeState.j2Completed) {
+          updates.j2Completed = true;
+          updates.j2CompletedAtStr = new Date().toISOString();
+          setChallengeCelebratedStep(2);
+          setTimeout(() => {
+            setShowChallengeCelebration(true);
+          }, 800);
+       } else if (challengeState.j3Presented && !challengeState.j3Completed) {
+          updates.j3Completed = true;
+          setChallengeCelebratedStep(3);
+          setTimeout(() => {
+            setShowChallengeCelebration(true);
+          }, 800);
+       }
+       
+       if (Object.keys(updates).length > 0) {
+          updateChallengeDB(updates);
+       }
+    };
+
     const handleDay2FormationRead = () => {
        setTimeout(() => {
           triggerAxisMessage(
@@ -179,28 +213,25 @@ const App: React.FC = () => {
        }, 3000);
     };
 
-    const handleNewSale = () => {
-       const j2Presented = localStorage.getItem('mz_challenge_3j_j2_presented');
-       const j2Completed = localStorage.getItem('mz_challenge_3j_j2_completed');
-       if (j2Presented && !j2Completed) {
-          localStorage.setItem('mz_challenge_3j_j2_completed', 'true');
-          setChallengeCelebratedStep(2);
-          setTimeout(() => {
-            setShowChallengeCelebration(true);
-          }, 800);
-       }
+    const handleResetChallenge = () => {
+       if (!userProfile) return;
+       const newPrefs = { ...(userProfile.store_preferences || {}), challenge_3j: {} };
+       setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+       supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id).then();
     };
 
     window.addEventListener('mz-product-added-to-store', handleProductAdded);
-    window.addEventListener('mz-day2-formation-read', handleDay2FormationRead);
     window.addEventListener('mz-new-sale', handleNewSale);
+    window.addEventListener('mz-day2-formation-read', handleDay2FormationRead);
+    window.addEventListener('mz-reset-challenge', handleResetChallenge);
     
     return () => {
        window.removeEventListener('mz-product-added-to-store', handleProductAdded);
-       window.removeEventListener('mz-day2-formation-read', handleDay2FormationRead);
        window.removeEventListener('mz-new-sale', handleNewSale);
+       window.removeEventListener('mz-day2-formation-read', handleDay2FormationRead);
+       window.removeEventListener('mz-reset-challenge', handleResetChallenge);
     };
-  }, []);
+  }, [userProfile]); // Add dependency on userProfile so the DB helpers get latest state!
 
   useEffect(() => {
     const handleXpReward = async (e: Event) => {
@@ -245,7 +276,13 @@ const App: React.FC = () => {
             clearInterval(interval);
             setChallengeTriggered(true);
             setShowChallenge(true);
-            localStorage.setItem('mz_challenge_3j_presented', 'true');
+            const prefs = userProfile?.store_preferences || {};
+            const challenge = prefs.challenge_3j || {};
+            if (!challenge.presented && userProfile) {
+              const newPrefs = { ...prefs, challenge_3j: { ...challenge, presented: true } };
+              setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+              supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id).then();
+            }
           }
         }
       }, 1000);
@@ -260,7 +297,8 @@ const App: React.FC = () => {
         customEvent.detail.text, 
         customEvent.detail.type || 'progression', 
         customEvent.detail.duration || 10000, 
-        customEvent.detail.action
+        customEvent.detail.action,
+        'smart'
       );
     };
     window.addEventListener('mz-axis-message', handleAxisMessage);
@@ -282,15 +320,20 @@ const App: React.FC = () => {
     const handleForceDay2 = () => {
       setShowChallengeDay2(true);
     };
+    const handleForceDay3 = () => {
+      setShowChallengeDay3(true);
+    };
     window.addEventListener('mz-trigger-3j-challenge', handleForceChallenge);
     window.addEventListener('mz-force-welcome-guide', handleForceGuide);
     window.addEventListener('mz-trigger-3j-celebration', handleForceCelebration);
     window.addEventListener('mz-trigger-3j-day2', handleForceDay2);
+    window.addEventListener('mz-trigger-3j-day3', handleForceDay3);
     return () => {
       window.removeEventListener('mz-trigger-3j-challenge', handleForceChallenge);
       window.removeEventListener('mz-force-welcome-guide', handleForceGuide);
       window.removeEventListener('mz-trigger-3j-celebration', handleForceCelebration);
       window.removeEventListener('mz-trigger-3j-day2', handleForceDay2);
+      window.removeEventListener('mz-trigger-3j-day3', handleForceDay3);
     };
   }, []);
 
@@ -467,19 +510,20 @@ const App: React.FC = () => {
       // Handle challenge commands from Admin
       if (enrichedProfile.store_preferences?.challenge_command) {
         const command = enrichedProfile.store_preferences.challenge_command;
+        const newPrefs = { ...enrichedProfile.store_preferences };
+        const challenge = newPrefs.challenge_3j || {};
+        
         if (command === 'reset') {
-            localStorage.removeItem('mz_challenge_3j_presented');
-            localStorage.removeItem('mz_challenge_3j_started_at');
-            localStorage.removeItem('mz_challenge_3j_j1_completed');
+            newPrefs.challenge_3j = {};
         } else if (command === 'complete') {
-            localStorage.setItem('mz_challenge_3j_presented', 'true');
-            localStorage.setItem('mz_challenge_3j_j1_completed', 'true');
-            if (!localStorage.getItem('mz_challenge_3j_started_at')) {
-                localStorage.setItem('mz_challenge_3j_started_at', new Date().toISOString());
-            }
+            newPrefs.challenge_3j = {
+               ...challenge,
+               presented: true,
+               j1Completed: true,
+               startedAt: challenge.startedAt || new Date().toISOString()
+            };
         }
         
-        const newPrefs = { ...enrichedProfile.store_preferences };
         delete newPrefs.challenge_command;
         
         try {
@@ -487,23 +531,6 @@ const App: React.FC = () => {
           enrichedProfile.store_preferences = newPrefs;
         } catch (e) {
           console.error("Error clearing challenge command", e);
-        }
-      } else {
-        // Sync local challenge state to DB for Admin visibility
-        const prefs = enrichedProfile.store_preferences || {};
-        const presented = localStorage.getItem('mz_challenge_3j_presented') === 'true';
-        const j1Completed = localStorage.getItem('mz_challenge_3j_j1_completed') === 'true';
-        const startedAt = localStorage.getItem('mz_challenge_3j_started_at') || null;
-        
-        const dbChallenge = prefs.challenge_3j || {};
-        if (dbChallenge.j1Completed !== j1Completed || dbChallenge.presented !== presented) {
-            prefs.challenge_3j = { presented, startedAt, j1Completed };
-            try {
-              await supabase.from('users').update({ store_preferences: prefs }).eq('id', enrichedProfile.id);
-              enrichedProfile.store_preferences = prefs;
-            } catch (e) {
-              console.error("Error syncing challenge state", e);
-            }
         }
       }
 
@@ -943,7 +970,7 @@ const App: React.FC = () => {
             }, 1000);
           }
           const isAdminTest = userProfile?.email === 'mzplusofficial@gmail.com' || userProfile?.email === 'maximilienleroy01@gmail.com' || userProfile?.email === 'h.bocquet.pro@gmail.com';
-          const hasSeenChallenge = localStorage.getItem('mz_challenge_3j_presented');
+          const hasSeenChallenge = userProfile?.store_preferences?.challenge_3j?.presented;
           if (!hasSeenChallenge || isAdminTest) {
              setChallengeTriggered(false);
              setChallengeEligible(true);
@@ -978,6 +1005,11 @@ const App: React.FC = () => {
         completedStep={challengeCelebratedStep}
         onAccept={() => {
           setShowChallengeCelebration(false);
+          if (challengeCelebratedStep === 1) {
+            updateChallengeDB({ j2Presented: true });
+          } else if (challengeCelebratedStep === 2) {
+            updateChallengeDB({ j3Presented: true });
+          }
         }}
       />
       <ChallengePresentation 
@@ -986,8 +1018,7 @@ const App: React.FC = () => {
         onAccept={() => {
           setShowChallengeDay2(false);
           setActiveTab('formation');
-          localStorage.setItem('mz_challenge_3j_j2_presented', 'true');
-          localStorage.setItem('mz_challenge_3j_j2_started_at', new Date().toISOString());
+          updateChallengeDB({ j2Presented: true, j2StartedAt: new Date().toISOString() });
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('open-formation', { detail: { id: 'default-free-video' } }));
           }, 400);
@@ -995,6 +1026,17 @@ const App: React.FC = () => {
         onClose={() => {
           setShowChallengeDay2(false);
           // Ne pas marquer comme présenté pour qu'on puisse le re-proposer "Plus tard"
+        }}
+      />
+      <ChallengePresentation 
+        isVisible={showChallengeDay3}
+        mode="day3_intro"
+        onAccept={() => {
+          setShowChallengeDay3(false);
+          updateChallengeDB({ j3Presented: true, j3StartedAt: new Date().toISOString() });
+        }}
+        onClose={() => {
+          setShowChallengeDay3(false);
         }}
       />
       <PWAInstallBanner />

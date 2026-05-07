@@ -7,7 +7,7 @@ interface ChallengePresentationProps {
   isVisible: boolean;
   onAccept: () => void;
   onClose?: () => void;
-  mode?: 'intro' | 'celebration' | 'day2_intro';
+  mode?: 'intro' | 'celebration' | 'day2_intro' | 'day3_intro';
   completedStep?: number;
 }
 
@@ -18,9 +18,10 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
   const getInitialStep = () => {
     if (mode === 'celebration') return 'timeline';
     if (mode === 'day2_intro') return 'day2_intro_screen';
+    if (mode === 'day3_intro') return 'day3_intro_screen';
     return 'intro';
   };
-  const [modalStep, setModalStep] = useState<'intro'|'timeline'|'celebrationText'|'day2challenge'|'day2_intro_screen'>(getInitialStep());
+  const [modalStep, setModalStep] = useState<'intro'|'timeline'|'celebrationText'|'day2challenge'|'day3challenge'|'day2_intro_screen'|'day3_intro_screen'>(getInitialStep());
   
   // Re-sync modalStep when isVisible changes to ensure modal resets if opened repeatedly
   useEffect(() => {
@@ -69,6 +70,17 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
       } else if (mode === 'day2_intro') {
         setModalStep('day2_intro_screen');
         // Play surprise sound for day 2 as well
+        try {
+          if (surpriseSoundUrl) {
+            const audio = new Audio(surpriseSoundUrl);
+            audio.volume = 0.5;
+            audio.play().catch(() => {});
+          }
+        } catch {
+          // Silent catch
+        }
+      } else if (mode === 'day3_intro') {
+        setModalStep('day3_intro_screen');
         try {
           if (surpriseSoundUrl) {
             const audio = new Audio(surpriseSoundUrl);
@@ -499,7 +511,6 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                           onClick={() => {
                             if (mode === 'intro') {
                               window.dispatchEvent(new Event('mz-challenge-3j-started'));
-                              localStorage.setItem('mz_challenge_3j_presented', 'true');
                               onAccept();
                             } else if (mode === 'celebration') {
                               setModalStep('celebrationText');
@@ -537,7 +548,7 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                       </motion.div>
 
                       <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter mb-6 text-center">
-                        Jour 1 <span className="text-[var(--color-gold-main)]">Terminé !</span>
+                        Jour {completedStep} <span className="text-[var(--color-gold-main)]">Terminé !</span>
                       </h2>
 
                       <motion.div
@@ -550,14 +561,40 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                           <Rocket size={60} />
                         </div>
                         <div className="space-y-4 text-xs sm:text-sm text-neutral-300 font-medium relative z-10">
-                          <p className="flex items-start gap-3">
-                            <span className="text-lg leading-none">📈</span> 
-                            <span>Ton business est <strong className="text-white">lancé.</strong></span>
-                          </p>
-                          <p className="flex items-start gap-3 pt-3 border-t border-[var(--color-gold-main)]/10">
-                            <span className="text-lg leading-none">🔥</span> 
-                            <span className="text-[var(--color-gold-main)] font-black uppercase tracking-tight leading-tight">Continue comme ça… chaque étape te rapproche de tes premiers résultats.</span>
-                          </p>
+                          {completedStep === 1 ? (
+                            <>
+                              <p className="flex items-start gap-3">
+                                <span className="text-lg leading-none">📈</span> 
+                                <span>Ton business est <strong className="text-white">lancé.</strong></span>
+                              </p>
+                              <p className="flex items-start gap-3 pt-3 border-t border-[var(--color-gold-main)]/10">
+                                <span className="text-lg leading-none">🔥</span> 
+                                <span className="text-[var(--color-gold-main)] font-black uppercase tracking-tight leading-tight">Continue comme ça… chaque étape te rapproche de tes premiers résultats.</span>
+                              </p>
+                            </>
+                          ) : completedStep === 2 ? (
+                            <>
+                              <p className="flex items-start gap-3">
+                                <span className="text-lg leading-none">💸</span> 
+                                <span>Boom ! Tu as fait ta <strong className="text-white">première vente !</strong></span>
+                              </p>
+                              <p className="flex items-start gap-3 pt-3 border-t border-[var(--color-gold-main)]/10">
+                                <span className="text-lg leading-none">🔥</span> 
+                                <span className="text-[var(--color-gold-main)] font-black uppercase tracking-tight leading-tight">La glace est brisée. Maintenant, l'objectif est d'exploser tes ventes.</span>
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="flex items-start gap-3">
+                                <span className="text-lg leading-none">🏆</span> 
+                                <span>Félicitations ! Tu as complété <strong className="text-[var(--color-gold-main)]">le défi des 3 jours !</strong></span>
+                              </p>
+                              <p className="flex items-start gap-3 pt-3 border-t border-[var(--color-gold-main)]/10">
+                                <span className="text-lg leading-none">👑</span> 
+                                <span className="text-white font-black uppercase tracking-tight leading-tight">Tu es maintenant un vrai membre de la MZ+. Visite et admire tes résultats !</span>
+                              </p>
+                            </>
+                          )}
                         </div>
                       </motion.div>
 
@@ -568,10 +605,18 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                         className="w-full max-w-[200px] mx-auto"
                       >
                         <button
-                          onClick={() => setModalStep('day2challenge')}
+                          onClick={() => {
+                            if (completedStep === 1) {
+                              setModalStep('day2challenge');
+                            } else if (completedStep === 2) {
+                              setModalStep('day3challenge');
+                            } else {
+                              onAccept();
+                            }
+                          }}
                           className="w-full py-3 sm:py-4 rounded-xl bg-white text-black font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-md"
                         >
-                          Voir le jour 2
+                          {completedStep === 1 ? 'Voir le jour 2' : completedStep === 2 ? 'Voir le jour 3' : 'Voir le tableau de bord'}
                         </button>
                       </motion.div>
                     </motion.div>
@@ -638,6 +683,68 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                         </button>
                       </motion.div>
                     </motion.div>
+                  ) : modalStep === 'day3challenge' ? (
+                    <motion.div
+                      key="day3challenge"
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+                      className="w-full flex flex-col items-center py-4"
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1, type: "spring" }}
+                        className="mb-4 relative"
+                      >
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#1A1814] to-black border border-neutral-700/50 rounded-full flex items-center justify-center shadow-lg">
+                          <Flame size={32} className="text-neutral-400" />
+                        </div>
+                      </motion.div>
+
+                      <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter mb-4 text-center">
+                        Défi Jour 3
+                      </h2>
+                      
+                      <div className="text-lg sm:text-xl font-bold text-[var(--color-gold-main)] uppercase tracking-wide mb-6">
+                        Faire exploser tes ventes
+                      </div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="w-full mb-8 text-center px-4"
+                      >
+                        <p className="text-xs sm:text-sm text-neutral-400 font-medium">
+                          Félicitations pour le Jour 2 accompli ! Ne t'arrête pas en si bon chemin, la vraie réussite consiste à répéter tes succès !
+                        </p>
+                      </motion.div>
+
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="w-full max-w-[200px] mx-auto"
+                      >
+                        <button
+                          onClick={() => {
+                             onAccept();
+                             setTimeout(() => {
+                               window.dispatchEvent(new CustomEvent('mz-axis-message', { 
+                                 detail: { 
+                                   text: "🔥 C'est le moment d'allumer le feu ! Je suis fier de toi.",
+                                   type: 'success'
+                                 }
+                               }));
+                             }, 1000);
+                          }}
+                          className="w-full py-3 sm:py-4 rounded-xl bg-[var(--color-gold-main)] text-black font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-md"
+                        >
+                          Terminer
+                        </button>
+                      </motion.div>
+                    </motion.div>
                   ) : modalStep === 'day2_intro_screen' ? (
                     <motion.div
                       key="day2_intro_screen"
@@ -691,6 +798,70 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                           className="w-full py-3 sm:py-4 rounded-xl bg-white text-black font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md"
                         >
                           Voir le Jour 2
+                        </button>
+                        {onClose && (
+                          <button
+                            onClick={onClose}
+                            className="w-full py-2 rounded-xl text-neutral-500 font-bold text-xs uppercase tracking-wider transition-colors hover:text-white"
+                          >
+                            Plus tard
+                          </button>
+                        )}
+                      </motion.div>
+                    </motion.div>
+                  ) : modalStep === 'day3_intro_screen' ? (
+                    <motion.div
+                      key="day3_intro_screen"
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+                      className="w-full flex flex-col items-center py-4 relative"
+                    >
+                      {onClose && (
+                        <button 
+                          onClick={onClose}
+                          className="absolute -top-2 right-0 p-2 text-neutral-500 hover:text-white transition-colors z-50 bg-white/5 rounded-full"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                      )}
+                      
+                      <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter mb-6 text-center mt-6">
+                        👋 Jour 3 — <span className="text-emerald-400">On explose !</span>
+                      </h2>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="w-full mb-8 text-left bg-white/5 border border-white/5 rounded-xl p-4 sm:p-5 shadow-lg relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none">
+                          <Rocket size={60} />
+                        </div>
+                        <div className="space-y-4 text-xs sm:text-sm text-neutral-300 font-medium relative z-10">
+                          <p className="flex items-start gap-3">
+                            <span className="text-lg leading-none">🔥</span> 
+                            <span>Incroyable, tu as fait ta <strong className="text-white">première vente !</strong></span>
+                          </p>
+                          <p className="flex items-start gap-3 pt-3 border-t border-emerald-400/10">
+                            <span className="text-lg leading-none">💰</span> 
+                            <span className="text-emerald-400 font-black uppercase tracking-tight leading-tight">Ta mission : répéter l'opération pour exploser tes résultats !</span>
+                          </p>
+                        </div>
+                      </motion.div>
+
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="w-full max-w-[200px] mx-auto flex flex-col gap-3"
+                      >
+                        <button
+                          onClick={onAccept}
+                          className="w-full py-3 sm:py-4 rounded-xl bg-white text-black font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center shadow-md"
+                        >
+                          C'est parti !
                         </button>
                         {onClose && (
                           <button

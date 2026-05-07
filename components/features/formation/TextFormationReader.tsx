@@ -83,7 +83,12 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
       if (!hasGottenXP || isAdmin) {
         localStorage.setItem(storageKey, 'true');
         window.dispatchEvent(new CustomEvent('mz-xp-reward', {
-          detail: { amount: 10, title: "🎉 Bien joué.", description: "Tu as reçu 10 points pour avoir terminé la formation MZ+.", source: 'formation_complete' }
+          detail: { 
+            amount: 10, 
+            title: "🎉 Bien joué.", 
+            description: "Tu as reçu 10 points pour avoir terminé la formation MZ+.", 
+            source: formationId === 'default-free-video' ? 'formation_day2_complete' : 'formation_complete' 
+          }
         }));
       }
     }

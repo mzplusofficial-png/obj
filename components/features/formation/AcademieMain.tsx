@@ -48,6 +48,7 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
   const [formations, setFormations] = useState<Formation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTextFormation, setActiveTextFormation] = useState<Formation | null>(null);
+  const [pendingFormationId, setPendingFormationId] = useState<string | null>(null);
   const isPremium = profile?.user_level === 'niveau_mz_plus';
   const isAdmin = profile?.is_admin === true || !!profile?.admin_role;
 
@@ -110,9 +111,13 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
     const handleOpenFormation = (e: Event) => {
       const customEvent = e as CustomEvent<{ id: string }>;
       const formationId = customEvent.detail.id;
-      const formation = formations.find(f => f.id === formationId);
-      if (formation) {
-        setActiveTextFormation(formation);
+      if (formations.length > 0) {
+        const formation = formations.find(f => f.id === formationId);
+        if (formation) {
+          setActiveTextFormation(formation);
+        }
+      } else {
+        setPendingFormationId(formationId);
       }
     };
     window.addEventListener('open-formation', handleOpenFormation);
@@ -120,6 +125,16 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
       window.removeEventListener('open-formation', handleOpenFormation);
     };
   }, [formations]);
+
+  useEffect(() => {
+    if (formations.length > 0 && pendingFormationId) {
+      const formation = formations.find(f => f.id === pendingFormationId);
+      if (formation) {
+        setActiveTextFormation(formation);
+      }
+      setPendingFormationId(null);
+    }
+  }, [formations, pendingFormationId]);
 
   const handleReadTextFormation = (formation: Formation) => {
      setActiveTextFormation(formation);

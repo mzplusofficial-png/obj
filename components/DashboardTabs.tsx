@@ -29,7 +29,8 @@ import {
   User,
   LogOut,
   Settings,
-  Bell
+  Bell,
+  Rocket
 } from 'lucide-react';
 import { UserProfile, RPASubmission, CoachingRequest, WithdrawalRequest, TabId, Wallet } from '../types.ts';
 import { SectionTitle, GoldBorderCard, EliteBadge, GoldText, PrimaryButton, UpgradeGate, PurpleText } from './UI.tsx';
@@ -65,6 +66,7 @@ export const GlobalView: React.FC<any> = ({
 
   const [loginCount, setLoginCount] = useState(1);
   const [isChallengeActive, setIsChallengeActive] = useState(false);
+  const [forceRender, setForceRender] = useState(0);
 
   useEffect(() => {
     const savedCount = parseInt(localStorage.getItem('mz_login_count') || '0');
@@ -76,12 +78,21 @@ export const GlobalView: React.FC<any> = ({
     } else {
       setLoginCount(savedCount);
     }
-    setIsChallengeActive(localStorage.getItem('mz_challenge_3j_presented') === 'true');
+    setIsChallengeActive(profile?.store_preferences?.challenge_3j?.presented === true);
     
     // Listen to custom event for challenge start
     const handleChallengeChange = () => setIsChallengeActive(true);
+    const handleAction = () => setForceRender(prev => prev + 1);
+    
     window.addEventListener('mz-challenge-3j-started', handleChallengeChange);
-    return () => window.removeEventListener('mz-challenge-3j-started', handleChallengeChange);
+    window.addEventListener('mz-product-added-to-store', handleAction);
+    window.addEventListener('mz-new-sale', handleAction);
+    
+    return () => {
+      window.removeEventListener('mz-challenge-3j-started', handleChallengeChange);
+      window.removeEventListener('mz-product-added-to-store', handleAction);
+      window.removeEventListener('mz-new-sale', handleAction);
+    };
   }, []);
 
   useEffect(() => {
@@ -300,6 +311,52 @@ export const GlobalView: React.FC<any> = ({
           </div>
         </div>
       </div>
+
+      {(() => {
+        const challengeDb = profile?.store_preferences?.challenge_3j || {};
+        
+        const startedAt = challengeDb.startedAt;
+        if (!startedAt) return null;
+        
+        const j1Completed = challengeDb.j1Completed === true;
+        const j2Presented = challengeDb.j2Presented === true;
+        const j2Completed = challengeDb.j2Completed === true;
+        const j3Presented = challengeDb.j3Presented === true;
+        const j3Completed = challengeDb.j3Completed === true;
+
+        let mission = null;
+        if (!j1Completed) {
+          mission = { day: 1, title: 'Choisir le bon produit', desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique." };
+        } else if (j2Presented && !j2Completed) {
+          mission = { day: 2, title: 'Vendre ton produit', desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation." };
+        } else if (j3Presented && !j3Completed) {
+          mission = { day: 3, title: 'Faire exploser tes ventes', desc: "Fais une nouvelle vente pour confirmer ton succès !" };
+        }
+
+        if (!mission) return null;
+
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-[#111] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_8px_20px_rgba(16,185,129,0.1)] relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 p-3 opacity-10 text-emerald-500 group-hover:scale-110 group-hover:opacity-20 transition-all duration-300">
+              <Rocket size={40} />
+            </div>
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                J{mission.day}
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Ta mission aujourd'hui</p>
+                <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">{mission.title}</h3>
+                <p className="text-xs text-neutral-400 font-medium leading-relaxed">{mission.desc}</p>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* 1. CARTE SOLDE (ELITE BUSINESS HUB) */}
       <motion.div 

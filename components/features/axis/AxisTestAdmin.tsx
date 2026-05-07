@@ -20,9 +20,7 @@ export const AxisTestAdmin = () => {
              </button>
              <button
               onClick={() => {
-                localStorage.removeItem('mz_challenge_3j_presented');
-                localStorage.removeItem('mz_challenge_3j_started_at');
-                localStorage.removeItem('mz_challenge_3j_j1_completed');
+                window.dispatchEvent(new CustomEvent('mz-reset-challenge'));
                 window.dispatchEvent(new CustomEvent('mz-navigate-dashboard'));
                 setTimeout(() => window.dispatchEvent(new CustomEvent('mz-force-welcome-guide')), 100);
               }}
@@ -53,6 +51,22 @@ export const AxisTestAdmin = () => {
               className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-xl font-bold border border-blue-500/50 hover:bg-blue-500/30 transition-all"
              >
                Tester Intro Jour 2
+             </button>
+             <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
+              }}
+              className="px-6 py-3 bg-fuchsia-500/20 text-fuchsia-400 rounded-xl font-bold border border-fuchsia-500/50 hover:bg-fuchsia-500/30 transition-all"
+             >
+               Tester Intro Jour 3
+             </button>
+             <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('mz-new-sale'));
+              }}
+              className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-bold border border-purple-500/50 hover:bg-purple-500/30 transition-all"
+             >
+               Simuler une vente (Valide J2 ou J3)
              </button>
           </div>
         </div>
