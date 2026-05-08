@@ -402,7 +402,7 @@ export const GlobalView: React.FC<any> = ({
                 }}
                 className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
               >
-                Astuce : Renoncer au défi
+                Renoncer au défi
               </button>
             </div>
           </motion.div>

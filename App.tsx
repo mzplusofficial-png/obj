@@ -410,6 +410,12 @@ const App: React.FC = () => {
             setShowChallengeDay3(false);
             setShowChallengeDay2Fail(false);
             setShowChallengeCelebration(false);
+          } else if (action === 'set_j2_failed') {
+            setShowChallenge(false);
+            setShowChallengeDay2(false);
+            setShowChallengeDay3(false);
+            setShowChallengeDay2Fail(true);
+            setShowChallengeCelebration(false);
           } else if (action === 'set_j3') {
             setShowChallenge(false);
             setShowChallengeDay2(false);

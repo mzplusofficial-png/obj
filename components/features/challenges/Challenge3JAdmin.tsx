@@ -47,8 +47,7 @@ export const Challenge3JAdmin: React.FC<Challenge3JAdminProps> = ({ users, onRef
     try {
       const user = localUsers.find(u => u.id === userId);
       const newPrefs = { ...(user?.store_preferences || {}) };
-      if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
-      const c = newPrefs.challenge_3j;
+      const c = { ...(newPrefs.challenge_3j || {}) };
       const now = new Date().toISOString();
 
       if (action === 'reset') {
@@ -87,6 +86,18 @@ export const Challenge3JAdmin: React.FC<Challenge3JAdminProps> = ({ users, onRef
          c.j3StartedAt = null;
          c.j3Completed = false;
          c.cancelled = false;
+      } else if (action === 'set_j2_failed') {
+         c.presented = true;
+         c.startedAt = c.startedAt || now;
+         c.j1Completed = true;
+         c.j2Presented = true;
+         c.j2StartedAt = new Date(Date.now() - 86400000 * 2).toISOString(); // 2 jours dans le passé pour forcer l'échec
+         c.j2Completed = false;
+         c.j2CompletedAtStr = null;
+         c.j3Presented = false;
+         c.j3StartedAt = null;
+         c.j3Completed = false;
+         c.cancelled = false;
       } else if (action === 'set_j3') {
          c.presented = true;
          c.startedAt = c.startedAt || now;
@@ -111,6 +122,8 @@ export const Challenge3JAdmin: React.FC<Challenge3JAdminProps> = ({ users, onRef
       } else if (action === 'cancel') {
          c.cancelled = true;
       }
+      
+      newPrefs.challenge_3j = c;
       
       // Update UI Optimistically
       setLocalUsers(prev => prev.map(u => {
@@ -309,27 +322,34 @@ export const Challenge3JAdmin: React.FC<Challenge3JAdminProps> = ({ users, onRef
                   </div>
                   
                   {/* Sets the user directly to a specific day */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap gap-2">
                     <button 
                       onClick={() => handleCommand(u.id, 'set_j1')}
                       disabled={loadingId === u.id}
-                      className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
+                      className="flex-1 min-w-[70px] py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
                     >
                       Forcer J1
                     </button>
                     <button 
                       onClick={() => handleCommand(u.id, 'set_j2')}
                       disabled={loadingId === u.id}
-                      className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
+                      className="flex-1 min-w-[70px] py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
                     >
                       Forcer J2
                     </button>
                     <button 
                       onClick={() => handleCommand(u.id, 'set_j3')}
                       disabled={loadingId === u.id}
-                      className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
+                      className="flex-1 min-w-[70px] py-1.5 text-xs font-bold rounded-lg border border-white/10 bg-white/5 hover:bg-[var(--color-gold-main)] hover:text-black hover:border-transparent transition-all disabled:opacity-50"
                     >
                       Forcer J3
+                    </button>
+                    <button 
+                      onClick={() => handleCommand(u.id, 'set_j2_failed')}
+                      disabled={loadingId === u.id}
+                      className="flex-1 min-w-[70px] py-1.5 text-xs font-bold rounded-lg border border-red-500/20 text-red-400 bg-red-500/10 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/50 transition-all disabled:opacity-50"
+                    >
+                      Échec J2
                     </button>
                   </div>
                   
