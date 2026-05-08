@@ -17,6 +17,7 @@ import {
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { CurrencySelector } from './ui/CurrencyDisplay.tsx';
+import { NotificationsModal } from './features/notifications/NotificationsModal.tsx';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -58,6 +59,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const [activeMembers, setActiveMembers] = useState(() => Math.floor(Math.random() * (1500 - 800) + 800));
   const [showProfileBadge, setShowProfileBadge] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const handleProfileBadge = () => setShowProfileBadge(true);
@@ -148,13 +150,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
 
           <button 
+            onClick={() => setShowNotifications(true)}
             className="p-2.5 bg-[var(--color-card-start)]/50 border border-[var(--color-border-gold)] rounded-xl hover:bg-[var(--color-card-end)] transition-all relative flex items-center justify-center group"
           >
             <span className="text-lg group-hover:scale-110 transition-transform">🔔</span>
-            <span className="absolute top-2 right-2 w-1 h-1 bg-red-600 rounded-full"></span>
+            <span className="absolute top-2 right-2 w-1 h-1 bg-red-600 rounded-full animate-pulse"></span>
           </button>
         </div>
       </header>
+
+      {showNotifications && (
+        <NotificationsModal profile={profile} onClose={() => setShowNotifications(false)} />
+      )}
 
       {/* OVERLAY MENU MOBILE PLEIN ÉCRAN */}
       {isMenuOpen && (

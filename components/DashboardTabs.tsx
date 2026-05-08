@@ -30,7 +30,8 @@ import {
   LogOut,
   Settings,
   Bell,
-  Rocket
+  Rocket,
+  MapPin
 } from 'lucide-react';
 import { UserProfile, RPASubmission, CoachingRequest, WithdrawalRequest, TabId, Wallet } from '../types.ts';
 import { SectionTitle, GoldBorderCard, EliteBadge, GoldText, PrimaryButton, UpgradeGate, PurpleText } from './UI.tsx';
@@ -46,6 +47,7 @@ import { LivePulse } from './features/LivePulse.tsx';
 import { CurrencyDisplay } from './ui/CurrencyDisplay.tsx';
 import { useCurrency } from '../hooks/useCurrency.ts';
 import { useAxis } from './features/axis/AxisProvider.tsx';
+import { LiquidProgressionTube, getCurrentLevel } from './features/progression/LiquidProgressionTube.tsx';
 
 type HubCategory = 'main' | 'business' | 'academy' | 'community';
 
@@ -1119,9 +1121,18 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
          <div className="relative bg-[#0d0d0c] border border-white/5 rounded-[2.5rem] p-8">
             <div className="flex flex-col items-center text-center gap-6">
                <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 border-[var(--color-gold-main)]/30 flex items-center justify-center shadow-2xl relative z-10">
-                     <span className="text-4xl">🤴</span>
-                  </div>
+                  {(() => {
+                    const userLevel = getCurrentLevel(profile?.xp || 0);
+                    const ProfileIcon = userLevel.icon;
+                    return (
+                      <div 
+                        className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 flex items-center justify-center shadow-2xl relative z-10"
+                        style={{ borderColor: `${userLevel.hex}50`, boxShadow: `0 0 30px ${userLevel.hex}30` }}
+                      >
+                         <ProfileIcon size={40} color={userLevel.hex} style={{ filter: `drop-shadow(0 0 10px ${userLevel.hex}80)` }} />
+                      </div>
+                    );
+                  })()}
                   {isMzPlus && (
                     <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 z-20">
                        <Crown size={14} fill="currentColor" />
@@ -1134,35 +1145,36 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
                     {profile?.full_name || 'Utilisateur Élite'}
                   </h3>
                   <div className="flex items-center justify-center gap-2">
-                    <EliteBadge level={isMzPlus ? 'PREMIUM' : 'STANDARD'} />
+                    {(() => {
+                      const userLevel = getCurrentLevel(profile?.xp || 0);
+                      const Icon = userLevel.icon;
+                      return (
+                         <div 
+                           className="px-3 py-1 flex items-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg transition-transform hover:scale-105"
+                           style={{ 
+                              borderColor: `${userLevel.hex}40`,
+                              color: userLevel.hex, 
+                              backgroundColor: `${userLevel.hex}15`,
+                              boxShadow: `0 0 15px ${userLevel.hex}40`
+                           }}
+                         >
+                           <Icon size={12} strokeWidth={3} />
+                           {userLevel.name}
+                         </div>
+                      );
+                    })()}
                     <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">•</span>
                     <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{profile?.email}</span>
                   </div>
                </div>
 
                <div className="w-full h-[1px] bg-white/5"></div>
-               
-               <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                   <div className="p-2.5 rounded-xl bg-yellow-500/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                     <Trophy size={20} />
-                   </div>
-                   <div className="text-left">
-                     <p className="text-[8px] font-black text-yellow-500/80 uppercase tracking-widest drop-shadow-md">Niveau d'expérience</p>
-                     <h4 className="text-xl font-black text-white drop-shadow-lg">{profile?.xp || 0} XP</h4>
-                   </div>
-                 </div>
-                 <div className="text-right flex items-center justify-center">
-                   <div className="px-3 py-1 bg-yellow-500/20 rounded-full text-[10px] font-black text-yellow-500 uppercase tracking-wider border border-yellow-500/30">
-                     Débutant
-                   </div>
-                 </div>
-               </div>
+
 
                <div className="grid grid-cols-2 w-full gap-4">
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                     <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Code Parrainage</p>
-                     <p className="text-sm font-black text-[var(--color-gold-main)] uppercase tracking-tighter">{profile?.referral_code || '---'}</p>
+                     <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Points Acquis</p>
+                     <p className="text-sm font-black text-[var(--color-gold-main)] uppercase tracking-tighter">{profile?.xp || 0} XP</p>
                   </div>
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
                      <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Membre Depuis</p>
@@ -1175,11 +1187,31 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
          </div>
       </div>
 
-      <div className="space-y-3">
-         <ProfileMenuButton icon={User} label="Informations Personnelles" sub="Nom, Email, Photo" />
-         <ProfileMenuButton icon={Shield} label="Sécurité" sub="Mot de passe, 2FA" />
-         <ProfileMenuButton icon={Bell} label="Notifications" sub="Push, Email, Alertes" />
-         <ProfileMenuButton icon={Settings} label="Préférences" sub="Langue, Devise, Thème" />
+      <LiquidProgressionTube currentXp={profile?.xp || 0} />
+
+      {/* Leaderboard Actions */}
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <button 
+          onClick={() => onSwitchTab('leaderboard')}
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-amber-600/10 border border-yellow-500/20 transition-all hover:bg-yellow-500/20 hover:scale-[1.02] active:scale-95 group"
+        >
+          <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <Trophy size={24} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-widest text-yellow-500">Classement</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Mondial</span>
+        </button>
+
+        <button 
+          onClick={() => onSwitchTab('leaderboard_local')}
+          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 transition-all hover:bg-purple-500/20 hover:scale-[1.02] active:scale-95 group"
+        >
+          <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <MapPin size={24} className="text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-widest text-purple-400">Classement</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Local</span>
+        </button>
       </div>
 
       {isChallengeActive && (
@@ -1197,7 +1229,7 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
          </div>
       )}
 
-      <div className="pt-8 border-t border-white/5">
+      <div className="pt-8 border-t border-white/5 space-y-4">
         <button 
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-red-500/5 group"
@@ -1212,21 +1244,6 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
     </div>
   );
 };
-
-const ProfileMenuButton = ({ icon: Icon, label, sub }: any) => (
-  <button className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group">
-    <div className="flex items-center gap-4">
-      <div className="p-2.5 rounded-xl bg-black/40 text-[var(--color-gold-main)] border border-white/5">
-        <Icon size={18} />
-      </div>
-      <div>
-        <h4 className="text-[11px] font-black uppercase text-white tracking-tight">{label}</h4>
-        <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-wider">{sub}</p>
-      </div>
-    </div>
-    <ChevronRight size={16} className="text-neutral-600 group-hover:text-white transition-colors" />
-  </button>
-);
 
 export const RevenueTab: React.FC<any> = ({ profile, wallet, onRefresh }) => {
   return (

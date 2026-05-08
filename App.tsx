@@ -27,6 +27,7 @@ import { ProductSalesPage } from './components/ProductSalesPage.tsx';
 import { EspacePrive } from './components/EspacePrive.tsx';
 import { MZPlusFlashOfferOverlay } from './components/features/mz-plus-offer/MZPlusFlashOfferOverlay.tsx';
 import { MZPlusPresentationOverlay } from './components/features/mz-plus-presentation/MZPlusPresentationOverlay.tsx';
+import { LeaderboardTab } from './components/features/leaderboard/LeaderboardTab.tsx';
 import { LunaChatPage } from './components/LunaChatPage.tsx';
 import { SQLConsole } from './components/SQLConsole.tsx';
 import { PrivateMessagingMain } from './components/features/messagerie-privee/PrivateMessagingMain.tsx';
@@ -1064,6 +1065,8 @@ const App: React.FC = () => {
         onComplete={() => setIsTeamGuideActive(false)} 
       />
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
+      {activeTab === 'leaderboard' && <LeaderboardTab profile={userProfile} mode="global" />}
+      {activeTab === 'leaderboard_local' && <LeaderboardTab profile={userProfile} mode="local" />}
       {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
       {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
