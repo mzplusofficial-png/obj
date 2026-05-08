@@ -253,7 +253,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
     if (!isReady || !session) return;
 
     const handleForceWelcome = () => {
-      sessionStorage.setItem('mz_axis_welcomed', 'true');
+      localStorage.setItem('mz_axis_welcomed', 'true');
       sessionStorage.setItem('mz_axis_guide_active', 'true');
       startGuide();
     };
@@ -261,7 +261,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
     window.addEventListener('mz-force-welcome-guide', handleForceWelcome);
 
     // Lancement automatique du guide uniquement si ce n'est pas déjà fait
-    if (sessionStorage.getItem('mz_axis_welcomed') !== 'true') {
+    if (localStorage.getItem('mz_axis_welcomed') !== 'true') {
       const isInstalled = localStorage.getItem('mz_pwa_installed') === 'true' || 
                           window.matchMedia('(display-mode: standalone)').matches || 
                           ('standalone' in navigator && (navigator as unknown as { standalone: boolean }).standalone);
@@ -270,7 +270,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
       const recentlyPrompted = lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000;
 
       const runOnce = () => {
-        sessionStorage.setItem('mz_axis_welcomed', 'true');
+        localStorage.setItem('mz_axis_welcomed', 'true');
         sessionStorage.setItem('mz_axis_guide_active', 'true');
         startGuide();
       };

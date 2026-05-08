@@ -24,6 +24,16 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
   const qaSectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string>();
+  const [showVideoCTA, setShowVideoCTA] = useState(false);
+
+  useEffect(() => {
+    if (formationId === 'default-free-video') {
+      const timer = setTimeout(() => {
+        setShowVideoCTA(true);
+      }, 60000);
+      return () => clearTimeout(timer);
+    }
+  }, [formationId]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -165,36 +175,61 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
             </h1>
 
             {previewUrl && (
-              <div className="mb-16 w-full aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative">
-                {(previewUrl.includes('youtube.com') || previewUrl.includes('youtu.be')) ? (() => {
-                  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-                  const match = previewUrl.match(regExp);
-                  const youtubeId = (match && match[2].length === 11) ? match[2] : null;
-                  
-                  if (youtubeId) {
+              <div className="mb-16">
+                <div className="w-full aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative">
+                  {(previewUrl.includes('youtube.com') || previewUrl.includes('youtu.be')) ? (() => {
+                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                    const match = previewUrl.match(regExp);
+                    const youtubeId = (match && match[2].length === 11) ? match[2] : null;
+                    
+                    if (youtubeId) {
+                      return (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                          title={title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                          className="w-full h-full absolute inset-0 z-10 border-0 bg-[#050505]"
+                        />
+                      );
+                    }
+                    
                     return (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-                        title={title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                        className="w-full h-full absolute inset-0 z-10 border-0 bg-[#050505]"
-                      />
+                        <div className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: previewUrl }} />
                     );
-                  }
-                  
-                  return (
-                      <div className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: previewUrl }} />
-                  );
-                })() : (
-                  <video 
-                    src={previewUrl}
-                    className="w-full h-full object-cover bg-[#050505]"
-                    controls
-                    playsInline
-                    autoPlay
-                  />
+                  })() : (
+                    <video 
+                      src={previewUrl}
+                      className="w-full h-full object-cover bg-[#050505]"
+                      controls
+                      playsInline
+                      autoPlay
+                    />
+                  )}
+                </div>
+                {showVideoCTA && onUpgrade && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    className="mt-8 relative"
+                  >
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('mz_premium_cta_clicked', 'true');
+                        onClose();
+                        if (onUpgrade) onUpgrade();
+                      }}
+                      className="w-full py-5 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white font-black uppercase tracking-[0.2em] md:text-lg rounded-2xl shadow-[0_10px_30px_rgba(147,51,234,0.3)] hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden relative group border border-purple-400/30"
+                    >
+                       <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                       <span className="relative z-10 flex items-center justify-center gap-3">
+                         Passer au niveau supérieur
+                       </span>
+                       <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 z-20 pointer-events-none mix-blend-overlay" />
+                    </button>
+                  </motion.div>
                 )}
               </div>
             )}
@@ -309,6 +344,7 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
             {formationId === 'default-free-video' && onUpgrade && (
                <button
                  onClick={() => {
+                   localStorage.setItem('mz_premium_cta_clicked', 'true');
                    onUpgrade();
                    if (onClose) onClose();
                  }}

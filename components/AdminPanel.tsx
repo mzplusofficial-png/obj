@@ -64,16 +64,43 @@ export const AdminPanel: React.FC<{
         supabase.from('withdrawals').select('*, users(full_name, email)').order('created_at', { ascending: false }),
         supabase.from('rpa_submissions').select('*, users(full_name, email, rpa_points, rpa_balance)').order('created_at', { ascending: false }),
         supabase.from('coaching_requests').select('*, users(full_name, email, user_level)').order('created_at', { ascending: false }),
-        supabase.from('mz_admin_activity_summary').select('*')
+        supabase.from('mz_admin_activity_summary').select('*'),
+        supabase.from('mz_challenge_3j_state').select('*')
       ];
 
-      const [uRes, cRes, wRes, rRes, coachRes, actRes] = await Promise.all(queries);
+      const [uRes, cRes, wRes, rRes, coachRes, actRes, challRes] = await Promise.all(queries);
 
       // Check for errors in any of the responses
-      const errors = [uRes.error, cRes.error, wRes.error, rRes.error, coachRes.error, actRes.error].filter(Boolean);
+      const errors = [uRes.error, cRes.error, wRes.error, rRes.error, coachRes.error, actRes.error, challRes.error].filter(Boolean);
       if (errors.length > 0) throw errors[0];
 
-      setUsers(uRes.data || []);
+      // Merge challenge state into users for backward UI compatibility
+      let finalUsers = uRes.data || [];
+      if (challRes.data) {
+        finalUsers = finalUsers.map((u: any) => {
+          const cState = challRes.data.find((c: any) => c.user_id === u.id);
+          if (cState) {
+             const prefs = u.store_preferences || {};
+             prefs.challenge_3j = {
+                presented: cState.presented,
+                startedAt: cState.started_at,
+                j1Completed: cState.j1_completed,
+                j2Presented: cState.j2_presented,
+                j2StartedAt: cState.j2_started_at,
+                j2Completed: cState.j2_completed,
+                j2CompletedAtStr: cState.j2_completed_at,
+                j3Presented: cState.j3_presented,
+                j3StartedAt: cState.j3_started_at,
+                j3Completed: cState.j3_completed,
+                cancelled: cState.cancelled
+             };
+             u.store_preferences = prefs;
+          }
+          return u;
+        });
+      }
+
+      setUsers(finalUsers);
       setCommissions(cRes.data || []);
       setActivitySummary(actRes.data || []);
       setWithdrawals(wRes.data || []);

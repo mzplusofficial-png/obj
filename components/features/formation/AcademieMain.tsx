@@ -49,6 +49,7 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
   const [loading, setLoading] = useState(true);
   const [activeTextFormation, setActiveTextFormation] = useState<Formation | null>(null);
   const [pendingFormationId, setPendingFormationId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'free' | 'premium'>('free');
   const isPremium = profile?.user_level === 'niveau_mz_plus';
   const isAdmin = profile?.is_admin === true || !!profile?.admin_role;
 
@@ -79,7 +80,10 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
     }
 
     const hasDefaultFreeVideo = finalData.some(f => f.id === 'default-free-video');
-    if (!hasDefaultFreeVideo) {
+    const challengeState = profile?.store_preferences?.challenge_3j || {};
+    const canSeeDay2 = challengeState.j2Presented || isAdmin;
+
+    if (!hasDefaultFreeVideo && canSeeDay2) {
       defaultInjections.push({
            id: 'default-free-video',
            title: 'La méthode en vidéo',
@@ -157,7 +161,7 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
     <div className="animate-fade-in pb-40 px-4 md:px-0 max-w-5xl mx-auto">
       
       {/* 1. HEADER ÉPURÉ & STATUT UNIQUE */}
-      <div className="text-center mb-24 space-y-8">
+      <div className="text-center mb-16 space-y-8">
         <div className="space-y-4">
            <div className="inline-flex items-center gap-3 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
               <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
@@ -167,32 +171,56 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
              ACADÉMIE <br/><PurpleText>STRATÉGIQUE</PurpleText>
            </h2>
         </div>
-
-        {/* BANDEAU DE STATUT PREMIUM - LE SEUL CTA GLOBAL */}
-        {!isPremium && (
-          <div className="max-w-2xl mx-auto bg-gradient-to-r from-purple-900/40 via-purple-600/20 to-purple-900/40 border border-purple-500/30 p-6 rounded-[2rem] backdrop-blur-xl animate-slide-down flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-             <div className="flex items-center gap-4 text-left">
-                <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
-                   <Lock size={20} strokeWidth={2.5} />
-                </div>
-                <div>
-                   <p className="text-white text-xs font-black uppercase tracking-tight">Accès Complet Verrouillé</p>
-                   <p className="text-purple-300/60 text-[10px] font-medium leading-tight">Débloquez l'intégralité des modules de l'Académie en passant au Niveau MZ+ Premium.</p>
-                </div>
-             </div>
-             <button 
-               onClick={() => onSwitchTab('flash_offer')}
-               className="px-6 py-3.5 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-xl whitespace-nowrap"
-             >
-               Activer mon accès
-             </button>
-          </div>
-        )}
       </div>
 
+      {/* TAB TOGGLE: GRATUIT / PREMIUM */}
+      <div className="max-w-sm mx-auto mb-16 flex bg-[#111] p-1.5 rounded-full border border-white/10">
+        <button 
+          onClick={() => setActiveFilter('free')}
+          className={`flex-1 py-3 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+            activeFilter === 'free' 
+              ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
+              : 'text-neutral-500 hover:text-white'
+          }`}
+        >
+          Gratuit
+        </button>
+        <button 
+          onClick={() => setActiveFilter('premium')}
+          className={`flex-1 py-3 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+            activeFilter === 'premium' 
+              ? 'bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]' 
+              : 'text-neutral-500 hover:text-white'
+          }`}
+        >
+          MZ+ Premium
+        </button>
+      </div>
+
+      {/* BANDEAU DE STATUT PREMIUM - CTA GLOBAL */}
+      {!isPremium && activeFilter === 'premium' && (
+        <div className="mb-24 max-w-2xl mx-auto bg-gradient-to-r from-purple-900/40 via-purple-600/20 to-purple-900/40 border border-purple-500/30 p-6 rounded-[2rem] backdrop-blur-xl animate-slide-down flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+           <div className="flex items-center gap-4 text-left">
+              <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
+                 <Rocket size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                 <p className="text-white text-xs font-black uppercase tracking-tight">Évoluer vers la MZ+ Premium</p>
+                 <p className="text-purple-300/60 text-[10px] font-medium leading-tight">Change de niveau pour accéder à toutes les formations en illimité et gratuitement.</p>
+              </div>
+           </div>
+           <button 
+             onClick={() => onSwitchTab('flash_offer')}
+             className="px-6 py-3.5 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-xl whitespace-nowrap"
+           >
+             Voir l'offre
+           </button>
+        </div>
+      )}
+
       {/* 2. LISTE DES MODULES - GRATUITS */}
-      {freeFormations.length > 0 && (
-        <div className="mb-32">
+      {activeFilter === 'free' && freeFormations.length > 0 && (
+        <div className="mb-32 animate-fade-in">
           <div className="flex items-center gap-4 mb-16 border-b border-emerald-500/20 pb-4">
             <Unlock className="text-emerald-500" size={24} />
             <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">Formations <span className="text-emerald-500">Gratuites</span></h3>
@@ -210,33 +238,38 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
               />
             ))}
           </div>
+          <div className="mt-16 text-center bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-2xl">
+            <p className="text-[10px] md:text-xs font-black text-emerald-400 uppercase tracking-widest">🎯 Évolue et accumule des points d'expérience pour débloquer de nouvelles formations gratuites.</p>
+          </div>
         </div>
       )}
 
       {/* 3. LISTE DES MODULES - PREMIUM */}
-      <div>
-        <div className="flex items-center gap-4 mb-16 border-b border-purple-500/20 pb-4">
-          <Crown className="text-purple-500" size={24} />
-          <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">Formations <PurpleText>Premium</PurpleText></h3>
+      {activeFilter === 'premium' && (
+        <div className="animate-fade-in">
+          <div className="flex items-center gap-4 mb-16 border-b border-purple-500/20 pb-4">
+            <Crown className="text-purple-500" size={24} />
+            <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">Formations <PurpleText>Premium</PurpleText></h3>
+          </div>
+          <div className="space-y-48">
+            {premiumFormations.length === 0 ? (
+              <div className="py-20 text-center opacity-20 italic uppercase tracking-[0.5em] text-xs font-black">Aucun module premium disponible...</div>
+            ) : (
+              premiumFormations.map((f, index) => (
+                <EliteModuleCard 
+                  key={f.id} 
+                  formation={f} 
+                  index={freeFormations.length + index + 1}
+                  isPremium={isPremium} 
+                  isFree={false}
+                  onUpgrade={() => onSwitchTab('flash_offer')} 
+                  onReadClick={() => handleReadTextFormation(f)}
+                />
+              ))
+            )}
+          </div>
         </div>
-        <div className="space-y-48">
-          {premiumFormations.length === 0 ? (
-            <div className="py-20 text-center opacity-20 italic uppercase tracking-[0.5em] text-xs font-black">Aucun module premium disponible...</div>
-          ) : (
-            premiumFormations.map((f, index) => (
-              <EliteModuleCard 
-                key={f.id} 
-                formation={f} 
-                index={freeFormations.length + index + 1}
-                isPremium={isPremium} 
-                isFree={false}
-                onUpgrade={() => onSwitchTab('flash_offer')} 
-                onReadClick={() => handleReadTextFormation(f)}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      )}
 
       {/* FOOTER RAFFINÉ */}
       <div className="mt-40 pt-20 border-t border-white/5 text-center opacity-20">
@@ -405,29 +438,31 @@ const EliteModuleCard: React.FC<{ formation: Formation; index: number; isPremium
       </div>
 
       {/* 3. PLAN D'ACTION (CHAPITRES) - Épuré et informatif */}
-      <div className="max-w-2xl mx-auto space-y-10">
-        <div className="flex items-center gap-3 pl-4 border-l-2 border-purple-600/30">
-           <Eye size={12} className="text-purple-500" />
-           <p className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.4em] italic">
-             Aperçu du programme stratégique
-           </p>
-        </div>
+      {!isFree && (
+        <div className="max-w-2xl mx-auto space-y-10">
+          <div className="flex items-center gap-3 pl-4 border-l-2 border-purple-600/30">
+             <Eye size={12} className="text-purple-500" />
+             <p className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.4em] italic">
+               Aperçu du programme stratégique
+             </p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3">
-           {chapters.map((chap, i) => (
-             <div key={i} className="flex items-center gap-6 p-5 bg-white/[0.01] border border-white/5 rounded-3xl hover:bg-white/[0.03] transition-all">
-                <div className="w-10 h-10 rounded-xl bg-neutral-950 flex items-center justify-center text-neutral-700 transition-all shadow-inner shrink-0 group-hover:text-purple-400">
-                   <chap.icon size={18} />
-                </div>
-                <h4 className="text-[10px] md:text-[12px] font-black uppercase text-neutral-500 tracking-widest leading-tight">
-                   {chap.title}
-                </h4>
-                {(!isPremium && !isFree) && <Lock size={12} className="ml-auto text-neutral-800" />}
-                {(isPremium || isFree) && <CheckCircle2 size={16} className={`ml-auto ${isFree && !isPremium ? 'text-emerald-500/50' : 'text-purple-600/50'}`} />}
-             </div>
-           ))}
+          <div className="grid grid-cols-1 gap-3">
+             {chapters.map((chap, i) => (
+               <div key={i} className="flex items-center gap-6 p-5 bg-white/[0.01] border border-white/5 rounded-3xl hover:bg-white/[0.03] transition-all">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-950 flex items-center justify-center text-neutral-700 transition-all shadow-inner shrink-0 group-hover:text-purple-400">
+                     <chap.icon size={18} />
+                  </div>
+                  <h4 className="text-[10px] md:text-[12px] font-black uppercase text-neutral-500 tracking-widest leading-tight">
+                     {chap.title}
+                  </h4>
+                  {(!isPremium && !isFree) && <Lock size={12} className="ml-auto text-neutral-800" />}
+                  {(isPremium || isFree) && <CheckCircle2 size={16} className={`ml-auto ${isFree && !isPremium ? 'text-emerald-500/50' : 'text-purple-600/50'}`} />}
+               </div>
+             ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

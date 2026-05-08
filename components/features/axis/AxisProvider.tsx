@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
-export type AxisState = 'idle' | 'guiding' | 'action' | 'progression' | 'success' | 'inactive';
+export type AxisState = 'idle' | 'guiding' | 'action' | 'progression' | 'success' | 'warning' | 'inactive';
 
 export interface AxisAction {
   label: string;
   action: () => void;
   secondaryLabel?: string;
   secondaryAction?: () => void;
+  isPremium?: boolean;
 }
 
 export type AxisPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center-modal' | 'top-center' | 'smart';

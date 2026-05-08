@@ -315,8 +315,8 @@ export const GlobalView: React.FC<any> = ({
       {(() => {
         const challengeDb = profile?.store_preferences?.challenge_3j || {};
         
-        const startedAt = challengeDb.startedAt;
-        if (!startedAt) return null;
+        if (!challengeDb.presented || challengeDb.cancelled) return null;
+        if (loginCount < 2) return null;
         
         const j1Completed = challengeDb.j1Completed === true;
         const j2Presented = challengeDb.j2Presented === true;
@@ -326,11 +326,31 @@ export const GlobalView: React.FC<any> = ({
 
         let mission = null;
         if (!j1Completed) {
-          mission = { day: 1, title: 'Choisir le bon produit', desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique." };
+          mission = { 
+            day: 1, 
+            title: 'Choisir le bon produit', 
+            desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique.",
+            action: 'Ouvrir le catalogue',
+            tab: 'affiliation'
+          };
         } else if (j2Presented && !j2Completed) {
-          mission = { day: 2, title: 'Vendre ton produit', desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation." };
+          mission = { 
+            day: 2, 
+            title: 'Vendre ton produit', 
+            desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation.",
+            action: 'Suivre la formation',
+            tab: 'formation',
+            event: 'open-formation',
+            detail: { id: 'default-free-video' }
+          };
         } else if (j3Presented && !j3Completed) {
-          mission = { day: 3, title: 'Faire exploser tes ventes', desc: "Fais une nouvelle vente pour confirmer ton succès !" };
+          mission = { 
+            day: 3, 
+            title: 'Faire exploser tes ventes', 
+            desc: "Partage ta boutique pour faire une nouvelle vente et confirmer ton succès !",
+            action: 'Voir ma boutique',
+            tab: 'my_store'
+          };
         }
 
         if (!mission) return null;
@@ -339,20 +359,51 @@ export const GlobalView: React.FC<any> = ({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full bg-[#111] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_8px_20px_rgba(16,185,129,0.1)] relative overflow-hidden group"
+            className="w-full bg-[#111] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_8px_20px_rgba(16,185,129,0.1)] relative overflow-hidden group mb-4"
           >
-            <div className="absolute top-0 right-0 p-3 opacity-10 text-emerald-500 group-hover:scale-110 group-hover:opacity-20 transition-all duration-300">
+            <div className="absolute top-0 right-0 p-3 opacity-10 text-emerald-500 group-hover:scale-110 group-hover:opacity-20 transition-all duration-300 pointer-events-none">
               <Rocket size={40} />
             </div>
-            <div className="flex items-start gap-3 relative z-10">
-              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
-                J{mission.day}
+            
+            <div className="flex flex-col relative z-10">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                  J{mission.day}
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Ta mission aujourd'hui</p>
+                  <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">{mission.title}</h3>
+                  <p className="text-xs text-neutral-400 font-medium leading-relaxed">{mission.desc}</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Ta mission aujourd'hui</p>
-                <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">{mission.title}</h3>
-                <p className="text-xs text-neutral-400 font-medium leading-relaxed">{mission.desc}</p>
-              </div>
+              
+              <button
+                onClick={() => {
+                  if (mission.tab) onSwitchTab(mission.tab as TabId);
+                  if (mission.event) {
+                    // Small delay to allow tab switch
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent(mission.event, { detail: mission.detail }));
+                    }, 100);
+                  }
+                }}
+                className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all border border-emerald-500/20 flex items-center justify-center gap-2"
+              >
+                {mission.action} 👉
+              </button>
+              <button 
+                onClick={async () => {
+                   if (!window.confirm("Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.")) return;
+                   const newPrefs = { ...(profile.store_preferences || {}) };
+                   if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
+                   newPrefs.challenge_3j.cancelled = true;
+                   await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', profile?.id);
+                   window.location.reload();
+                }}
+                className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
+              >
+                Astuce : Renoncer au défi
+              </button>
             </div>
           </motion.div>
         );
@@ -459,51 +510,7 @@ export const GlobalView: React.FC<any> = ({
         />
       )}
 
-      {/* MISSION DU JOUR (Only after 2nd connection) */}
-      {loginCount >= 2 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full bg-gradient-to-r from-neutral-900 via-[#1A1814] to-neutral-900 border border-[var(--color-border-gold)] rounded-2xl p-4 shadow-[0_10px_30px_rgba(201,168,76,0.1)] relative overflow-hidden mt-4"
-        >
-          <div className="absolute inset-0 bg-[var(--color-gold-main)]/5 animate-pulse pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-gold-main)]/10 to-transparent pointer-events-none" />
-          
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-10 h-10 rounded-full bg-[var(--color-gold-main)]/20 border border-[var(--color-gold-main)]/30 flex items-center justify-center flex-shrink-0 animate-pulse shadow-[0_0_15px_rgba(201,168,76,0.5)]">
-              <Target size={20} className="text-[var(--color-gold-main)] drop-shadow-[0_0_8px_rgba(201,168,76,0.8)]" />
-            </div>
-            <div>
-              <h3 className="text-white text-[11px] font-black uppercase tracking-[0.2em] drop-shadow-md">Ta mission aujourd'hui</h3>
-              <p className="text-[var(--color-gold-main)] text-[9px] font-bold uppercase tracking-widest mt-1 drop-shadow-sm">
-                {isChallengeActive ? "Défi 3 jours - Actif" : "Action Flash"}
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-black/60 rounded-xl p-3 mb-4 border border-[var(--color-border-gold)]/30 relative z-10 shadow-inner">
-            <div className="text-[12px] font-bold text-white flex items-start gap-2 leading-tight">
-              <Sparkles size={14} className="text-[var(--color-gold-main)] flex-shrink-0 mt-0.5" />
-              {isChallengeActive ? "Continuer la phase 1 du défi : Choisir ton produit gagnant." : "Découvre un produit à succès dans le catalogue et partage ton lien !"}
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => {
-              if (isChallengeActive) {
-                onSwitchTab('affiliation');
-                window.dispatchEvent(new CustomEvent('mz-shop-opened'));
-              } else {
-                window.dispatchEvent(new Event('mz-trigger-3j-challenge'));
-              }
-            }}
-            className="w-full bg-gradient-to-r from-[var(--color-gold-main)] to-[#fcd34d] hover:from-[#fcd34d] hover:to-[var(--color-gold-main)] text-black transition-all rounded-xl py-3 text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_8px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_0_30px_rgba(201,168,76,0.6)] flex items-center justify-center gap-2 relative z-10 group overflow-hidden"
-          >
-            {isChallengeActive ? 'Continuer 👉' : 'Commencer 👉'}
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 transition-opacity" />
-          </button>
-        </motion.div>
-      )}
+
 
       {/* 4. ACTIONS (NEW CIRCULAR ALIGNMENT) */}
       <div className="space-y-4 pt-4">
@@ -1067,8 +1074,21 @@ const SubServiceCard = ({ title, desc, icon: Icon, onClick, locked }: any) => (
   </button>
 );
 
-export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitchTab }) => {
+export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitchTab, onRefresh }) => {
   const isMzPlus = profile?.user_level === 'niveau_mz_plus';
+  const challengeState = profile?.store_preferences?.challenge_3j || {};
+  // Considere the challenge active if it has been presented, not cancelled, and not completely finished
+  const isChallengeActive = challengeState.presented && !challengeState.cancelled && !challengeState.j3Completed;
+  
+  const handleCancelChallenge = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.")) return;
+    const newPrefs = { ...(profile.store_preferences || {}) };
+    if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
+    newPrefs.challenge_3j.cancelled = true;
+    await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', profile.id);
+    if (onRefresh) onRefresh();
+    window.location.reload();
+  };
   
   return (
     <div className="max-w-xl mx-auto space-y-8 pb-24 pt-10 px-5 animate-fade-in font-sans">
@@ -1161,6 +1181,21 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
          <ProfileMenuButton icon={Bell} label="Notifications" sub="Push, Email, Alertes" />
          <ProfileMenuButton icon={Settings} label="Préférences" sub="Langue, Devise, Thème" />
       </div>
+
+      {isChallengeActive && (
+         <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-red-500/5 to-red-900/5 border border-red-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-red-500/10">
+            <div className="flex flex-col">
+               <span className="text-[10px] font-black uppercase text-red-400 tracking-widest">Défi Actif</span>
+               <span className="text-xs font-bold text-neutral-400">Ta première vente en 3 Jours</span>
+            </div>
+            <button 
+               onClick={handleCancelChallenge}
+               className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
+            >
+               Renoncer au défi
+            </button>
+         </div>
+      )}
 
       <div className="pt-8 border-t border-white/5">
         <button 

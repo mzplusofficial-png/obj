@@ -39,6 +39,12 @@ const AXIS_CONFIG: Record<AxisState, {
     scale: [1, 1.25, 1],
     speed: 1.5,
   },
+  warning: {
+    color: "#f97316", // Orange 500
+    glow: "rgba(249, 115, 22, 0.6)",
+    scale: [1, 1.1, 1],
+    speed: 3,
+  },
   inactive: {
     color: "#1e293b",
     glow: "rgba(30, 41, 59, 0.2)",
@@ -198,20 +204,31 @@ export const AxisEntity = () => {
                         }
                       }, 600);
                     }}
-                    className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border border-yellow-300/50"
+                    className={`w-full py-3 font-extrabold text-[13px] rounded-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all overflow-hidden relative group ${
+                      axisAction.isPremium 
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-800 text-white border border-purple-400/30' 
+                        : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-black border border-yellow-300/50'
+                    }`}
                     animate={{ 
                       scale: [1, 1.02, 1],
-                      boxShadow: [
-                        "0 0 20px rgba(250,204,21,0.5)",
-                        "0 0 35px rgba(250,204,21,0.8)",
-                        "0 0 20px rgba(250,204,21,0.5)"
-                      ]
+                      boxShadow: axisAction.isPremium 
+                        ? [
+                            "0 0 20px rgba(168,85,247,0.4)",
+                            "0 0 35px rgba(168,85,247,0.7)",
+                            "0 0 20px rgba(168,85,247,0.4)"
+                          ]
+                        : [
+                            "0 0 20px rgba(250,204,21,0.5)",
+                            "0 0 35px rgba(250,204,21,0.8)",
+                            "0 0 20px rgba(250,204,21,0.5)"
+                          ]
                     }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                  >
-                   {axisAction.label} <span className="text-[16px]">⚡</span>
+                   {axisAction.isPremium && <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 z-20 pointer-events-none mix-blend-overlay" />}
+                   <span className="relative z-10 flex items-center gap-2">{axisAction.label} {!axisAction.isPremium && <span className="text-[16px]">⚡</span>}</span>
                  </motion.button>
 
                  {axisAction.secondaryLabel && axisAction.secondaryAction && (

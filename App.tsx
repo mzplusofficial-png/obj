@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader, Sparkles, X, AlertTriangle, Bell, Crown } from 'lucide-react';
+import { Loader, Sparkles, X, AlertTriangle, Bell, Crown, Rocket } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
 import { LandingPage } from './components/LandingPage.tsx';
@@ -17,7 +17,7 @@ import {
   GuidesTab,
   ProfileTab
 } from './components/DashboardTabs.tsx';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MyStore } from './components/features/my-store/MyStore.tsx';
 import { StandalonePublicStore } from './components/features/my-store/StandalonePublicStore.tsx';
 import { RewardFeature } from './components/features/programme-recompense/RewardFeature.tsx';
@@ -85,12 +85,28 @@ const App: React.FC = () => {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showChallengeDay2, setShowChallengeDay2] = useState(false);
   const [showChallengeDay3, setShowChallengeDay3] = useState(false);
+  const [showChallengeDay2Fail, setShowChallengeDay2Fail] = useState(false);
+  const [pendingDay3TriggerAfterPremium, setPendingDay3TriggerAfterPremium] = useState(false);
+  const [forceDay3FailText, setForceDay3FailText] = useState(false);
   const [challengeEligible, setChallengeEligible] = useState(false);
   const [challengeTriggered, setChallengeTriggered] = useState(false);
   const [showChallengeCelebration, setShowChallengeCelebration] = useState(false);
   const [challengeCelebratedStep, setChallengeCelebratedStep] = useState(1);
+  const [showDay2UpsellPopup, setShowDay2UpsellPopup] = useState(false);
+  const [showDay2FailedUpsellPopup, setShowDay2FailedUpsellPopup] = useState(false);
   
   const { triggerAxisMessage, hideAxis } = useAxis();
+
+  useEffect(() => {
+    if (activeTab === 'dashboard' && pendingDay3TriggerAfterPremium) {
+      setPendingDay3TriggerAfterPremium(false);
+      updateChallengeDB({ j3Presented: true, j3StartedAt: new Date().toISOString() });
+      setForceDay3FailText(true);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
+      }, 800);
+    }
+  }, [activeTab, pendingDay3TriggerAfterPremium]);
 
   // DB-Backed Challenge Update Helper
   const updateChallengeDB = async (updates: any) => {
@@ -104,6 +120,23 @@ const App: React.FC = () => {
     // Push DB
     try {
       await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id);
+      
+      const dbPayload = {
+        user_id: userProfile.id,
+        presented: newState.presented || false,
+        started_at: newState.startedAt || null,
+        j1_completed: newState.j1Completed || false,
+        j2_presented: newState.j2Presented || false,
+        j2_started_at: newState.j2StartedAt || null,
+        j2_completed: newState.j2Completed || false,
+        j2_completed_at: newState.j2CompletedAtStr || null,
+        j3_presented: newState.j3Presented || false,
+        j3_started_at: newState.j3StartedAt || null,
+        j3_completed: newState.j3Completed || false,
+        cancelled: newState.cancelled || false,
+        updated_at: new Date().toISOString()
+      };
+      await supabase.from('mz_challenge_3j_state').upsert(dbPayload, { onConflict: 'user_id' });
     } catch (err) {
       console.error(err);
     }
@@ -116,7 +149,7 @@ const App: React.FC = () => {
     const challengeState = userProfile.store_preferences?.challenge_3j || {};
     
     const checkDailyChallenge = () => {
-      if (!challengeState.presented) return;
+      if (!challengeState.presented || challengeState.cancelled) return;
 
       // Check for Day 2 eligibility
       if (challengeState.startedAt && challengeState.j1Completed) {
@@ -132,6 +165,20 @@ const App: React.FC = () => {
         }
       }
       
+      // Check for Day 2 Failure (Presented but not completed the next day)
+      if (challengeState.j2StartedAt && !challengeState.j2Completed) {
+        const j2StartedDate = new Date(challengeState.j2StartedAt);
+        const currentDate = new Date();
+        const j2StartLocal = j2StartedDate.getFullYear() + '-' + String(j2StartedDate.getMonth() + 1).padStart(2, '0') + '-' + String(j2StartedDate.getDate()).padStart(2, '0');
+        const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
+
+        if (currentDayLocal > j2StartLocal) {
+           if (!challengeState.j3Presented) {
+               setTimeout(() => setShowChallengeDay2Fail(true), 1500);
+           }
+        }
+      }
+
       if (challengeState.j2CompletedAtStr) {
         const j2CompDate = new Date(challengeState.j2CompletedAtStr);
         const currentDate = new Date();
@@ -155,7 +202,7 @@ const App: React.FC = () => {
     const handleProductAdded = () => {
       const challengeState = userProfile?.store_preferences?.challenge_3j || {};
       
-      if (!challengeState.presented) return;
+      if (!challengeState.presented || challengeState.cancelled) return;
       
       const updates: any = {};
       
@@ -179,6 +226,7 @@ const App: React.FC = () => {
     
     const handleNewSale = () => {
        const challengeState = userProfile?.store_preferences?.challenge_3j || {};
+       if (challengeState.cancelled) return;
        const updates: any = {};
        
        if (challengeState.j2Presented && !challengeState.j2Completed) {
@@ -202,15 +250,15 @@ const App: React.FC = () => {
     };
 
     const handleDay2FormationRead = () => {
+       if (userProfile?.user_level === 'niveau_mz_plus') return;
+       if (localStorage.getItem('mz_premium_cta_clicked')) return;
+       if (localStorage.getItem('mz_day2_premium_upsell_shown')) return;
+
+       localStorage.setItem('mz_day2_premium_upsell_shown', 'true');
+       
        setTimeout(() => {
-          triggerAxisMessage(
-             "👉 Maintenant que tu as suivi la formation, il est temps de faire ta première vente ! Vas-y, tu peux le faire !",
-             'progression',
-             15000,
-             undefined,
-             'smart'
-          );
-       }, 3000);
+          setShowDay2UpsellPopup(true);
+       }, 500);
     };
 
     const handleResetChallenge = () => {
@@ -220,16 +268,22 @@ const App: React.FC = () => {
        supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id).then();
     };
 
+    const handleTestDay2Fail = () => {
+      setShowChallengeDay2Fail(true);
+    };
+
     window.addEventListener('mz-product-added-to-store', handleProductAdded);
     window.addEventListener('mz-new-sale', handleNewSale);
     window.addEventListener('mz-day2-formation-read', handleDay2FormationRead);
     window.addEventListener('mz-reset-challenge', handleResetChallenge);
+    window.addEventListener('mz-test-day2-fail', handleTestDay2Fail);
     
     return () => {
        window.removeEventListener('mz-product-added-to-store', handleProductAdded);
        window.removeEventListener('mz-new-sale', handleNewSale);
        window.removeEventListener('mz-day2-formation-read', handleDay2FormationRead);
        window.removeEventListener('mz-reset-challenge', handleResetChallenge);
+       window.removeEventListener('mz-test-day2-fail', handleTestDay2Fail);
     };
   }, [userProfile]); // Add dependency on userProfile so the DB helpers get latest state!
 
@@ -306,8 +360,82 @@ const App: React.FC = () => {
   }, [triggerAxisMessage]);
 
   useEffect(() => {
+    if (!userProfile?.id) return;
+    
+    // Écoute les modifications admin en temps réel
+    const channel = supabase.channel('mz_admin_challenge_controls_' + userProfile.id)
+      .on('broadcast', { event: 'force_update' }, (payload: any) => {
+        const { userId, challengeData, action } = payload.payload;
+        if (userId === userProfile.id) {
+          console.log("[Admin Force Update] Received:", payload.payload);
+          
+          setUserProfile((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              store_preferences: {
+                ...(prev.store_preferences || {}),
+                challenge_3j: challengeData
+              }
+            };
+          });
+          
+          // Sauvegarde en DB pour la persistance 
+          supabase.from('users').select('store_preferences').eq('id', userId).single().then(({data}) => {
+            const prefs = data?.store_preferences || {};
+            const newPrefs = { ...prefs, challenge_3j: challengeData };
+            supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userId).then();
+          });
+          
+          window.dispatchEvent(new CustomEvent('mz-axis-message', { 
+            detail: { text: `⚠️ Votre état de défi a été modifié (${action})`, type: 'warning', duration: 5000 } 
+          }));
+          
+          // Re-evaluation instantanée des modales
+          if (action === 'reset') {
+            setShowChallenge(false);
+            setShowChallengeDay2(false);
+            setShowChallengeDay3(false);
+            setShowChallengeDay2Fail(false);
+            setShowChallengeCelebration(false);
+          } else if (action === 'set_j1') {
+            setShowChallenge(true);
+            setShowChallengeDay2(false);
+            setShowChallengeDay3(false);
+            setShowChallengeDay2Fail(false);
+            setShowChallengeCelebration(false);
+          } else if (action === 'set_j2') {
+            setShowChallenge(false);
+            setShowChallengeDay2(true);
+            setShowChallengeDay3(false);
+            setShowChallengeDay2Fail(false);
+            setShowChallengeCelebration(false);
+          } else if (action === 'set_j3') {
+            setShowChallenge(false);
+            setShowChallengeDay2(false);
+            setShowChallengeDay3(true);
+            setShowChallengeDay2Fail(false);
+            setShowChallengeCelebration(false);
+          }
+        }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.id]);
+
+  useEffect(() => {
     const handleForceChallenge = () => {
       setShowChallenge(true);
+      if (userProfile && !userProfile.store_preferences?.challenge_3j?.presented) {
+         const prefs = userProfile.store_preferences || {};
+         const challenge = prefs.challenge_3j || {};
+         const newPrefs = { ...prefs, challenge_3j: { ...challenge, presented: true } };
+         setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+         supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id).then();
+      }
     };
     const handleForceGuide = () => {
       setChallengeTriggered(false);
@@ -475,6 +603,26 @@ const App: React.FC = () => {
       
       let { data: profile } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
       
+      let challengeState = null;
+      if (profile) {
+          const { data: cState } = await supabase.from('mz_challenge_3j_state').select('*').eq('user_id', userId).maybeSingle();
+          if (cState) {
+              challengeState = {
+                presented: cState.presented,
+                startedAt: cState.started_at,
+                j1Completed: cState.j1_completed,
+                j2Presented: cState.j2_presented,
+                j2StartedAt: cState.j2_started_at,
+                j2Completed: cState.j2_completed,
+                j2CompletedAtStr: cState.j2_completed_at,
+                j3Presented: cState.j3_presented,
+                j3StartedAt: cState.j3_started_at,
+                j3Completed: cState.j3_completed,
+                cancelled: cState.cancelled
+              };
+          }
+      }
+
       if (!profile) {
         const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         const newProfileData = { 
@@ -504,8 +652,12 @@ const App: React.FC = () => {
         xp: Number(profile?.xp || 0),
         user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
         created_at: profile?.created_at,
-        store_preferences: profile?.store_preferences
+        store_preferences: { ...(profile?.store_preferences || {}) }
       };
+
+      if (challengeState) {
+          enrichedProfile.store_preferences.challenge_3j = challengeState;
+      }
       
       // Handle challenge commands from Admin
       if (enrichedProfile.store_preferences?.challenge_command) {
@@ -905,7 +1057,7 @@ const App: React.FC = () => {
         isActive={isTeamGuideActive} 
         onComplete={() => setIsTeamGuideActive(false)} 
       />
-      {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} />}
+      {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
       {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
       {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
@@ -969,9 +1121,8 @@ const App: React.FC = () => {
               }
             }, 1000);
           }
-          const isAdminTest = userProfile?.email === 'mzplusofficial@gmail.com' || userProfile?.email === 'maximilienleroy01@gmail.com' || userProfile?.email === 'h.bocquet.pro@gmail.com';
           const hasSeenChallenge = userProfile?.store_preferences?.challenge_3j?.presented;
-          if (!hasSeenChallenge || isAdminTest) {
+          if (!hasSeenChallenge) {
              setChallengeTriggered(false);
              setChallengeEligible(true);
           }
@@ -1031,14 +1182,159 @@ const App: React.FC = () => {
       <ChallengePresentation 
         isVisible={showChallengeDay3}
         mode="day3_intro"
+        hasFailedDay2={forceDay3FailText || !userProfile?.store_preferences?.challenge_3j?.j2Completed}
         onAccept={() => {
           setShowChallengeDay3(false);
+          setForceDay3FailText(false);
           updateChallengeDB({ j3Presented: true, j3StartedAt: new Date().toISOString() });
         }}
         onClose={() => {
           setShowChallengeDay3(false);
+          setForceDay3FailText(false);
         }}
       />
+      <ChallengePresentation 
+        isVisible={showChallengeDay2Fail}
+        mode="day2_fail_intro"
+        onAccept={(action) => {
+          setShowChallengeDay2Fail(false);
+          setTimeout(() => {
+            if (action === 'premium') {
+              setPendingDay3TriggerAfterPremium(true);
+              setActiveTab('flash_offer');
+            } else {
+              updateChallengeDB({ j3Presented: true, j3StartedAt: new Date().toISOString() });
+              setForceDay3FailText(true);
+              window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
+            }
+          }, 300);
+        }}
+        onClose={() => {
+          setShowChallengeDay2Fail(false);
+          updateChallengeDB({ j3Presented: true, j3StartedAt: new Date().toISOString() });
+          setForceDay3FailText(true);
+          window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
+        }}
+      />
+      <AnimatePresence>
+        {showDay2UpsellPopup && (
+           <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowDay2UpsellPopup(false)}
+           >
+              <motion.div
+                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                 animate={{ scale: 1, opacity: 1, y: 0 }}
+                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                 onClick={e => e.stopPropagation()}
+                 className="bg-[#111] border border-purple-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full relative overflow-hidden shadow-[0_10px_50px_rgba(168,85,247,0.2)]"
+              >
+                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none text-purple-500">
+                    <Rocket size={80} />
+                 </div>
+                 
+                 <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/50 flex items-center justify-center text-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                       <Crown size={32} />
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                         <span className="text-orange-500 mr-2">🔥</span>Tu comprends maintenant comment fonctionnent les ventes avec MZ+.
+                       </h3>
+                       
+                       <p className="text-sm font-medium text-purple-200/70 leading-relaxed">
+                         <span className="text-purple-400 mr-2">👑</span>Les membres MZ+ Premium obtiennent des résultats plus rapidement grâce à un accompagnement et des stratégies avancées.
+                       </p>
+                    </div>
+
+                    <button
+                       onClick={() => {
+                          setShowDay2UpsellPopup(false);
+                          setActiveTab('flash_offer');
+                       }}
+                       className="w-full py-4 mt-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-black text-sm uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-[1.02] transition-all relative overflow-hidden group border border-purple-400/30"
+                    >
+                       <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 z-20 pointer-events-none mix-blend-overlay" />
+                       <span className="relative z-10 flex flex-col items-center gap-1">
+                          <span>👉 En savoir plus 👑</span>
+                       </span>
+                    </button>
+                    
+                    <button
+                       onClick={() => setShowDay2UpsellPopup(false)}
+                       className="text-neutral-500 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors"
+                    >
+                       Peut-être plus tard
+                    </button>
+                 </div>
+              </motion.div>
+           </motion.div>
+        )}
+        
+        {showDay2FailedUpsellPopup && (
+           <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowDay2FailedUpsellPopup(false)}
+           >
+              <motion.div
+                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                 animate={{ scale: 1, opacity: 1, y: 0 }}
+                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                 onClick={e => e.stopPropagation()}
+                 className="bg-[#111] border border-purple-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full relative overflow-hidden shadow-[0_10px_50px_rgba(168,85,247,0.2)]"
+              >
+                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none text-purple-500">
+                    <Rocket size={80} />
+                 </div>
+                 
+                 <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/50 flex items-center justify-center text-[var(--color-gold-main)] shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                       <Crown size={32} />
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                         <span className="text-purple-500 mr-2">🎯</span>C'est normal de bloquer au début.
+                       </h3>
+                       
+                       <p className="text-sm font-medium text-neutral-300 leading-relaxed">
+                         <span className="text-purple-400 mr-2">⚡</span>Ne reste pas bloqué ! Les membres <strong className="text-[var(--color-gold-main)]">MZ+ Premium</strong> obtiennent des résultats beaucoup plus vite grâce à notre accompagnement et nos conseils.
+                       </p>
+                    </div>
+
+                    <button
+                       onClick={() => {
+                          setShowDay2FailedUpsellPopup(false);
+                          setActiveTab('flash_offer');
+                       }}
+                       className="w-full py-4 mt-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-black text-sm uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-[1.02] transition-all relative overflow-hidden group border border-purple-400/30"
+                    >
+                       <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 z-20 pointer-events-none mix-blend-overlay" />
+                       <span className="relative z-10 flex flex-col items-center gap-1">
+                          <span>👉 Découvrir MZ+ Premium 👑</span>
+                       </span>
+                    </button>
+                    
+                    <button
+                       onClick={() => setShowDay2FailedUpsellPopup(false)}
+                       className="text-neutral-500 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors"
+                    >
+                       Peut-être plus tard
+                    </button>
+                 </div>
+              </motion.div>
+           </motion.div>
+        )}
+      </AnimatePresence>
       <PWAInstallBanner />
     </DashboardLayout>
   );
