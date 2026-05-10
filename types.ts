@@ -1,4 +1,24 @@
 
+export interface RankReward {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  file_url: string;
+  perceived_value: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserRankReward {
+  id: string;
+  user_id: string;
+  rank_id: number;
+  reward_id: string;
+  claimed_at: string;
+  reward?: RankReward;
+}
+
 export interface UserProfile {
   id: string;
   full_name: string;

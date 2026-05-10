@@ -1213,7 +1213,7 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
 
       <div className="flex flex-col items-center mt-6">
         <button 
-          onClick={() => onSwitchTab('recompense')}
+          onClick={() => onSwitchTab('flash_offer')}
           className="group relative flex items-center justify-center gap-3 w-full max-w-sm py-4 px-6 rounded-2xl bg-[#0a0a09] border border-[var(--color-border-gold)] hover:border-[var(--color-gold-main)]/50 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-gold-main)]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />

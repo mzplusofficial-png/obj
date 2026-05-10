@@ -28,8 +28,9 @@ import { Challenge3JAdmin } from './features/challenges/Challenge3JAdmin.tsx';
 import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
 import { SoundEffectsAdmin } from './features/gamification/SoundEffectsAdmin.tsx';
 import { AdminImages } from './features/admin-images/AdminImages.tsx';
+import { RankRewardsAdmin } from './features/rank-rewards/RankRewardsAdmin.tsx';
 
-type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j' | 'images';
+type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j' | 'images' | 'rank_rewards';
 
 export const AdminPanel: React.FC<{ 
   adminProfile: UserProfile | null; 
@@ -214,6 +215,7 @@ export const AdminPanel: React.FC<{
                <TabButton active={activeSubTab === 'axis_test'} onClick={() => setActiveSubTab('axis_test')} icon={Zap} label="AXIS Intelligence" color="text-amber-400" />
                <TabButton active={activeSubTab === 'pwa_branding'} onClick={() => setActiveSubTab('pwa_branding')} icon={Settings} label="PWA & Branding" color="text-emerald-500" />
                <TabButton active={activeSubTab === 'sound_effects'} onClick={() => setActiveSubTab('sound_effects')} icon={Volume2} label="Effets Sonores" color="text-cyan-400" />
+               <TabButton active={activeSubTab === 'rank_rewards'} onClick={() => setActiveSubTab('rank_rewards')} icon={Crown} label="Paliers Récompense" color="text-yellow-400" />
              </div>
           </div>
         </div>
@@ -309,6 +311,7 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'sound_effects' && <SoundEffectsAdmin />}
         {activeSubTab === 'axis_test' && <AxisTestAdmin />}
         {activeSubTab === 'activity_audit' && isAnyAdmin && <AdminActivityAudit />}
+        {activeSubTab === 'rank_rewards' && <RankRewardsAdmin />}
       </div>
     </div>
   );
@@ -565,9 +568,16 @@ const AdminUserManagement = ({ users, activitySummary, searchTerm, setSearchTerm
               </div>
               <EliteBadge variant={u.user_level}>{u.user_level === 'niveau_mz_plus' ? 'MZ+' : 'Standard'}</EliteBadge>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-white/5">
-              <CurrencyDisplay amount={u.wallets?.[0]?.balance || 0} className="font-mono text-yellow-500 text-xs font-black" vertical={true} />
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
+              <div className="flex justify-between items-center">
+                <div className="font-mono text-purple-400 font-bold text-xs">{u.xp || 0} XP</div>
+                <CurrencyDisplay amount={u.wallets?.[0]?.balance || 0} className="font-mono text-yellow-500 text-xs font-black" vertical={true} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => {
+                    const newXp = window.prompt(`Modifier l'XP pour ${u.full_name}:`, (u.xp || 0).toString());
+                    if (newXp !== null && !isNaN(parseInt(newXp))) updateUser(u.id, { xp: parseInt(newXp) });
+                }} className="flex items-center gap-1 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white transition-all text-[10px] font-bold" title="Modifier XP"><Star size={12}/> EXP</button>
                 <button onClick={() => updateUser(u.id, { user_level: u.user_level === 'standard' ? 'niveau_mz_plus' : 'standard' })} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-neutral-400" title="Basculer Niveau"><RefreshCw size={14}/></button>
                 <button onClick={() => updateUser(u.id, { is_admin: !u.is_admin })} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-neutral-400" title="Basculer Admin"><ShieldCheck size={14} className={u.is_admin ? 'text-blue-500' : ''}/></button>
               </div>
@@ -580,7 +590,7 @@ const AdminUserManagement = ({ users, activitySummary, searchTerm, setSearchTerm
       <div className="hidden md:block bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
         <table className="w-full text-left text-xs">
           <thead className="bg-black/40 text-[9px] font-black uppercase text-neutral-500 border-b border-neutral-800">
-            <tr><th className="p-6">Ambassadeur</th><th className="p-6">Status</th><th className="p-6">Solde</th><th className="p-6 text-right">Actions</th></tr>
+            <tr><th className="p-6">Ambassadeur</th><th className="p-6">XP</th><th className="p-6">Status</th><th className="p-6">Solde</th><th className="p-6 text-right">Actions</th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-800/50">
             {filteredUsers.map((u: any) => (
@@ -589,12 +599,17 @@ const AdminUserManagement = ({ users, activitySummary, searchTerm, setSearchTerm
                   <div className="font-bold">{u.full_name}</div>
                   <div className="text-[10px] opacity-50 font-mono">{u.email}</div>
                 </td>
+                <td className="p-6 font-mono text-purple-400 font-bold">{u.xp || 0} XP</td>
                 <td className="p-6"><EliteBadge variant={u.user_level}>{u.user_level === 'niveau_mz_plus' ? 'MZ+' : 'Standard'}</EliteBadge></td>
                 <td className="p-6">
                   <CurrencyDisplay amount={u.wallets?.[0]?.balance || 0} className="font-mono text-yellow-500" vertical={true} />
                 </td>
                 <td className="p-6 text-right">
                   <div className="flex justify-end gap-2">
+                    <button onClick={() => {
+                        const newXp = window.prompt(`Modifier l'XP pour ${u.full_name}:`, (u.xp || 0).toString());
+                        if (newXp !== null && !isNaN(parseInt(newXp))) updateUser(u.id, { xp: parseInt(newXp) });
+                    }} className="flex items-center gap-1 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white transition-all text-xs font-bold font-mono" title="Modifier XP"><Star size={14}/> EXP</button>
                     <button onClick={() => updateUser(u.id, { user_level: u.user_level === 'standard' ? 'niveau_mz_plus' : 'standard' })} className="p-2 bg-white/5 rounded-lg border border-white/10 hover:bg-yellow-600 hover:text-black transition-all" title="Basculer Niveau"><RefreshCw size={14}/></button>
                     <button onClick={() => updateUser(u.id, { is_admin: !u.is_admin })} className="p-2 bg-white/5 rounded-lg border border-white/10 hover:bg-blue-600 hover:text-white transition-all" title="Basculer Admin"><ShieldCheck size={14} className={u.is_admin ? 'text-blue-500' : ''}/></button>
                   </div>

@@ -18,6 +18,7 @@ import {
   ProfileTab
 } from './components/DashboardTabs.tsx';
 import { motion, AnimatePresence } from 'motion/react';
+import { RankRewardChecker } from './components/features/rank-rewards/RankRewardChecker.tsx';
 import { MyStore } from './components/features/my-store/MyStore.tsx';
 import { StandalonePublicStore } from './components/features/my-store/StandalonePublicStore.tsx';
 import { RewardFeature } from './components/features/programme-recompense/RewardFeature.tsx';
@@ -46,6 +47,7 @@ import { ShareModal } from './components/features/gamification/ShareModal.tsx';
 import { ChallengePresentation } from './components/features/challenges/ChallengePresentation.tsx';
 import { WeeklyChallenge } from './components/features/challenges/WeeklyChallenge.tsx';
 import { rewardUserXP } from './services/gamification.ts';
+import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -664,9 +666,30 @@ const App: React.FC = () => {
         country_code: profile?.country_code || profile?.country
       };
 
+      // Calculate the correct rank_id from xp immediately.
+      let currentLevelIdx = 0;
+      for (let i = 0; i < PROGRESSION_LEVELS.length; i++) {
+        if (enrichedProfile.xp >= PROGRESSION_LEVELS[i].xp) {
+          currentLevelIdx = i;
+        }
+      }
+      const computedRankId = currentLevelIdx + 1;
+      enrichedProfile.rank_name = PROGRESSION_LEVELS[currentLevelIdx].name;
+
+      if (computedRankId !== enrichedProfile.rank_id) {
+        enrichedProfile.rank_id = computedRankId;
+        try {
+          // Fire and forget update
+          supabase.from('users').update({ rank_id: computedRankId }).eq('id', enrichedProfile.id).then();
+        } catch (e) {
+          console.error("Error updating rank_id", e);
+        }
+      }
+
       if (challengeState) {
           enrichedProfile.store_preferences.challenge_3j = challengeState;
       }
+
       
       // Handle challenge commands from Admin
       if (enrichedProfile.store_preferences?.challenge_command) {
@@ -1114,6 +1137,7 @@ const App: React.FC = () => {
       {activeTab === 'sql_console' && isAdmin && <SQLConsole profile={userProfile} />}
       {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
       <AxisGuideFlow session={session} userProfile={userProfile} isReady={!loading && !initSequence} />
+      <RankRewardChecker profile={userProfile} onRedirectProfile={() => setActiveTab('profile')} />
       <XPRewardModal 
         isVisible={showXpReward} 
         amount={xpRewardAmount} 
