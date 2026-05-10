@@ -129,16 +129,34 @@ export const RankRewardsAdmin: React.FC = () => {
           </h2>
           <p className="text-sm text-neutral-400 mt-1">Gérer les cadeaux de passage de niveau (Kits, Formations, etc.)</p>
         </div>
-        <button
-          onClick={() => {
-            setIsAdding(true);
-            setIsEditing(null);
-            setEditForm({ is_active: true });
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl transition-all font-bold text-sm"
-        >
-          <Plus size={16} /> Nouvelle Récompense
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              if (window.confirm('Voulez-vous vraiment TOUT supprimer ? Cette action est irréversible.')) {
+                try {
+                  const { error } = await supabase.from('rank_rewards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                  if (error) throw error;
+                  fetchRewards();
+                } catch(e) {
+                  alert('Erreur lors de la suppression');
+                }
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-500/50 text-red-500 rounded-xl transition-all font-bold text-sm"
+          >
+            <Trash2 size={16} /> Tout Supprimer
+          </button>
+          <button
+            onClick={() => {
+              setIsAdding(true);
+              setIsEditing(null);
+              setEditForm({ is_active: true });
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl transition-all font-bold text-sm"
+          >
+            <Plus size={16} /> Nouvelle Récompense
+          </button>
+        </div>
       </div>
 
       {(isAdding || isEditing) && (
@@ -214,13 +232,14 @@ export const RankRewardsAdmin: React.FC = () => {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Fichier / Guide</label>
+              <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex justify-between">
+                <span>Contenu du Guide / Formation</span>
+                <span className="text-[9px] text-purple-400">Texte Markdown ou lien direct d'un PDF</span>
+              </label>
               <div className="relative">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="URL du guide ou utiliser le bouton à droite..."
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-24 py-3 text-white outline-none focus:border-purple-500 transition-colors text-xs"
+                <textarea 
+                  placeholder="Écrivez le contenu de la formation ici (supporte le Markdown) OU collez un lien vers un fichier PDF..."
+                  className="w-full h-40 bg-black/50 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-purple-500 transition-colors text-sm font-mono custom-scrollbar"
                   value={editForm.file_url || ''}
                   onChange={e => setEditForm({ ...editForm, file_url: e.target.value })}
                 />
@@ -233,9 +252,9 @@ export const RankRewardsAdmin: React.FC = () => {
                 />
                 <label 
                   htmlFor="file-upload"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-1.5 px-3 rounded-lg cursor-pointer transition-colors"
+                  className="absolute right-2 bottom-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-1.5 px-3 rounded-lg cursor-pointer transition-colors"
                 >
-                  {uploadingFile ? <Loader2 size={14} className="animate-spin" /> : 'Upload'}
+                  {uploadingFile ? <Loader2 size={14} className="animate-spin" /> : 'Upload de Fichier'}
                 </label>
               </div>
             </div>

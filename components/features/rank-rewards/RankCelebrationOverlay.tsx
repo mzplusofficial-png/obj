@@ -277,23 +277,21 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
           )}
 
           {step === 'claimed' && selectedReward && (
-            <div className="w-full flex flex-col items-center justify-center text-center p-6">
+            <div className="w-full flex flex-col items-center justify-center text-center p-6 h-full max-h-[900px] overflow-y-auto custom-scrollbar">
               <motion.div 
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", bounce: 0.5 }}
-                className="w-32 h-32 md:w-48 md:h-48 bg-gradient-to-tr from-green-500 to-emerald-400 rounded-[2.5rem] rotate-12 flex items-center justify-center mb-10 shadow-[0_0_60px_rgba(16,185,129,0.4)]"
+                className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-tr from-green-500 to-emerald-400 rounded-full flex items-center justify-center mb-6 shadow-[0_0_60px_rgba(16,185,129,0.4)] shrink-0"
               >
-                <div className="w-full h-full -rotate-12 flex items-center justify-center">
-                  <CheckCircle size={80} className="text-white drop-shadow-lg md:w-28 md:h-28" />
-                </div>
+                <CheckCircle size={48} className="text-white drop-shadow-lg" />
               </motion.div>
               
               <motion.h3 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-4xl md:text-6xl font-black text-white mb-6"
+                className="text-3xl md:text-5xl font-black text-white mb-4"
               >
                 C'EST À VOUS !
               </motion.h3>
@@ -302,7 +300,7 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-xl md:text-2xl text-neutral-300 max-w-2xl mb-12"
+                className="text-lg md:text-xl text-neutral-300 max-w-2xl mb-8"
               >
                 La récompense <strong className="text-white font-black">{selectedReward.title}</strong> a bien été ajoutée à votre profil.
               </motion.p>
@@ -311,21 +309,29 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="flex flex-col sm:flex-row gap-4 w-full max-w-lg"
+                className="flex flex-col gap-4 w-full max-w-lg"
               >
-                <a 
-                  href={selectedReward.file_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-3 py-5 bg-white text-neutral-950 hover:bg-neutral-200 rounded-2xl font-black text-lg transition-all shadow-xl"
-                  onClick={onClose}
-                >
-                  <Download size={24} /> 
-                  TÉLÉCHARGER LE KIT
-                </a>
+                {selectedReward.file_url?.startsWith('http') ? (
+                  <a 
+                    href={selectedReward.file_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-white text-neutral-950 hover:bg-neutral-200 rounded-2xl font-black text-lg transition-all shadow-xl"
+                  >
+                    <Download size={20} /> 
+                    TÉLÉCHARGER LE KIT
+                  </a>
+                ) : (
+                  <button 
+                    onClick={onClose}
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-white text-neutral-950 hover:bg-neutral-200 rounded-2xl font-black text-lg transition-all shadow-xl"
+                  >
+                    DÉCOUVRIR MA FORMATION (SUR MON PROFIL)
+                  </button>
+                )}
                 <button 
                   onClick={onClose}
-                  className="px-8 py-5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-lg transition-all"
+                  className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-lg transition-all"
                 >
                   Aller sur mon profil
                 </button>

@@ -48,6 +48,114 @@ import { CurrencyDisplay } from './ui/CurrencyDisplay.tsx';
 import { useCurrency } from '../hooks/useCurrency.ts';
 import { useAxis } from './features/axis/AxisProvider.tsx';
 import { LiquidProgressionTube, getCurrentLevel } from './features/progression/LiquidProgressionTube.tsx';
+import { Download, Gift } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+
+const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({ profile }) => {
+  const [rewards, setRewards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedContent, setSelectedContent] = useState<{title: string, text: string, imageUrl?: string} | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    const fetchMyRewards = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('user_rewards')
+          .select('*, reward:rank_rewards(*)')
+          .eq('user_id', profile.id)
+          .order('claimed_at', { ascending: false });
+        if (data) setRewards(data as any);
+      } catch (err) {} finally { setLoading(false); }
+    };
+    fetchMyRewards();
+  }, [profile]);
+
+  if (loading) return <div className="text-center py-4"><span className="animate-pulse text-purple-500 text-xs uppercase font-black tracking-widest">Chargement...</span></div>;
+  if (!rewards.length) return null;
+
+  return (
+    <div className="w-full space-y-4 mb-8">
+      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 pl-2 border-l-2 border-purple-500 mb-4 flex items-center gap-2">
+        <Gift size={12} className="text-purple-500" /> VOS FORMATIONS DÉBLOQUÉES
+      </h3>
+      
+      <div className="flex flex-wrap gap-3">
+        {rewards.map((userReward) => {
+          const rw = userReward.reward;
+          if (!rw) return null;
+          const isUrl = rw.file_url?.startsWith('http') && !rw.file_url.includes(' ');
+          
+          return (
+            <div key={userReward.id} className="relative group w-full p-4 rounded-3xl bg-[#111] border border-white/5 hover:border-purple-500/50 transition-colors cursor-pointer overflow-hidden flex items-center gap-4 shadow-xl"
+                 onClick={() => {
+                   if (isUrl) {
+                     window.open(rw.file_url, '_blank');
+                   } else if (rw.file_url) {
+                     setSelectedContent({ title: rw.title, text: rw.file_url, imageUrl: rw.image_url });
+                   }
+                 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              {rw.image_url ? (
+                <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+                  <img src={rw.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600/20 to-fuchsia-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                  {isUrl ? <Download size={20} /> : <BookOpen size={20} />}
+                </div>
+              )}
+
+              <div className="flex-1">
+                 <h4 className="font-bold text-white text-sm line-clamp-1">{rw.title}</h4>
+                 <p className="text-[10px] text-neutral-400 uppercase font-black tracking-widest">{isUrl ? 'Kit Premium' : 'Formation Interne'}</p>
+              </div>
+              <div className="p-2 bg-white/5 rounded-full text-neutral-400 group-hover:text-purple-400 transition-colors">
+                 {isUrl ? <Download size={14} /> : <ChevronRight size={14} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedContent && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setSelectedContent(null)} />
+          <div className="relative w-full h-full md:h-auto md:max-w-4xl bg-[#0a0a09] md:rounded-[2rem] shadow-[0_0_100px_rgba(168,85,247,0.15)] overflow-hidden flex flex-col md:max-h-[90vh]">
+             
+             {/* Header */}
+             <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#111] z-10 sticky top-0">
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                      <BookOpen size={20} className="text-purple-400" />
+                   </div>
+                   <h3 className="text-lg md:text-xl font-black text-white line-clamp-1">{selectedContent.title}</h3>
+                </div>
+                <button onClick={() => setSelectedContent(null)} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-colors shrink-0">✕</button>
+             </div>
+             
+             {/* Content Body */}
+             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-neutral-950">
+                <div className="max-w-3xl mx-auto space-y-8">
+                  {selectedContent.imageUrl && (
+                    <div className="w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl mb-10">
+                      <img src={selectedContent.imageUrl} alt="Formation" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  
+                  <div className="text-neutral-300 leading-relaxed max-w-none [&>h1]:text-4xl [&>h1]:font-black [&>h1]:text-white [&>h1]:mb-6 [&>h2]:text-3xl [&>h2]:font-bold [&>h2]:text-white [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-2xl [&>h3]:font-bold [&>h3]:text-white [&>h3]:mt-8 [&>h3]:mb-4 [&>p]:mb-6 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-6 [&>ul>li]:mb-2 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-6 [&>a]:text-purple-400 [&>a]:underline hover:[&>a]:text-purple-300 [&>blockquote]:border-l-4 [&>blockquote]:border-purple-500 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-neutral-400">
+                    <ReactMarkdown>{selectedContent.text}</ReactMarkdown>
+                  </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type HubCategory = 'main' | 'business' | 'academy' | 'community';
 
@@ -1137,6 +1245,9 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
           <ChevronRight size={18} className="ml-auto text-amber-500" />
         </button>
       )}
+
+      {/* Mes Récompenses Débloquées */}
+      <UserRewardsSection profile={profile} />
 
       <div className="relative group">
          <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-gold-main)] to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
