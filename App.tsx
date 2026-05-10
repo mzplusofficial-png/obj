@@ -44,6 +44,7 @@ import { AxisGuideFlow } from './components/features/axis/AxisGuideFlow.tsx';
 import { XPRewardModal } from './components/features/gamification/XPRewardModal.tsx';
 import { ShareModal } from './components/features/gamification/ShareModal.tsx';
 import { ChallengePresentation } from './components/features/challenges/ChallengePresentation.tsx';
+import { WeeklyChallenge } from './components/features/challenges/WeeklyChallenge.tsx';
 import { rewardUserXP } from './services/gamification.ts';
 
 const ADMIN_EMAILS = [
@@ -659,7 +660,8 @@ const App: React.FC = () => {
         xp: Number(profile?.xp || 0),
         user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
         created_at: profile?.created_at,
-        store_preferences: { ...(profile?.store_preferences || {}) }
+        store_preferences: { ...(profile?.store_preferences || {}) },
+        country_code: profile?.country_code || profile?.country
       };
 
       if (challengeState) {
@@ -1067,6 +1069,7 @@ const App: React.FC = () => {
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
       {activeTab === 'leaderboard' && <LeaderboardTab profile={userProfile} mode="global" />}
       {activeTab === 'leaderboard_local' && <LeaderboardTab profile={userProfile} mode="local" />}
+      {activeTab === 'weekly_challenge' && <WeeklyChallenge profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
       {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
       {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
@@ -1165,11 +1168,6 @@ const App: React.FC = () => {
         completedStep={challengeCelebratedStep}
         onAccept={() => {
           setShowChallengeCelebration(false);
-          if (challengeCelebratedStep === 1) {
-            updateChallengeDB({ j2Presented: true });
-          } else if (challengeCelebratedStep === 2) {
-            updateChallengeDB({ j3Presented: true });
-          }
         }}
       />
       <ChallengePresentation 

@@ -3,15 +3,43 @@ import { ArrowLeft, CheckCircle2, Receipt, CalendarCheck, FileText, Download, Ch
 import { supabase } from '../../../services/supabase';
 
 const getCountryFlag = (countryCode?: string) => {
-  if (!countryCode) return '🌐';
-  const code = countryCode.toUpperCase();
-  if (/^[A-Z]{2}$/.test(code)) {
-    return String.fromCodePoint(
-      code.charCodeAt(0) + 127397,
-      code.charCodeAt(1) + 127397
-    );
+  if (!countryCode) return null;
+  const code = countryCode.trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(code)) {
+    return <img src={`https://flagcdn.com/w40/${code}.png`} alt={code.toUpperCase()} loading="lazy" className="w-5 sm:w-6 object-contain rounded-sm shadow-sm opacity-90 inline-block" />;
   }
-  return '🌐';
+  return null;
+};
+
+const getCountryName = (countryCode?: string) => {
+   if (!countryCode) return 'Inconnu';
+   const map: Record<string, string> = {
+      'ci': "Côte d'Ivoire",
+      'sn': "Sénégal",
+      'cm': "Cameroun",
+      'ml': "Mali",
+      'bf': "Burkina Faso",
+      'tg': "Togo",
+      'bj': "Bénin",
+      'ne': "Niger",
+      'cd': "RDC",
+      'cg': "Congo",
+      'ga': "Gabon",
+      'gf': "Guyane",
+      'gp': "Guadeloupe",
+      'mq': "Martinique",
+      're': "Réunion",
+      'yt': "Mayotte",
+      'mg': "Madagascar",
+      'gn': "Guinée",
+      'dz': "Algérie",
+      'ma': "Maroc",
+      'tn': "Tunisie",
+      'fr': "France",
+      'ca': "Canada",
+   };
+   const code = countryCode.toLowerCase();
+   return map[code] || code.toUpperCase();
 };
 
 const formatCurrency = (countryCode: string | undefined, amountFcfa: number) => {
@@ -70,6 +98,7 @@ const formatCurrency = (countryCode: string | undefined, amountFcfa: number) => 
 
 export const PastRewardsView: React.FC<{ onClose: () => void }> = ({ onClose }) => {
    const [rewards, setRewards] = useState<any[]>([]);
+   const [appImages, setAppImages] = useState<Record<string, string>>({});
    const [loading, setLoading] = useState(true);
 
    // Calculate dynamic dates
@@ -81,22 +110,20 @@ export const PastRewardsView: React.FC<{ onClose: () => void }> = ({ onClose }) 
    const distributionDateStr = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(distributionDate);
 
    useEffect(() => {
-      fetchRewards();
+      fetchData();
    }, []);
 
-   const fetchRewards = async () => {
+   const fetchData = async () => {
       setLoading(true);
       try {
+         // Fetch images from platform_settings
+         const { data: imgData } = await supabase.from('platform_settings').select('value').eq('id', 'app_images').single();
+         const images = imgData?.value || {};
+         setAppImages(images);
+
          const { data, error } = await supabase
            .from('past_monthly_rewards')
-           .select(`
-             *,
-             payment_methods (
-               id,
-               name,
-               logo_url
-             )
-           `)
+           .select('*')
            .order('rank', { ascending: true })
            .limit(10);
            
@@ -105,16 +132,16 @@ export const PastRewardsView: React.FC<{ onClose: () => void }> = ({ onClose }) 
          } else {
             // Realistic mock data for preview with matching countries/methods
             setRewards([
-              { id: '1', rank: 1, user_name: 'Alex D.', country_code: 'ci', amount_fcfa: 50000, payment_methods: { name: 'Orange Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Orange_logo.svg' } },
-              { id: '2', rank: 2, user_name: 'Sarah M.', country_code: 'sn', amount_fcfa: 40000, payment_methods: { name: 'Wave', logo_url: 'https://play-lh.googleusercontent.com/1-TtcB5K-8g8T9Ym-o9D52p7D0uEqg399o2kLrdLzOwe39mGE2u_nKj-r4I1h9q1Xw' } },
-              { id: '3', rank: 3, user_name: 'Kevin B.', country_code: 'cm', amount_fcfa: 30000, payment_methods: { name: 'MTN Mobile Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/9/93/MTN_Logo.svg' } },
-              { id: '4', rank: 4, user_name: 'Marie J.', country_code: 'ml', amount_fcfa: 25000, payment_methods: { name: 'Orange Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Orange_logo.svg' } },
-              { id: '5', rank: 5, user_name: 'Paul H.', country_code: 'bf', amount_fcfa: 20000, payment_methods: { name: 'Wave', logo_url: 'https://play-lh.googleusercontent.com/1-TtcB5K-8g8T9Ym-o9D52p7D0uEqg399o2kLrdLzOwe39mGE2u_nKj-r4I1h9q1Xw' } },
-              { id: '6', rank: 6, user_name: 'Omar C.', country_code: 'ci', amount_fcfa: 18000, payment_methods: { name: 'Wave', logo_url: 'https://play-lh.googleusercontent.com/1-TtcB5K-8g8T9Ym-o9D52p7D0uEqg399o2kLrdLzOwe39mGE2u_nKj-r4I1h9q1Xw' } },
-              { id: '7', rank: 7, user_name: 'Fatou N.', country_code: 'sn', amount_fcfa: 17000, payment_methods: { name: 'Orange Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Orange_logo.svg' } },
-              { id: '8', rank: 8, user_name: 'Ali K.', country_code: 'tg', amount_fcfa: 16000, payment_methods: { name: 'Moov Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Moov_Africa_logo.svg/1200px-Moov_Africa_logo.svg.png' } },
-              { id: '9', rank: 9, user_name: 'Jean P.', country_code: 'cd', amount_fcfa: 15000, payment_methods: { name: 'M-Pesa', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/1/15/M-PESA_LOGO-01.svg' } },
-              { id: '10', rank: 10, user_name: 'Awa T.', country_code: 'bj', amount_fcfa: 15000, payment_methods: { name: 'MTN Mobile Money', logo_url: 'https://upload.wikimedia.org/wikipedia/commons/9/93/MTN_Logo.svg' } },
+              { id: '1', rank: 1, user_name: 'Alex D.', country_code: 'ci', amount_fcfa: 50000, rewarded_xp: 45200, payment_methods: { name: 'Orange Money' } },
+              { id: '2', rank: 2, user_name: 'Sarah M.', country_code: 'sn', amount_fcfa: 40000, rewarded_xp: 38900, payment_methods: { name: 'Wave' } },
+              { id: '3', rank: 3, user_name: 'Kevin B.', country_code: 'cm', amount_fcfa: 30000, rewarded_xp: 32100, payment_methods: { name: 'MTN Mobile Money' } },
+              { id: '4', rank: 4, user_name: 'Marie J.', country_code: 'ml', amount_fcfa: 25000, rewarded_xp: 28500, payment_methods: { name: 'Orange Money' } },
+              { id: '5', rank: 5, user_name: 'Paul H.', country_code: 'bf', amount_fcfa: 20000, rewarded_xp: 24300, payment_methods: { name: 'Wave' } },
+              { id: '6', rank: 6, user_name: 'Omar C.', country_code: 'ci', amount_fcfa: 18000, rewarded_xp: 21500, payment_methods: { name: 'Wave' } },
+              { id: '7', rank: 7, user_name: 'Fatou N.', country_code: 'sn', amount_fcfa: 17000, rewarded_xp: 19800, payment_methods: { name: 'Orange Money' } },
+              { id: '8', rank: 8, user_name: 'Ali K.', country_code: 'tg', amount_fcfa: 16000, rewarded_xp: 18200, payment_methods: { name: 'Moov Money' } },
+              { id: '9', rank: 9, user_name: 'Jean P.', country_code: 'cd', amount_fcfa: 15000, rewarded_xp: 17500, payment_methods: { name: 'M-Pesa' } },
+              { id: '10', rank: 10, user_name: 'Awa T.', country_code: 'bj', amount_fcfa: 15000, rewarded_xp: 16900, payment_methods: { name: 'MTN Mobile Money' } },
             ]);
          }
       } catch(err) {
@@ -206,20 +233,28 @@ export const PastRewardsView: React.FC<{ onClose: () => void }> = ({ onClose }) 
                          {/* Name & Country */}
                          <div className="flex items-center gap-3">
                             <span className="sm:hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest w-24">Bénéficiaire</span>
-                            <span className="text-xl shadow-sm rounded-sm" title={reward.country_code?.toUpperCase()}>{getCountryFlag(reward.country_code)}</span>
-                            <span className="font-bold text-slate-800">{reward.user_name}</span>
+                            <div className="flex flex-col items-center justify-center w-8 shrink-0">
+                               {getCountryFlag(reward.country_code)}
+                               <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tight text-center leading-tight mt-1 truncate max-w-[40px]">{getCountryName(reward.country_code)}</span>
+                            </div>
+                            <div className="flex flex-col">
+                               <span className="font-bold text-slate-800 leading-tight">{reward.user_name}</span>
+                               {reward.rewarded_xp && (
+                                 <span className="text-[10px] text-slate-500 font-semibold">{reward.rewarded_xp.toLocaleString('fr-FR')} XP</span>
+                               )}
+                            </div>
                          </div>
                          
                          {/* Payment Method */}
                          <div className="flex items-center gap-3">
                             <span className="sm:hidden text-[10px] font-bold text-slate-400 uppercase tracking-widest w-24">Paiement via</span>
                             <div className="flex items-center gap-2">
-                               {reward.payment_methods?.logo_url ? (
+                               {reward.payment_methods?.logo_url || (reward.payment_methods?.name && appImages[reward.payment_methods.name]) ? (
                                  <div className="h-6 bg-white border border-slate-200 rounded px-1.5 py-0.5 flex items-center justify-center shadow-sm">
-                                    <img src={reward.payment_methods.logo_url} alt={reward.payment_methods?.name} className="h-4 w-auto object-contain max-w-[40px]" />
+                                    <img src={reward.payment_methods?.logo_url || appImages[reward.payment_methods.name]} alt={reward.payment_methods?.name} className="h-4 w-auto object-contain max-w-[40px]" />
                                  </div>
                                ) : (
-                                  <div className="h-6 w-8 bg-slate-200 rounded animate-pulse" />
+                                  <div className="h-6 w-8 bg-slate-200 rounded flex items-center justify-center text-[8px] text-slate-500 uppercase font-black" >{reward.payment_methods?.name?.substring(0, 2) || '-'}</div>
                                )}
                                <span className="text-xs font-semibold text-slate-600 truncate max-w-[120px]">{reward.payment_methods?.name || 'Virement'}</span>
                             </div>

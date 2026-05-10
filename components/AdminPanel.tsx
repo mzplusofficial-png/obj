@@ -27,8 +27,9 @@ import { Challenge3JAdmin } from './features/challenges/Challenge3JAdmin.tsx';
 
 import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
 import { SoundEffectsAdmin } from './features/gamification/SoundEffectsAdmin.tsx';
+import { AdminImages } from './features/admin-images/AdminImages.tsx';
 
-type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j';
+type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j' | 'images';
 
 export const AdminPanel: React.FC<{ 
   adminProfile: UserProfile | null; 
@@ -176,6 +177,7 @@ export const AdminPanel: React.FC<{
              <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
                 <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'validation'} onClick={() => setActiveSubTab('validation')} icon={ClipboardList} label="Ventes" badge={stats.pendingSales} color="text-green-400" />
                 <TabButton hidden={!isSuperAdmin} active={activeSubTab === 'withdrawals'} onClick={() => setActiveSubTab('withdrawals')} icon={Wallet} label="Retraits" badge={stats.pendingWithdrawals} color="text-teal-400" />
+                <TabButton active={activeSubTab === 'images'} onClick={() => setActiveSubTab('images')} icon={ImageIcon} label="Images" color="text-purple-400" />
                 <TabButton active={activeSubTab === 'catalog'} onClick={() => setActiveSubTab('catalog')} icon={Package} label="Catalogue" />
                 <TabButton active={activeSubTab === 'store_settings'} onClick={() => setActiveSubTab('store_settings')} icon={Store} label="Boutique" color="text-orange-500" />
              </div>
@@ -303,6 +305,7 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'flash_offer' && <MZPlusFlashOfferAdmin />}
         {activeSubTab === 'pwa_branding' && <PWABrandingAdmin />}
         {activeSubTab === 'store_settings' && <AdminStoreSettings />}
+        {activeSubTab === 'images' && <AdminImages />}
         {activeSubTab === 'sound_effects' && <SoundEffectsAdmin />}
         {activeSubTab === 'axis_test' && <AxisTestAdmin />}
         {activeSubTab === 'activity_audit' && isAnyAdmin && <AdminActivityAudit />}

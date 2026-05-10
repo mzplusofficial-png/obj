@@ -6,15 +6,43 @@ import { PastRewardsView } from './PastRewardsView';
 
 const DEFAULT_FLAG = '🌐';
 const getCountryFlag = (countryCode?: string) => {
-  if (!countryCode) return DEFAULT_FLAG;
-  const code = countryCode.toUpperCase();
-  if (/^[A-Z]{2}$/.test(code)) {
-    return String.fromCodePoint(
-      code.charCodeAt(0) + 127397,
-      code.charCodeAt(1) + 127397
-    );
+  if (!countryCode) return null;
+  const code = countryCode.trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(code)) {
+    return <img src={`https://flagcdn.com/w40/${code}.png`} alt={code.toUpperCase()} loading="lazy" className="w-5 sm:w-6 object-contain rounded-sm shadow-sm opacity-90 inline-block" />;
   }
-  return DEFAULT_FLAG;
+  return null;
+};
+
+const getCountryName = (countryCode?: string) => {
+   if (!countryCode) return 'Inconnu';
+   const map: Record<string, string> = {
+      'ci': "Côte d'Ivoire",
+      'sn': "Sénégal",
+      'cm': "Cameroun",
+      'ml': "Mali",
+      'bf': "Burkina Faso",
+      'tg': "Togo",
+      'bj': "Bénin",
+      'ne': "Niger",
+      'cd': "RDC",
+      'cg': "Congo",
+      'ga': "Gabon",
+      'gf': "Guyane",
+      'gp': "Guadeloupe",
+      'mq': "Martinique",
+      're': "Réunion",
+      'yt': "Mayotte",
+      'mg': "Madagascar",
+      'gn': "Guinée",
+      'dz': "Algérie",
+      'ma': "Maroc",
+      'tn': "Tunisie",
+      'fr': "France",
+      'ca': "Canada",
+   };
+   const code = countryCode.toLowerCase();
+   return map[code] || code.toUpperCase();
 };
 
 type Period = 'week' | 'month' | 'all_time';
@@ -207,7 +235,12 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
 
                      {/* Flag & Name */}
                      <div className="flex items-center gap-3 ml-4 flex-1 min-w-0">
-                        <span className="text-xl sm:text-2xl flex-shrink-0" title="Pays">{displayFlag}</span>
+                        <div className="flex flex-col items-center justify-center w-10 sm:w-12 shrink-0">
+                           <div className="h-4 sm:h-5 flex items-center justify-center">
+                             {displayFlag}
+                           </div>
+                           <span className="text-[8px] sm:text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center leading-tight mt-1 max-w-full truncate">{getCountryName(user.country_code)}</span>
+                        </div>
                         <span className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-2">
                           <span className="truncate">{user.full_name || 'Utilisateur Anonyme'}</span>
                           {isMe && <span className="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full uppercase tracking-widest border border-purple-500/30 flex-shrink-0">Moi</span>}

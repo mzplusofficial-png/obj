@@ -191,7 +191,7 @@ export const GlobalView: React.FC<any> = ({
           <div className="grid grid-cols-2 gap-3 animate-fade-in text-left">
              <SubServiceCard title="Ma Boutique" desc="Gérer mes liens" icon={Store} onClick={() => onSwitchTab('affiliation')} />
              <SubServiceCard title="Vidéo" desc="TikTok/Reels" icon={Video} locked={!isMzPlus} onClick={() => onSwitchTab('rpa')} />
-             <SubServiceCard title="Équipe" desc="Parrainage" icon={UserPlus} onClick={() => onSwitchTab('team')} />
+             <SubServiceCard title="Mon Équipe" desc="Communauté" icon={UserPlus} onClick={() => onSwitchTab('team')} />
           </div>
         );
       case 'referral':
@@ -327,6 +327,8 @@ export const GlobalView: React.FC<any> = ({
         const j3Completed = challengeDb.j3Completed === true;
 
         let mission = null;
+        let isWaiting = false;
+        
         if (!j1Completed) {
           mission = { 
             day: 1, 
@@ -334,6 +336,15 @@ export const GlobalView: React.FC<any> = ({
             desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique.",
             action: 'Ouvrir le catalogue',
             tab: 'affiliation'
+          };
+        } else if (j1Completed && !j2Presented) {
+          isWaiting = true;
+          mission = {
+            day: 1,
+            title: 'Mission Accomplie !',
+            desc: "Bravo ! Reviens demain pour la prochaine mission.",
+            action: 'Patienter',
+            tab: 'dashboard'
           };
         } else if (j2Presented && !j2Completed) {
           mission = { 
@@ -344,6 +355,15 @@ export const GlobalView: React.FC<any> = ({
             tab: 'formation',
             event: 'open-formation',
             detail: { id: 'default-free-video' }
+          };
+        } else if (j2Completed && !j3Presented) {
+          isWaiting = true;
+          mission = {
+            day: 2,
+            title: 'Mission Accomplie !',
+            desc: "Parfait ! Reviens demain pour ton dernier défi.",
+            action: 'Patienter',
+            tab: 'dashboard'
           };
         } else if (j3Presented && !j3Completed) {
           mission = { 
@@ -373,26 +393,28 @@ export const GlobalView: React.FC<any> = ({
                   J{mission.day}
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Ta mission aujourd'hui</p>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">{isWaiting ? 'Objectif Atteint' : "Ta mission aujourd'hui"}</p>
                   <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">{mission.title}</h3>
                   <p className="text-xs text-neutral-400 font-medium leading-relaxed">{mission.desc}</p>
                 </div>
               </div>
               
-              <button
-                onClick={() => {
-                  if (mission.tab) onSwitchTab(mission.tab as TabId);
-                  if (mission.event) {
-                    // Small delay to allow tab switch
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent(mission.event, { detail: mission.detail }));
-                    }, 100);
-                  }
-                }}
-                className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all border border-emerald-500/20 flex items-center justify-center gap-2"
-              >
-                {mission.action} 👉
-              </button>
+              {!isWaiting && (
+                <button
+                  onClick={() => {
+                    if (mission?.tab) onSwitchTab(mission.tab as TabId);
+                    if (mission?.event) {
+                      // Small delay to allow tab switch
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent(mission.event as string, { detail: mission.detail }));
+                      }, 100);
+                    }
+                  }}
+                  className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all border border-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  {mission.action} 👉
+                </button>
+              )}
               <button 
                 onClick={async () => {
                    if (!window.confirm("Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.")) return;
@@ -1189,28 +1211,43 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
 
       <LiquidProgressionTube currentXp={profile?.xp || 0} />
 
-      {/* Leaderboard Actions */}
-      <div className="grid grid-cols-2 gap-4 mt-4">
+      {/* Icon Grid Actions */}
+      <div className="grid grid-cols-3 gap-3 mt-4">
         <button 
           onClick={() => onSwitchTab('leaderboard')}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-amber-600/10 border border-yellow-500/20 transition-all hover:bg-yellow-500/20 hover:scale-[1.02] active:scale-95 group"
+          className="flex flex-col items-center justify-center p-2 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Trophy size={24} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+          <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-yellow-500/20 transition-all">
+            <Trophy size={20} className="text-yellow-400" />
           </div>
-          <span className="text-[11px] font-black uppercase tracking-widest text-yellow-500">Classement</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Mondial</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Classement</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-500/70 mt-0.5">Mondial</span>
         </button>
 
         <button 
           onClick={() => onSwitchTab('leaderboard_local')}
-          className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 transition-all hover:bg-purple-500/20 hover:scale-[1.02] active:scale-95 group"
+          className="flex flex-col items-center justify-center p-2 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <MapPin size={24} className="text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+          <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all">
+            <MapPin size={20} className="text-purple-400" />
           </div>
-          <span className="text-[11px] font-black uppercase tracking-widest text-purple-400">Classement</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Local</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Classement</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-purple-400/70 mt-0.5">Local</span>
+        </button>
+
+        <button 
+          onClick={() => onSwitchTab('weekly_challenge')}
+          className="flex flex-col items-center justify-center p-2 transition-all group relative"
+        >
+          <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all">
+            <Target size={20} className="text-blue-400" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Défi</span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-blue-400/70 mt-0.5">Hebdo.</span>
         </button>
       </div>
 
