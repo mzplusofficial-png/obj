@@ -270,39 +270,39 @@ const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: any }) => {
 
   const steps = [
     {
-       text: "Salut ! C'est encore moi. Ton lien de parrainage est une véritable machine à générer des revenus.",
-       button: "Comment ça marche ?"
+       text: "Ton lien de parrainage est l'outil principal pour construire ton empire et générer des revenus passifs.",
+       button: "Détails"
     },
     {
-       text: "C'est très simple : tu partages ton lien. À chaque fois qu'une personne s'inscrit gratuitement via ton lien, tu gagnes 10 XP !",
-       button: "Et pour l'argent ?"
+       text: "Chaque inscription gratuite générée via ton lien privé augmente directement ton influence (+10 XP).",
+       button: "Ensuite ?"
     },
     {
-       text: `Dès qu'un membre de ton équipe passe VIP (MZ+ Premium), tu reçois instantanément ${convertAndFormat(2500).formatted} retirables à tout moment !`,
-       button: "J'y retourne !"
+       text: `Dès qu'un de tes contacts accède au statut Premium, ${convertAndFormat(2500).formatted} sont crédités instantanément dans ta trésorerie.`,
+       button: "Compris"
     }
   ];
 
   if (step >= steps.length) {
     return (
-       <div className="bg-[#050505] border border-white/5 hover:border-white/10 rounded-[1.5rem] p-5 flex items-center justify-center cursor-pointer transition-colors shadow-sm" onClick={() => setStep(0)}>
+       <div className="bg-[#0a0a09] border border-[var(--color-border-gold)] hover:border-[var(--color-gold-main)]/50 rounded-[1.5rem] p-5 flex items-center justify-center cursor-pointer transition-all shadow-sm group" onClick={() => setStep(0)}>
           <div className="flex items-center gap-3">
-             <Zap size={20} className="text-yellow-500" />
-             <p className="text-sm md:text-base font-bold text-white/80">Revoir l'explication d'Axis</p>
+             <Crown size={16} className="text-[var(--color-gold-main)] group-hover:scale-110 transition-transform" />
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-main)]">Revoir la stratégie de parrainage</p>
           </div>
        </div>
     );
   }
 
   return (
-    <div className="bg-[#050505] border border-white/[0.08] rounded-[2rem] p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 shadow-lg relative overflow-hidden">
-       <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-[40px] pointer-events-none" />
+    <div className="bg-[#0a0a09] border border-[var(--color-border-gold)] rounded-[2rem] p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative overflow-hidden">
+       <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-gold-main)]/5 rounded-full blur-[40px] pointer-events-none" />
        
-       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 flex items-center justify-center shrink-0 border border-yellow-500/20">
-          <Zap className="text-yellow-500" size={28} />
+       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#111] to-[#050505] flex items-center justify-center shrink-0 border border-[var(--color-gold-main)]/20 shadow-inner">
+          <Crown className="text-[var(--color-gold-main)]" size={24} />
        </div>
        
-       <div className="flex-1 w-full text-center sm:text-left">
+       <div className="flex-1 w-full text-center sm:text-left relative z-10">
           <AnimatePresence mode="wait">
              <motion.div
                 key={step}
@@ -312,12 +312,12 @@ const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: any }) => {
                 transition={{ duration: 0.3 }}
                 className="flex flex-col sm:items-start items-center"
              >
-                <p className="text-white text-base md:text-lg leading-relaxed font-medium mb-5">
-                   "{steps[step].text}"
+                <p className="text-white/90 text-sm md:text-base leading-relaxed font-medium mb-4">
+                   {steps[step].text}
                 </p>
                 <button 
                   onClick={() => setStep(s => s + 1)} 
-                  className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm transition-all border border-white/5 active:scale-95"
+                  className="px-6 py-2.5 bg-[var(--color-gold-main)]/10 hover:bg-[var(--color-gold-main)]/20 text-[var(--color-gold-main)] rounded-xl font-bold text-[10px] uppercase tracking-[0.2em] transition-all border border-[var(--color-gold-main)]/20 active:scale-95"
                 >
                    {steps[step].button}
                 </button>
@@ -333,16 +333,16 @@ const AxisFirstTimeGuide = ({ onClose, convertAndFormat }: { onClose: () => void
 
   const steps = [
     {
-       text: "Salut ! Je suis Axis. Savais-tu que ton lien de parrainage est une véritable machine à générer des revenus ?",
-       button: "Ah bon ?"
+       text: "Ton réseau est un actif générateur de revenus. Il est temps d'activer ta machine à revenus MZ+.",
+       button: "Suivant"
     },
     {
-       text: "C'est très simple : chaque personne qui s'inscrit gratuitement via ton lien te rapporte 10 XP !",
-       button: "Et pour l'argent ?"
+       text: "À chaque fois qu'une personne s'inscrit gratuitement via ton lien privé, ton niveau d'expérience augmente (+10 XP).",
+       button: "Et ensuite ?"
     },
     {
-       text: `Dès qu'un membre de ton équipe passe VIP (MZ+ Premium), tu reçois instantanément ${convertAndFormat(2500).formatted} retirables à tout moment !`,
-       button: "Génial, je m'y mets !"
+       text: `Dès qu'un de tes filleuls accède au statut Premium, tu reçois instantanément ${convertAndFormat(2500).formatted} sur ton solde, retirable immédiatement.`,
+       button: "Accéder à mon lien"
     }
   ];
 
@@ -355,46 +355,50 @@ const AxisFirstTimeGuide = ({ onClose, convertAndFormat }: { onClose: () => void
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-[#050505] border border-white/10 rounded-[2rem] p-8 md:p-10 max-w-md w-full shadow-2xl relative overflow-hidden"
+        className="w-full max-w-sm bg-[#0a0a09] border border-[var(--color-border-gold)] rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden"
       >
-         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-[60px] -mr-20 -mt-20 pointer-events-none" />
+         {/* Subtle gold glow */}
+         <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-gold-main)]/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none" />
          
-         <div className="w-20 h-20 mx-auto rounded-[1.5rem] bg-gradient-to-br from-yellow-500/10 to-transparent flex items-center justify-center mb-8 border border-yellow-500/20 shadow-inner">
-            <Zap className="text-yellow-500" size={36} />
+         <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-[#111] to-[#050505] flex items-center justify-center mb-8 border border-[var(--color-gold-main)]/20 shadow-inner">
+            <Crown className="text-[var(--color-gold-main)] opacity-90" size={26} />
          </div>
          
-         <div className="text-center relative z-10">
+         <div className="relative z-10 min-h-[140px]">
             <AnimatePresence mode="wait">
                <motion.div
                   key={step}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="flex flex-col items-center"
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col"
                >
-                  <p className="text-white/90 text-lg md:text-xl leading-relaxed font-semibold mb-10 tracking-tight">
-                     "{steps[step].text}"
-                  </p>
-                  <button 
-                    onClick={handleNext} 
-                    className="w-full px-8 py-4 bg-white text-black hover:bg-white/90 rounded-2xl font-black text-lg transition-all active:scale-95 flex items-center justify-center gap-3"
-                  >
-                     {steps[step].button}
-                     {step === steps.length - 1 ? <Rocket size={20} /> : <ChevronRight size={20} />}
-                  </button>
+                  <h3 className="text-white/90 text-lg md:text-xl font-medium tracking-tight leading-relaxed mb-8">
+                     {steps[step].text}
+                  </h3>
                </motion.div>
             </AnimatePresence>
          </div>
+
+         <div className="mt-4">
+             <button 
+               onClick={handleNext} 
+               className="w-full py-4 bg-[var(--color-gold-main)] hover:bg-[var(--color-gold-light)] text-black rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-2"
+             >
+                {steps[step].button}
+                {step === steps.length - 1 ? <Rocket size={14} /> : <ChevronRight size={14} />}
+             </button>
+         </div>
          
          {/* Dots indicator */}
-         <div className="flex justify-center gap-2 mt-8">
+         <div className="flex justify-center gap-2 mt-6">
            {steps.map((_, i) => (
-             <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-yellow-500' : 'w-2 bg-white/10'}`} />
+             <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === step ? 'w-6 bg-[var(--color-gold-main)]' : 'w-1.5 bg-white/10'}`} />
            ))}
          </div>
       </motion.div>

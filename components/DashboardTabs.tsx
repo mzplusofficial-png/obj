@@ -1211,6 +1211,19 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
 
       <LiquidProgressionTube currentXp={profile?.xp || 0} />
 
+      <div className="flex flex-col items-center mt-6">
+        <button 
+          onClick={() => onSwitchTab('recompense')}
+          className="group relative flex items-center justify-center gap-3 w-full max-w-sm py-4 px-6 rounded-2xl bg-[#0a0a09] border border-[var(--color-border-gold)] hover:border-[var(--color-gold-main)]/50 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-gold-main)]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+          <Crown size={18} className="text-[var(--color-gold-main)] transition-transform group-hover:scale-110" />
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-main)]">
+            Passer au niveau supérieur
+          </span>
+        </button>
+      </div>
+
       {/* Icon Grid Actions */}
       <div className="grid grid-cols-3 gap-3 mt-4">
         <button 
