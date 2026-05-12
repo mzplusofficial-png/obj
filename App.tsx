@@ -639,6 +639,9 @@ const App: React.FC = () => {
           console.log("FCM Token successfully saved to DB");
         }
       }
+    } else if (result.status === 'default') {
+       console.log("FCM permission is default, showing banner");
+       setShowPermissionBanner(true);
     } else {
        console.warn("FCM status granted but no token received.");
     }
@@ -653,21 +656,7 @@ const App: React.FC = () => {
   // Handle FCM Notifications
   useEffect(() => {
     if (session) {
-      if ('serviceWorker' in navigator) {
-         navigator.serviceWorker.ready.then(() => {
-            if ('Notification' in window) {
-              if (Notification.permission === 'granted') {
-                setupFCM(false);
-              } else if (Notification.permission === 'default') {
-                setShowPermissionBanner(true);
-              }
-            }
-         });
-      } else {
-         if ('Notification' in window && Notification.permission === 'granted') {
-           setupFCM(false);
-         }
-      }
+      setupFCM(false);
     }
   }, [session]);
 
