@@ -251,7 +251,7 @@ export const PushAdmin: React.FC = () => {
                   </p>
                   <p className="text-[9px] text-neutral-400 leading-relaxed font-medium">
                     Clé VAPID Elite détectée : <span className="text-white break-all font-mono">
-                      Clé validée ✅
+                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg"}
                     </span>
                   </p>
                   <p className="text-[7px] text-emerald-500/70 mt-1 italic">
