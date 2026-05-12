@@ -10,6 +10,8 @@ export const PushAdmin: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [fcmUsersCount, setFcmUsersCount] = useState(0);
+  // ✅ CORRECTION : Ajouter un état pour le statut du token en base de données
+  const [userTokenStatus, setUserTokenStatus] = useState<'checking' | 'found' | 'missing'>('checking');
   
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userResults, setUserResults] = useState<any[]>([]);
@@ -38,6 +40,31 @@ export const PushAdmin: React.FC = () => {
       .select('*', { count: 'exact', head: true })
       .not('fcm_token', 'is', null);
     setFcmUsersCount(count || 0);
+    
+    // ✅ CORRECTION : Vérifier le token de l'utilisateur actuel en base de données
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (!sessionError && session?.user?.id) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('fcm_token')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (!userError && userData?.fcm_token) {
+          setUserTokenStatus('found');
+          console.log('FCM: User token found in database');
+        } else {
+          setUserTokenStatus('missing');
+          console.warn('FCM: User token not found in database');
+        }
+      } else {
+        setUserTokenStatus('missing');
+      }
+    } catch (error) {
+      console.error('FCM: Error checking user token status:', error);
+      setUserTokenStatus('missing');
+    }
   };
 
   useEffect(() => {
@@ -237,9 +264,20 @@ export const PushAdmin: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-neutral-500">Diagnostic FCM</span>
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${localStorage.getItem('fcm_token') ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  {/* ✅ CORRECTION : Vérifier à la fois localStorage et la base de données */}
+                  <div className={`w-2 h-2 rounded-full ${
+                    userTokenStatus === 'found' && localStorage.getItem('fcm_token')
+                      ? 'bg-emerald-500 animate-pulse'
+                      : userTokenStatus === 'checking'
+                      ? 'bg-yellow-500 animate-pulse'
+                      : 'bg-red-500'
+                  }`}></div>
                   <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                    {localStorage.getItem('fcm_token') ? 'Token Actif' : 'Token Manquant'}
+                    {userTokenStatus === 'checking'
+                      ? 'Vérification...'
+                      : userTokenStatus === 'found' && localStorage.getItem('fcm_token')
+                      ? 'Token Actif'
+                      : 'Token Manquant'}
                   </span>
                 </div>
               </div>
@@ -260,7 +298,12 @@ export const PushAdmin: React.FC = () => {
                 </div>
 
               <p className="text-[10px] text-neutral-400 leading-relaxed italic">
-                Si le token est manquant, assurez-vous d'avoir autorisé les notifications via le bandeau jaune sur la page d'accueil (en ouvrant le site dans un nouvel onglet).
+                {/* ✅ CORRECTION : Afficher un message plus détaillé selon le statut */}
+                {userTokenStatus === 'missing' && localStorage.getItem('fcm_token')
+                  ? 'Token en localStorage mais pas en base de données. Cliquez sur "Synchroniser mon Token" pour corriger.'
+                  : userTokenStatus === 'missing'
+                  ? 'Si le token est manquant, assurez-vous d\'avoir autorisé les notifications via le bandeau jaune sur la page d\'accueil (en ouvrant le site dans un nouvel onglet).'
+                  : 'Vos notifications push sont correctement configurées.'}
               </p>
               <div className="p-3 bg-black/20 rounded-lg border border-white/5 space-y-2">
                 <p className="text-[8px] font-black uppercase text-blue-400">Conseils Mobile :</p>

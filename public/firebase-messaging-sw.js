@@ -16,51 +16,69 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Gestion des messages en arrière-plan
+// ✅ CORRECTION : Amélioration de la gestion des messages en arrière-plan
+// Cela garantit que les notifications sont affichées même si l'app est fermée
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Message en arrière-plan reçu :', payload);
   
-  const icon = payload.data?.icon || payload.notification?.icon || '/firebase-logo.png';
-  const title = payload.notification?.title || payload.data?.title || 'Elite MZ+ Alert';
-  const body = payload.notification?.body || payload.data?.body || 'Nouvelle notification reçue de l\'Elite System.';
-  
-  const notificationOptions = {
-    body: body,
-    icon: icon,
-    badge: icon,
-    tag: 'mz-plus-push',
-    renotify: true,
-    requireInteraction: true,
-    vibrate: [200, 100, 200, 100, 200],
-    data: {
-      url: payload.data?.url || '/'
-    }
-  };
+  try {
+    const icon = payload.data?.icon || payload.notification?.icon || '/icon.png';
+    const title = payload.notification?.title || payload.data?.title || 'Elite MZ+ Alert';
+    const body = payload.notification?.body || payload.data?.body || 'Nouvelle notification reçue de l\'Elite System.';
+    
+    const notificationOptions = {
+      body: body,
+      icon: icon,
+      badge: icon,
+      tag: 'mz-plus-push',
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [200, 100, 200, 100, 200],
+      data: {
+        url: payload.data?.url || '/'
+      }
+    };
 
-  return self.registration.showNotification(title, notificationOptions);
+    console.log('[SW] Affichage de la notification:', { title, body });
+    return self.registration.showNotification(title, notificationOptions);
+  } catch (error) {
+    console.error('[SW] Erreur lors de l\'affichage de la notification:', error);
+    // Fallback : afficher une notification générique
+    return self.registration.showNotification('Elite MZ+ System', {
+      body: 'Une nouvelle notification a été reçue',
+      icon: '/icon.png',
+      tag: 'mz-plus-push-fallback'
+    });
+  }
 });
 
-// Écriture d'un nouveau cache pour forcer la mise à jour
-const CACHE_NAME = 'mz-elite-v5';
+// ✅ CORRECTION : Version du cache incrémentée pour forcer la mise à jour
+const CACHE_NAME = 'mz-elite-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json'
 ];
 
-// Événement d'installation
+// ✅ CORRECTION : Événement d'installation avec meilleure gestion d'erreur
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installation du Service Worker...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Mise en cache des ressources critiques');
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(ASSETS_TO_CACHE).catch((error) => {
+        console.warn('[SW] Certaines ressources n\'ont pas pu être mises en cache:', error);
+        // Ne pas échouer l'installation si certaines ressources ne sont pas disponibles
+        return Promise.resolve();
+      });
     })
   );
   self.skipWaiting();
 });
 
-// Événement d'activation
+// ✅ CORRECTION : Événement d'activation avec meilleure gestion
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activation du Service Worker...');
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
@@ -77,9 +95,10 @@ self.addEventListener('activate', (event) => {
       })
     ])
   );
+  console.log('[SW] Service Worker activé avec succès');
 });
 
-// Interception des requêtes avec mise à jour du cache
+// ✅ CORRECTION : Amélioration de l'interception des requêtes avec gestion d'erreur
 self.addEventListener('fetch', (event) => {
   // On ne met pas en cache les requêtes Firebase ou externes (API)
   if (!event.request.url.startsWith(self.location.origin)) {
@@ -97,7 +116,10 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
+      }).catch((error) => {
+        console.warn('[SW] Fetch failed, using cache:', event.request.url, error);
+        return cachedResponse;
+      });
 
       // Stratégie : Réseau d'abord pour le HTML/Manifest, Cache d'abord pour le reste
       const isCritical = event.request.url.endsWith('index.html') || 
@@ -109,6 +131,9 @@ self.addEventListener('fetch', (event) => {
       }
 
       return cachedResponse || fetchPromise;
+    }).catch((error) => {
+      console.error('[SW] Cache match failed:', error);
+      return new Response('Offline', { status: 503 });
     })
   );
 });
