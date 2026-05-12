@@ -4,12 +4,12 @@ importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-comp
 
 // Ces valeurs DOIVENT correspondre exactement à votre projet Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyBcin72nhRBdWI0Ta6JDgHMdTna9Bg-gmA",
-  authDomain: "gen-lang-client-0302979800.firebaseapp.com",
-  projectId: "gen-lang-client-0302979800",
-  storageBucket: "gen-lang-client-0302979800.firebasestorage.app",
-  messagingSenderId: "97659721264",
-  appId: "1:97659721264:web:3395813fc886af1c21fff5"
+  apiKey: "AIzaSyAaHLKDOeDvHogKY22PCjA8XfzRv-HXLqw",
+  authDomain: "gen-lang-client-0260821538.firebaseapp.com",
+  projectId: "gen-lang-client-0260821538",
+  storageBucket: "gen-lang-client-0260821538.firebasestorage.app",
+  messagingSenderId: "627912091228",
+  appId: "1:627912091228:web:5662acb38029ac349b6899"
 };
 
 // Initialisation

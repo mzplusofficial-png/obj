@@ -581,12 +581,17 @@ const App: React.FC = () => {
 
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
-    // Si la notification ne fonctionne pas, l'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY
     const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
     
     if (!VAPID_KEY) {
        console.warn('FCM: No VAPID key provided. Push will not work.');
        return;
+    }
+
+    // Si ce n'est pas une demande manuelle et que la permission est "default", on affiche le bandeau au lieu de forcer le popup
+    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      setShowPermissionBanner(true);
+      return;
     }
 
     const result = await requestNotificationPermission(VAPID_KEY);
