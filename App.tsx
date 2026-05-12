@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader, Sparkles, X, AlertTriangle, Bell, Crown, Rocket } from 'lucide-react';
+import { Loader, Sparkles, X, AlertTriangle, Bell, Crown, Rocket, Zap } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
 import { LandingPage } from './components/LandingPage.tsx';
@@ -603,9 +603,8 @@ const App: React.FC = () => {
     // Si on est dans une iframe et que la permission n'est pas encore accordée
     if (isInIframe && !isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       console.log('FCM: Running in iframe with default permission, showing banner.');
-      if (!localStorage.getItem('fcm_permission_dismissed')) {
-        setShowPermissionBanner(true);
-      }
+      // Toujours afficher le bandeau dans l'iframe si par défaut, pour guider l'utilisateur
+      setShowPermissionBanner(true);
       return;
     }
 
@@ -1148,40 +1147,59 @@ const App: React.FC = () => {
       
       {/* Permission Banner for Mobile/Iframe */}
       {showPermissionBanner && (
-        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-yellow-600 p-4 md:p-6 animate-slide-up">
+        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-orange-600 p-4 md:p-6 animate-slide-up border-t border-white/20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 animate-pulse">
                 <Bell className="text-white" size={24} />
               </div>
-              <div>
-                <h4 className="text-white font-black uppercase text-sm tracking-tight">Activer les alertes MZ+</h4>
-                <p className="text-yellow-100 text-xs mt-1">Recevez vos gains et bonus en temps réel sur votre mobile.</p>
+              <div className="text-left">
+                <h4 className="text-white font-black uppercase text-sm tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 bg-white rounded-full"></span>
+                  Notifications Élite MZ+
+                </h4>
+                <p className="text-orange-100 text-[10px] md:text-xs mt-1 leading-tight font-medium">
+                  {window.self !== window.top 
+                    ? "IMPORTANT : Les notifications sont bloquées dans l'aperçu. Pour activer les alertes, ouvrez le site dans un nouvel onglet." 
+                    : "Votre compte MZ+ est prêt pour les alertes en temps réel."}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
               <button 
-                onClick={() => setupFCM(true)}
-                className="flex-1 md:flex-none bg-white text-yellow-700 font-black uppercase text-[10px] px-6 py-3 rounded-xl shadow-lg hover:bg-neutral-100 transition-all"
+                onClick={async () => {
+                  console.log("FCM: Manual activation triggered");
+                  if (window.self !== window.top) {
+                    window.open(window.location.href, '_blank');
+                  } else {
+                    // Tenter de forcer le popup de permission le plus tôt possible lors du clic
+                    if ('Notification' in window) {
+                      try {
+                        const p = await Notification.requestPermission();
+                        console.log("FCM: Immediate permission check:", p);
+                      } catch (e) {
+                        console.error("FCM: Initial request error:", e);
+                      }
+                    }
+                    setupFCM(true);
+                  }
+                }}
+                className="flex-1 md:flex-none bg-white text-orange-700 font-black uppercase text-[10px] px-8 py-4 rounded-xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                Activer maintenant
+                <Zap size={14} fill="currentColor" />
+                {window.self !== window.top ? "Ouvrir dans un nouvel onglet" : "Activer maintenant"}
               </button>
               <button 
                 onClick={() => {
                   setShowPermissionBanner(false);
                   localStorage.setItem('fcm_permission_dismissed', 'true');
                 }}
-                className="p-3 text-yellow-200 hover:text-white transition-colors"
+                className="p-4 text-orange-200 hover:text-white transition-colors"
               >
-                <X size={20} />
+                <X size={24} />
               </button>
             </div>
           </div>
-          {window.self !== window.top && (
-            <p className="text-[8px] text-yellow-200/60 text-center mt-3 uppercase font-bold tracking-widest">
-              Note: Pour de meilleurs résultats sur mobile, ouvrez le site dans un nouvel onglet.
-            </p>
-          )}
         </div>
       )}
 
