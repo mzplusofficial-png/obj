@@ -251,11 +251,11 @@ export const PushAdmin: React.FC = () => {
                   </p>
                   <p className="text-[9px] text-neutral-400 leading-relaxed font-medium">
                     Clé VAPID Elite détectée : <span className="text-white break-all font-mono">
-                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5... (Validée) ✅"}
+                      Clé validée ✅
                     </span>
                   </p>
                   <p className="text-[7px] text-emerald-500/70 mt-1 italic">
-                    Cette clé correspond à votre projet Firebase. Les notifications en arrière-plan sont activées.
+                    La clé VAPID est correctement configurée. Les notifications Push (en arrière-plan) sont opérationnelles.
                   </p>
                 </div>
 
@@ -273,25 +273,34 @@ export const PushAdmin: React.FC = () => {
               <div className="pt-2 space-y-2">
                 <button 
                   onClick={async () => {
-                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
-                    const result = await requestNotificationPermission(VAPID_KEY);
-                    if (result.token) {
-                      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                      if (sessionError) {
-                        alert("Erreur de session: " + sessionError.message);
-                      } else if (session?.user?.id) {
-                        const { error } = await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
-                        if (error) alert("Erreur lors de la sauvegarde: " + error.message);
-                        else {
-                          localStorage.setItem('fcm_token', result.token);
-                          alert("✅ Token synchronisé avec succès !");
-                          window.location.reload();
+                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
+                    if (!VAPID_KEY) {
+                      alert("❌ ERREUR: Vous n'avez pas configuré VITE_FIREBASE_VAPID_KEY.\n\nAllez dans votre Console Firebase > Project Settings > Cloud Messaging > Web configuration.\nGénérez une paire de clés (Key pair) et ajoutez-la dans les Settings (Variables d'environnement) de cette application sous le nom VITE_FIREBASE_VAPID_KEY, puis rechargez.");
+                      return;
+                    }
+                    try {
+                      // Notification API might block if not in top window in some browsers, but let's try
+                      const result = await requestNotificationPermission(VAPID_KEY);
+                      if (result.token) {
+                        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                        if (sessionError) {
+                          alert("Erreur de session: " + sessionError.message);
+                        } else if (session?.user?.id) {
+                          const { error } = await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
+                          if (error) alert("Erreur lors de la sauvegarde du token dans Supabase: " + error.message);
+                          else {
+                            localStorage.setItem('fcm_token', result.token);
+                            alert("✅ Token synchronisé avec succès ! FCM est activé pour ce navigateur.");
+                            window.location.reload();
+                          }
+                        } else {
+                          alert("Vous devez être connecté (Authentifié) pour synchroniser votre token.");
                         }
                       } else {
-                        alert("Vous devez être connecté pour synchroniser votre token.");
+                        alert("Impossible de récupérer le token. Statut de permission: " + result.status + "\nAssurez-vous que les notifications sont autorisées dans ce navigateur pour ce site.");
                       }
-                    } else {
-                      alert("Impossible de récupérer le token. Statut: " + result.status);
+                    } catch (err: any) {
+                       alert("Erreur critique Firebase: " + err.message + "\n\nAssurez-vous que la clé VAPID correspond bien à ce projet Firebase.");
                     }
                   }}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2"

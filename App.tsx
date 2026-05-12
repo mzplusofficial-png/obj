@@ -580,19 +580,27 @@ const App: React.FC = () => {
   }, []);
 
   const setupFCM = async (isManual = false) => {
-    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
-    // Si la notification ne fonctionne pas, l'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY
-    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
+    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement
+    // L'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY dans les settings.
+    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
     
     if (!VAPID_KEY) {
-       console.warn('FCM: No VAPID key provided. Push will not work.');
+       console.warn('FCM: No VAPID key provided. Push will not work. Please add VITE_FIREBASE_VAPID_KEY in settings.');
+       if (isManual) {
+         setNotification({
+           title: 'Configuration Manquante',
+           body: 'La clé VAPID Firebase n\'est pas configurée. Veuillez l\'ajouter dans les variables d\'environnement.',
+           type: 'error'
+         });
+       }
        return;
     }
 
-    const result = await requestNotificationPermission(VAPID_KEY);
-    console.log('FCM Registration Result:', result);
-    
-    if (result.status === 'unsupported') {
+    try {
+      const result = await requestNotificationPermission(VAPID_KEY);
+      console.log('FCM Registration Result:', result);
+      
+      if (result.status === 'unsupported') {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isManual) {
         setNotification({
@@ -624,6 +632,12 @@ const App: React.FC = () => {
           fcm_token: result.token,
           last_fcm_sync: new Date().toISOString() 
         }).eq('id', session.user.id);
+      }
+    }
+    } catch (e: any) {
+      console.error("FCM Request failed:", e);
+      if (isManual) {
+         setNotification({title: 'Erreur', body: 'Erreur de génération de token FCM.', type: 'error'});
       }
     }
   };
