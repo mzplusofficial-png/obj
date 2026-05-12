@@ -112,49 +112,18 @@ export const requestNotificationPermission = async (vapidKey: string) => {
     let registration;
     if ("serviceWorker" in navigator) {
       try {
-        // ✅ CORRECTION : Réutiliser le Service Worker existant au lieu de le réenregistrer
-        // Cela évite la race condition et les conflits d'enregistrement
-        const existingRegistration = await navigator.serviceWorker.getRegistration('/');
-        if (existingRegistration) {
-          console.log("FCM: Reusing existing Service Worker:", existingRegistration.scope);
-          registration = existingRegistration;
-        } else {
-          // Si aucun SW n'existe, en enregistrer un nouveau
-          console.log("FCM: No existing Service Worker found, registering new one");
+        registration = await navigator.serviceWorker.getRegistration('/');
+        if (!registration) {
           registration = await navigator.serviceWorker.register(
-            "/firebase-messaging-sw.js?v=MZ4",
+            "/firebase-messaging-sw.js?v=MZ5",
             { scope: "/" },
           );
-          console.log("FCM: Service Worker registered:", registration.scope);
         }
+        registration = await navigator.serviceWorker.ready;
+        console.log("FCM: Service Worker ready:", registration.scope);
       } catch (swError) {
-        console.error("FCM: Service Worker registration failed:", swError);
+        console.error("FCM: Service Worker registration/ready failed:", swError);
       }
-    }
-
-    // ✅ CORRECTION : Attendre que le Service Worker soit activé avant de demander la permission
-    if (registration && registration.active) {
-      console.log("FCM: Service Worker is active, proceeding with permission request");
-    } else if (registration) {
-      console.log("FCM: Waiting for Service Worker activation...");
-      // Attendre l'activation du Service Worker
-      await new Promise<void>((resolve) => {
-        if (registration.active) {
-          resolve();
-        } else {
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'activated') {
-                  console.log("FCM: Service Worker activated");
-                  resolve();
-                }
-              });
-            }
-          });
-        }
-      });
     }
 
     // alert('Demande de permission en cours...');
@@ -163,23 +132,12 @@ export const requestNotificationPermission = async (vapidKey: string) => {
     console.log("FCM: Permission result:", permission);
 
     if (permission === "granted") {
-      try {
-        const token = await getToken(messaging, {
-          vapidKey: vapidKey,
-          serviceWorkerRegistration: registration,
-        });
-        if (!token) {
-          console.error("FCM: Token generation failed - no token returned");
-          return { token: null, status: "error" };
-        }
-        console.log("FCM: Token generated successfully:", token.substring(0, 20) + "...");
-        return { token, status: "granted" };
-      } catch (tokenError) {
-        console.error("FCM: Error generating token:", tokenError);
-        return { token: null, status: "error" };
-      }
+      const token = await getToken(messaging, {
+        vapidKey: vapidKey,
+        serviceWorkerRegistration: registration,
+      });
+      return { token, status: "granted" };
     } else {
-      console.warn("FCM: Permission not granted. Status:", permission);
       return { token: null, status: permission };
     }
   } catch (error) {

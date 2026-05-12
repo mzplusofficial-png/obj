@@ -10,8 +10,7 @@ export const PushAdmin: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [fcmUsersCount, setFcmUsersCount] = useState(0);
-  // ✅ CORRECTION : Ajouter un état pour le statut du token en base de données
-  const [userTokenStatus, setUserTokenStatus] = useState<'checking' | 'found' | 'missing'>('checking');
+  const [dbTokenStatus, setDbTokenStatus] = useState<'loading' | 'active' | 'missing'>('loading');
   
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userResults, setUserResults] = useState<any[]>([]);
@@ -40,30 +39,18 @@ export const PushAdmin: React.FC = () => {
       .select('*', { count: 'exact', head: true })
       .not('fcm_token', 'is', null);
     setFcmUsersCount(count || 0);
-    
-    // ✅ CORRECTION : Vérifier le token de l'utilisateur actuel en base de données
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (!sessionError && session?.user?.id) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('fcm_token')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        if (!userError && userData?.fcm_token) {
-          setUserTokenStatus('found');
-          console.log('FCM: User token found in database');
-        } else {
-          setUserTokenStatus('missing');
-          console.warn('FCM: User token not found in database');
-        }
-      } else {
-        setUserTokenStatus('missing');
-      }
-    } catch (error) {
-      console.error('FCM: Error checking user token status:', error);
-      setUserTokenStatus('missing');
+
+    // Vérifier si nous avons un token en DB
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user?.id) {
+       const { data: userData } = await supabase
+         .from('users')
+         .select('fcm_token')
+         .eq('id', sessionData.session.user.id)
+         .single();
+       setDbTokenStatus(userData?.fcm_token ? 'active' : 'missing');
+    } else {
+       setDbTokenStatus('missing');
     }
   };
 
@@ -260,25 +247,34 @@ export const PushAdmin: React.FC = () => {
             <p className="text-[9px] text-neutral-400 leading-relaxed mb-4">
               Les notifications FCM permettent de toucher vos utilisateurs même quand ils ne sont pas sur le site.
             </p>
-            <div className="bg-neutral-900/50 border border-white/5 p-4 rounded-xl space-y-3 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-neutral-500">Diagnostic FCM</span>
-                <div className="flex items-center gap-2">
-                  {/* ✅ CORRECTION : Vérifier à la fois localStorage et la base de données */}
-                  <div className={`w-2 h-2 rounded-full ${
-                    userTokenStatus === 'found' && localStorage.getItem('fcm_token')
-                      ? 'bg-emerald-500 animate-pulse'
-                      : userTokenStatus === 'checking'
-                      ? 'bg-yellow-500 animate-pulse'
-                      : 'bg-red-500'
-                  }`}></div>
-                  <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                    {userTokenStatus === 'checking'
-                      ? 'Vérification...'
-                      : userTokenStatus === 'found' && localStorage.getItem('fcm_token')
-                      ? 'Token Actif'
-                      : 'Token Manquant'}
-                  </span>
+            <div className="bg-neutral-900/50 border border-white/5 p-4 rounded-xl space-y-4 mb-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Diagnostic FCM</span>
+                
+                <div className="flex items-center justify-between bg-black/40 p-2 rounded border border-white/5">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase">Token Local (Navigateur) :</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${localStorage.getItem('fcm_token') ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                    <span className={`text-[9px] font-bold uppercase ${localStorage.getItem('fcm_token') ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {localStorage.getItem('fcm_token') ? 'Actif' : 'Manquant'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between bg-black/40 p-2 rounded border border-white/5">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase">Token Sauvegardé (Base de données) :</span>
+                  <div className="flex items-center gap-1.5">
+                    {dbTokenStatus === 'loading' ? (
+                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Vérification...</span>
+                    ) : (
+                      <>
+                        <div className={`w-1.5 h-1.5 rounded-full ${dbTokenStatus === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <span className={`text-[9px] font-bold uppercase ${dbTokenStatus === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {dbTokenStatus === 'active' ? 'Actif & Synchronisé' : 'Manquant'}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -298,12 +294,7 @@ export const PushAdmin: React.FC = () => {
                 </div>
 
               <p className="text-[10px] text-neutral-400 leading-relaxed italic">
-                {/* ✅ CORRECTION : Afficher un message plus détaillé selon le statut */}
-                {userTokenStatus === 'missing' && localStorage.getItem('fcm_token')
-                  ? 'Token en localStorage mais pas en base de données. Cliquez sur "Synchroniser mon Token" pour corriger.'
-                  : userTokenStatus === 'missing'
-                  ? 'Si le token est manquant, assurez-vous d\'avoir autorisé les notifications via le bandeau jaune sur la page d\'accueil (en ouvrant le site dans un nouvel onglet).'
-                  : 'Vos notifications push sont correctement configurées.'}
+                Si le token est manquant, assurez-vous d'avoir autorisé les notifications via le bandeau jaune sur la page d'accueil (en ouvrant le site dans un nouvel onglet).
               </p>
               <div className="p-3 bg-black/20 rounded-lg border border-white/5 space-y-2">
                 <p className="text-[8px] font-black uppercase text-blue-400">Conseils Mobile :</p>

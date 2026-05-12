@@ -579,7 +579,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('mz-navigate-dashboard', handleNavigateDashboard);
   }, []);
 
-  // ✅ CORRECTION : Déclarer setupFCM en dehors de useEffect pour éviter les dépendances circulaires
   const setupFCM = async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement
     // L'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY dans les settings.
@@ -598,126 +597,55 @@ const App: React.FC = () => {
     }
 
     try {
-      // ✅ CORRECTION : Attendre que le Service Worker soit activé avant de demander le token
-      // Cela évite la race condition
-      if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration('/');
-        if (registration && !registration.active) {
-          console.log('FCM: Waiting for Service Worker activation before requesting token...');
-          await new Promise<void>((resolve) => {
-            const checkActive = () => {
-              if (registration.active) {
-                console.log('FCM: Service Worker is now active');
-                resolve();
-              } else {
-                setTimeout(checkActive, 100);
-              }
-            };
-            checkActive();
-          });
-        }
-      }
-
       const result = await requestNotificationPermission(VAPID_KEY);
       console.log('FCM Registration Result:', result);
       
       if (result.status === 'unsupported') {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        if (isManual) {
-          setNotification({
-            title: 'Appareil Non Compatible',
-            body: isIOS 
-              ? 'Sur iPhone, les notifications nécessitent Safari et "Ajouter à l\'écran d\'accueil".'
-              : 'Votre navigateur actuel ne supporte pas les notifications Push.',
-            type: 'warning'
-          });
-        }
-        setShowPermissionBanner(false);
-      } else if (result.status === 'denied') {
-        console.warn('FCM: User denied notification permission');
-        if (isManual) {
-          setNotification({
-            title: 'Notifications Bloquées',
-            body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
-            type: 'error'
-          });
-        }
-        setShowPermissionBanner(false);
-      } else if (result.status === 'error') {
-        // ✅ CORRECTION : Nouvelle gestion du cas d'erreur
-        console.error('FCM: Error occurred during token generation');
-        if (isManual) {
-          setNotification({
-            title: 'Erreur FCM',
-            body: 'Une erreur est survenue lors de la génération du token. Veuillez réessayer.',
-            type: 'error'
-          });
-        }
-      } else if (result.token) {
-        console.log('FCM Token Generated:', result.token.substring(0, 20) + '...');
-        setFcmToken(result.token);
-        localStorage.setItem('fcm_token', result.token);
-        setShowPermissionBanner(false);
-        
-        if (session?.user?.id) {
-          try {
-            // ✅ CORRECTION : Ajouter une gestion d'erreur pour la sauvegarde en base de données
-            const { error: updateError } = await supabase.from('users').update({ 
-              fcm_token: result.token,
-              last_fcm_sync: new Date().toISOString() 
-            }).eq('id', session.user.id);
-            
-            if (updateError) {
-              console.error('FCM: Failed to save token to database:', updateError);
-              if (isManual) {
-                setNotification({
-                  title: 'Avertissement',
-                  body: 'Token généré mais non sauvegardé en base de données. Les notifications push peuvent ne pas fonctionner.',
-                  type: 'warning'
-                });
-              }
-            } else {
-              console.log('FCM: Token saved to database successfully');
-              if (isManual) {
-                setNotification({
-                  title: 'Succès',
-                  body: 'Les notifications push sont maintenant activées !',
-                  type: 'success'
-                });
-              }
-            }
-          } catch (dbError) {
-            console.error('FCM: Exception while saving token:', dbError);
-            if (isManual) {
-              setNotification({
-                title: 'Erreur Base de Données',
-                body: 'Impossible de sauvegarder le token. Vérifiez votre connexion.',
-                type: 'error'
-              });
-            }
-          }
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isManual) {
+        setNotification({
+          title: 'Appareil Non Compatible',
+          body: isIOS 
+            ? 'Sur iPhone, les notifications nécessitent Safari et "Ajouter à l\'écran d\'accueil".' 
+            : 'Votre navigateur actuel ne supporte pas les notifications Push.',
+          type: 'warning'
+        });
+      }
+      setShowPermissionBanner(false);
+    } else if (result.status === 'denied') {
+      if (isManual) {
+        setNotification({
+          title: 'Notifications Bloquées',
+          body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
+          type: 'error'
+        });
+      }
+      setShowPermissionBanner(false);
+    } else if (result.token) {
+      console.log('FCM Token Generated:', result.token);
+      setFcmToken(result.token);
+      localStorage.setItem('fcm_token', result.token);
+      setShowPermissionBanner(false);
+      
+      if (session?.user?.id) {
+        const { error } = await supabase.from('users').update({ 
+          fcm_token: result.token,
+          last_fcm_sync: new Date().toISOString() 
+        }).eq('id', session.user.id);
+        if (error) {
+          console.error("Erreur de sauvegarde DB du token:", error);
+          if (isManual) setNotification({title: 'Erreur', body: 'Erreur de synchro Database', type: 'error'});
         } else {
-          console.warn('FCM: User not authenticated, token not saved to database');
-        }
-      } else {
-        // ✅ CORRECTION : Cas non géré précédemment
-        console.error('FCM: Unexpected state - no token and no error status');
-        if (isManual) {
-          setNotification({
-            title: 'Erreur Inattendue',
-            body: 'Une erreur inattendue s\'est produite. Veuillez réessayer.',
-            type: 'error'
-          });
+          console.log("FCM Token successfully saved to DB");
         }
       }
+    } else {
+       console.warn("FCM status granted but no token received.");
+    }
     } catch (e: any) {
       console.error("FCM Request failed:", e);
       if (isManual) {
-         setNotification({
-           title: 'Erreur',
-           body: 'Erreur de génération de token FCM: ' + (e.message || 'Erreur inconnue'),
-           type: 'error'
-         });
+         setNotification({title: 'Erreur', body: 'Erreur de génération de token FCM.', type: 'error'});
       }
     }
   };
@@ -725,14 +653,13 @@ const App: React.FC = () => {
   // Handle FCM Notifications
   useEffect(() => {
     if (session) {
-      // ✅ CORRECTION : Ajouter un délai pour s'assurer que le Service Worker est enregistré
-      // avant d'appeler setupFCM()
-      const timer = setTimeout(() => {
-        console.log('FCM: Initiating FCM setup after Service Worker registration');
-        setupFCM();
-      }, 500);
-      
-      return () => clearTimeout(timer);
+      if ('serviceWorker' in navigator) {
+         navigator.serviceWorker.ready.then(() => {
+            setupFCM();
+         });
+      } else {
+         setupFCM();
+      }
     }
   }, [session]);
 
