@@ -4,12 +4,12 @@ importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-comp
 
 // Ces valeurs DOIVENT correspondre exactement à votre projet Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAaHLKDOeDvHogKY22PCjA8XfzRv-HXLqw",
-  authDomain: "gen-lang-client-0260821538.firebaseapp.com",
-  projectId: "gen-lang-client-0260821538",
-  storageBucket: "gen-lang-client-0260821538.firebasestorage.app",
-  messagingSenderId: "627912091228",
-  appId: "1:627912091228:web:5662acb38029ac349b6899"
+  apiKey: "AIzaSyBcin72nhRBdWI0Ta6JDgHMdTna9Bg-gmA",
+  authDomain: "gen-lang-client-0302979800.firebaseapp.com",
+  projectId: "gen-lang-client-0302979800",
+  storageBucket: "gen-lang-client-0302979800.firebasestorage.app",
+  messagingSenderId: "97659721264",
+  appId: "1:97659721264:web:3395813fc886af1c21fff5"
 };
 
 // Initialisation
@@ -40,8 +40,35 @@ messaging.onBackgroundMessage((payload) => {
   return self.registration.showNotification(title, notificationOptions);
 });
 
-// Écriture d'un nouveau cache pour forcer la mise à jour
-const CACHE_NAME = 'mz-elite-v5';
+// Écouteur générique pour maximiser la compatibilité
+self.addEventListener('push', (event) => {
+  console.log('[SW] Événement Push réseau détecté');
+  
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      console.log('[SW] Données Push reçues:', data);
+      
+      // Si FCM gère déjà via onBackgroundMessage, showNotification fera un renotify sur le même tag
+      const icon = data.data?.icon || data.notification?.icon || '/firebase-logo.png';
+      const title = data.notification?.title || data.data?.title || 'MZ+ Elite';
+      const body = data.notification?.body || data.data?.body || 'Alerte Système';
+      
+      const promiseChain = self.registration.showNotification(title, {
+        body: body,
+        icon: icon,
+        badge: icon,
+        tag: 'mz-plus-push',
+        data: { url: data.data?.url || '/' }
+      });
+      event.waitUntil(promiseChain);
+    } catch (e) {
+      console.error('[SW] Erreur parsing Push Data:', e);
+    }
+  }
+});
+
+const CACHE_NAME = 'mz-elite-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
