@@ -46,10 +46,11 @@ const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
     try {
       // On utilise le même fichier que FCM pour éviter les conflits de scope
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=MZ4', {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=MZ5', {
         scope: '/'
       });
-      console.log('MZ+ System: Service Worker registered (PWA Active):', registration.scope);
+      await navigator.serviceWorker.ready;
+      console.log('MZ+ System: Service Worker ready (PWA Active):', registration.scope);
     } catch (error) {
       console.warn('MZ+ System: Service Worker registration failed:', error);
     }

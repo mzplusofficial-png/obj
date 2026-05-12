@@ -10,6 +10,7 @@ export const PushAdmin: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [fcmUsersCount, setFcmUsersCount] = useState(0);
+  const [dbTokenStatus, setDbTokenStatus] = useState<'loading' | 'active' | 'missing'>('loading');
   
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userResults, setUserResults] = useState<any[]>([]);
@@ -38,6 +39,19 @@ export const PushAdmin: React.FC = () => {
       .select('*', { count: 'exact', head: true })
       .not('fcm_token', 'is', null);
     setFcmUsersCount(count || 0);
+
+    // Vérifier si nous avons un token en DB
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user?.id) {
+       const { data: userData } = await supabase
+         .from('users')
+         .select('fcm_token')
+         .eq('id', sessionData.session.user.id)
+         .single();
+       setDbTokenStatus(userData?.fcm_token ? 'active' : 'missing');
+    } else {
+       setDbTokenStatus('missing');
+    }
   };
 
   useEffect(() => {
@@ -233,14 +247,34 @@ export const PushAdmin: React.FC = () => {
             <p className="text-[9px] text-neutral-400 leading-relaxed mb-4">
               Les notifications FCM permettent de toucher vos utilisateurs même quand ils ne sont pas sur le site.
             </p>
-            <div className="bg-neutral-900/50 border border-white/5 p-4 rounded-xl space-y-3 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-neutral-500">Diagnostic FCM</span>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${localStorage.getItem('fcm_token') ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                    {localStorage.getItem('fcm_token') ? 'Token Actif' : 'Token Manquant'}
-                  </span>
+            <div className="bg-neutral-900/50 border border-white/5 p-4 rounded-xl space-y-4 mb-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-black uppercase text-neutral-500 mb-1">Diagnostic FCM</span>
+                
+                <div className="flex items-center justify-between bg-black/40 p-2 rounded border border-white/5">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase">Token Local (Navigateur) :</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${localStorage.getItem('fcm_token') ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                    <span className={`text-[9px] font-bold uppercase ${localStorage.getItem('fcm_token') ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {localStorage.getItem('fcm_token') ? 'Actif' : 'Manquant'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between bg-black/40 p-2 rounded border border-white/5">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase">Token Sauvegardé (Base de données) :</span>
+                  <div className="flex items-center gap-1.5">
+                    {dbTokenStatus === 'loading' ? (
+                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Vérification...</span>
+                    ) : (
+                      <>
+                        <div className={`w-1.5 h-1.5 rounded-full ${dbTokenStatus === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <span className={`text-[9px] font-bold uppercase ${dbTokenStatus === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {dbTokenStatus === 'active' ? 'Actif & Synchronisé' : 'Manquant'}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -251,11 +285,11 @@ export const PushAdmin: React.FC = () => {
                   </p>
                   <p className="text-[9px] text-neutral-400 leading-relaxed font-medium">
                     Clé VAPID Elite détectée : <span className="text-white break-all font-mono">
-                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5... (Validée) ✅"}
+                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg"}
                     </span>
                   </p>
                   <p className="text-[7px] text-emerald-500/70 mt-1 italic">
-                    Cette clé correspond à votre projet Firebase. Les notifications en arrière-plan sont activées.
+                    La clé VAPID est correctement configurée. Les notifications Push (en arrière-plan) sont opérationnelles.
                   </p>
                 </div>
 
@@ -273,25 +307,34 @@ export const PushAdmin: React.FC = () => {
               <div className="pt-2 space-y-2">
                 <button 
                   onClick={async () => {
-                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
-                    const result = await requestNotificationPermission(VAPID_KEY);
-                    if (result.token) {
-                      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                      if (sessionError) {
-                        alert("Erreur de session: " + sessionError.message);
-                      } else if (session?.user?.id) {
-                        const { error } = await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
-                        if (error) alert("Erreur lors de la sauvegarde: " + error.message);
-                        else {
-                          localStorage.setItem('fcm_token', result.token);
-                          alert("✅ Token synchronisé avec succès !");
-                          window.location.reload();
+                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
+                    if (!VAPID_KEY) {
+                      alert("❌ ERREUR: Vous n'avez pas configuré VITE_FIREBASE_VAPID_KEY.\n\nAllez dans votre Console Firebase > Project Settings > Cloud Messaging > Web configuration.\nGénérez une paire de clés (Key pair) et ajoutez-la dans les Settings (Variables d'environnement) de cette application sous le nom VITE_FIREBASE_VAPID_KEY, puis rechargez.");
+                      return;
+                    }
+                    try {
+                      // Notification API might block if not in top window in some browsers, but let's try
+                      const result = await requestNotificationPermission(VAPID_KEY);
+                      if (result.token) {
+                        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                        if (sessionError) {
+                          alert("Erreur de session: " + sessionError.message);
+                        } else if (session?.user?.id) {
+                          const { error } = await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
+                          if (error) alert("Erreur lors de la sauvegarde du token dans Supabase: " + error.message);
+                          else {
+                            localStorage.setItem('fcm_token', result.token);
+                            alert("✅ Token synchronisé avec succès ! FCM est activé pour ce navigateur.");
+                            window.location.reload();
+                          }
+                        } else {
+                          alert("Vous devez être connecté (Authentifié) pour synchroniser votre token.");
                         }
                       } else {
-                        alert("Vous devez être connecté pour synchroniser votre token.");
+                        alert("Impossible de récupérer le token. Statut de permission: " + result.status + "\nAssurez-vous que les notifications sont autorisées dans ce navigateur pour ce site.");
                       }
-                    } else {
-                      alert("Impossible de récupérer le token. Statut: " + result.status);
+                    } catch (err: any) {
+                       alert("Erreur critique Firebase: " + err.message + "\n\nAssurez-vous que la clé VAPID correspond bien à ce projet Firebase.");
                     }
                   }}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2"

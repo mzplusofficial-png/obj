@@ -15,8 +15,11 @@ export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     audioRef.current.volume = 0.3;
 
-    // Permission is now handled by the global setupFCM/Banner in App.tsx
-
+    if ("Notification" in window) {
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+    }
     
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);

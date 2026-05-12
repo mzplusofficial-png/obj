@@ -112,14 +112,17 @@ export const requestNotificationPermission = async (vapidKey: string) => {
     let registration;
     if ("serviceWorker" in navigator) {
       try {
-        // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
-        registration = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js?v=MZ4",
-          { scope: "/" },
-        );
-        console.log("FCM: Service Worker registered:", registration.scope);
+        registration = await navigator.serviceWorker.getRegistration('/');
+        if (!registration) {
+          registration = await navigator.serviceWorker.register(
+            "/firebase-messaging-sw.js?v=MZ5",
+            { scope: "/" },
+          );
+        }
+        registration = await navigator.serviceWorker.ready;
+        console.log("FCM: Service Worker ready:", registration.scope);
       } catch (swError) {
-        console.error("FCM: Service Worker registration failed:", swError);
+        console.error("FCM: Service Worker registration/ready failed:", swError);
       }
     }
 

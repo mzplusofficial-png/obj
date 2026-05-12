@@ -40,35 +40,8 @@ messaging.onBackgroundMessage((payload) => {
   return self.registration.showNotification(title, notificationOptions);
 });
 
-// Écouteur générique pour maximiser la compatibilité
-self.addEventListener('push', (event) => {
-  console.log('[SW] Événement Push réseau détecté');
-  
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      console.log('[SW] Données Push reçues:', data);
-      
-      // Si FCM gère déjà via onBackgroundMessage, showNotification fera un renotify sur le même tag
-      const icon = data.data?.icon || data.notification?.icon || '/firebase-logo.png';
-      const title = data.notification?.title || data.data?.title || 'MZ+ Elite';
-      const body = data.notification?.body || data.data?.body || 'Alerte Système';
-      
-      const promiseChain = self.registration.showNotification(title, {
-        body: body,
-        icon: icon,
-        badge: icon,
-        tag: 'mz-plus-push',
-        data: { url: data.data?.url || '/' }
-      });
-      event.waitUntil(promiseChain);
-    } catch (e) {
-      console.error('[SW] Erreur parsing Push Data:', e);
-    }
-  }
-});
-
-const CACHE_NAME = 'mz-elite-v4';
+// Écriture d'un nouveau cache pour forcer la mise à jour
+const CACHE_NAME = 'mz-elite-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

@@ -580,24 +580,27 @@ const App: React.FC = () => {
   }, []);
 
   const setupFCM = async (isManual = false) => {
-    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
-    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
+    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement
+    // L'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY dans les settings.
+    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
     
     if (!VAPID_KEY) {
-       console.warn('FCM: No VAPID key provided. Push will not work.');
+       console.warn('FCM: No VAPID key provided. Push will not work. Please add VITE_FIREBASE_VAPID_KEY in settings.');
+       if (isManual) {
+         setNotification({
+           title: 'Configuration Manquante',
+           body: 'La clé VAPID Firebase n\'est pas configurée. Veuillez l\'ajouter dans les variables d\'environnement.',
+           type: 'error'
+         });
+       }
        return;
     }
 
-    // Si ce n'est pas une demande manuelle et que la permission est "default", on affiche le bandeau au lieu de forcer le popup
-    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      setShowPermissionBanner(true);
-      return;
-    }
-
-    const result = await requestNotificationPermission(VAPID_KEY);
-    console.log('FCM Registration Result:', result);
-    
-    if (result.status === 'unsupported') {
+    try {
+      const result = await requestNotificationPermission(VAPID_KEY);
+      console.log('FCM Registration Result:', result);
+      
+      if (result.status === 'unsupported') {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isManual) {
         setNotification({
@@ -625,10 +628,24 @@ const App: React.FC = () => {
       setShowPermissionBanner(false);
       
       if (session?.user?.id) {
-        await supabase.from('users').update({ 
+        const { error } = await supabase.from('users').update({ 
           fcm_token: result.token,
           last_fcm_sync: new Date().toISOString() 
         }).eq('id', session.user.id);
+        if (error) {
+          console.error("Erreur de sauvegarde DB du token:", error);
+          if (isManual) setNotification({title: 'Erreur', body: 'Erreur de synchro Database', type: 'error'});
+        } else {
+          console.log("FCM Token successfully saved to DB");
+        }
+      }
+    } else {
+       console.warn("FCM status granted but no token received.");
+    }
+    } catch (e: any) {
+      console.error("FCM Request failed:", e);
+      if (isManual) {
+         setNotification({title: 'Erreur', body: 'Erreur de génération de token FCM.', type: 'error'});
       }
     }
   };
@@ -636,7 +653,13 @@ const App: React.FC = () => {
   // Handle FCM Notifications
   useEffect(() => {
     if (session) {
-      setupFCM();
+      if ('serviceWorker' in navigator) {
+         navigator.serviceWorker.ready.then(() => {
+            setupFCM();
+         });
+      } else {
+         setupFCM();
+      }
     }
   }, [session]);
 
