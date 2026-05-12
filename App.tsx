@@ -580,20 +580,33 @@ const App: React.FC = () => {
   }, []);
 
   const setupFCM = async (isManual = false) => {
-    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement
-    // L'utilisateur DOIT configurer VITE_FIREBASE_VAPID_KEY dans les settings.
-    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
+    // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
+    // NOTE : Pour le nouveau projet Firebase, une nouvelle clé VAPID doit être générée dans la console Firebase
+    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo";
     
+    console.log('FCM: Initializing setup...', { isManual, hasVapid: !!VAPID_KEY });
+
     if (!VAPID_KEY) {
-       console.warn('FCM: No VAPID key provided. Push will not work. Please add VITE_FIREBASE_VAPID_KEY in settings.');
-       if (isManual) {
-         setNotification({
-           title: 'Configuration Manquante',
-           body: 'La clé VAPID Firebase n\'est pas configurée. Veuillez l\'ajouter dans les variables d\'environnement.',
-           type: 'error'
-         });
-       }
+       console.warn('FCM: No VAPID key provided. Push tokens cannot be generated.');
        return;
+    }
+
+    // Vérifier si nous sommes dans une iframe (AI Studio preview)
+    const isInIframe = window.self !== window.top;
+    if (isInIframe && !isManual) {
+      console.log('FCM: Running in iframe, skipping automatic permission request to avoid browser block.');
+      // On n'affiche même pas le bandeau automatiquement dans l'iframe pour éviter de polluer l'expérience
+      // Sauf si l'utilisateur n'a jamais été sollicité
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default' && !localStorage.getItem('fcm_permission_dismissed')) {
+        setShowPermissionBanner(true);
+      }
+      return;
+    }
+
+    // Si ce n'est pas une demande manuelle et que la permission est "default", on affiche le bandeau au lieu de forcer le popup
+    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      setShowPermissionBanner(true);
+      return;
     }
 
     try {
@@ -601,65 +614,57 @@ const App: React.FC = () => {
       console.log('FCM Registration Result:', result);
       
       if (result.status === 'unsupported') {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isManual) {
-        setNotification({
-          title: 'Appareil Non Compatible',
-          body: isIOS 
-            ? 'Sur iPhone, les notifications nécessitent Safari et "Ajouter à l\'écran d\'accueil".' 
-            : 'Votre navigateur actuel ne supporte pas les notifications Push.',
-          type: 'warning'
-        });
-      }
-      setShowPermissionBanner(false);
-    } else if (result.status === 'denied') {
-      if (isManual) {
-        setNotification({
-          title: 'Notifications Bloquées',
-          body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
-          type: 'error'
-        });
-      }
-      setShowPermissionBanner(false);
-    } else if (result.token) {
-      console.log('FCM Token Generated:', result.token);
-      setFcmToken(result.token);
-      localStorage.setItem('fcm_token', result.token);
-      setShowPermissionBanner(false);
-      
-      if (session?.user?.id) {
-        const { error } = await supabase.from('users').update({ 
-          fcm_token: result.token,
-          last_fcm_sync: new Date().toISOString() 
-        }).eq('id', session.user.id);
-        if (error) {
-          console.error("Erreur de sauvegarde DB du token:", error);
-          if (isManual) setNotification({title: 'Erreur', body: 'Erreur de synchro Database', type: 'error'});
-        } else {
-          console.log("FCM Token successfully saved to DB");
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        if (isManual) {
+          setNotification({
+            title: 'Appareil Non Compatible',
+            body: isIOS 
+              ? 'Sur iPhone, les notifications nécessitent Safari et "Ajouter à l\'écran d\'accueil".' 
+              : 'Votre navigateur actuel ne supporte pas les notifications Push.',
+            type: 'warning'
+          });
         }
+        setShowPermissionBanner(false);
+      } else if (result.status === 'denied') {
+        console.warn('FCM: Permission denied by user');
+        if (isManual) {
+          setNotification({
+            title: 'Notifications Bloquées',
+            body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
+            type: 'error'
+          });
+        }
+        setShowPermissionBanner(false);
+      } else if (result.token) {
+        console.log('FCM: Token successfully generated');
+        setFcmToken(result.token);
+        localStorage.setItem('fcm_token', result.token);
+        setShowPermissionBanner(false);
+        
+        if (session?.user?.id) {
+          const { error: updateError } = await supabase.from('users').update({ 
+            fcm_token: result.token,
+            last_fcm_sync: new Date().toISOString() 
+          }).eq('id', session.user.id);
+          
+          if (updateError) {
+            console.error('FCM: Failed to save token to database:', updateError);
+          } else {
+            console.log('FCM: Token synced with database');
+          }
+        }
+      } else {
+        console.warn('FCM: Process finished without token (status:', result.status, ')');
       }
-    } else {
-       console.warn("FCM status granted but no token received.");
-    }
-    } catch (e: any) {
-      console.error("FCM Request failed:", e);
-      if (isManual) {
-         setNotification({title: 'Erreur', body: 'Erreur de génération de token FCM.', type: 'error'});
-      }
+    } catch (err) {
+      console.error('FCM: Fatal error in setupFCM:', err);
     }
   };
 
   // Handle FCM Notifications
   useEffect(() => {
     if (session) {
-      if ('serviceWorker' in navigator) {
-         navigator.serviceWorker.ready.then(() => {
-            setupFCM();
-         });
-      } else {
-         setupFCM();
-      }
+      setupFCM();
     }
   }, [session]);
 
@@ -1156,7 +1161,10 @@ const App: React.FC = () => {
                 Activer maintenant
               </button>
               <button 
-                onClick={() => setShowPermissionBanner(false)}
+                onClick={() => {
+                  setShowPermissionBanner(false);
+                  localStorage.setItem('fcm_permission_dismissed', 'true');
+                }}
                 className="p-3 text-yellow-200 hover:text-white transition-colors"
               >
                 <X size={20} />

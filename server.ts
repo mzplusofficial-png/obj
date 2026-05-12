@@ -71,7 +71,8 @@ async function startServer() {
         "display": "standalone",
         "background_color": "#000000",
         "theme_color": "#ca8a04",
-        "scope": "/"
+        "scope": "/",
+        "gcm_sender_id": "103953800507"
       };
 
       res.setHeader('Content-Type', 'application/json');
