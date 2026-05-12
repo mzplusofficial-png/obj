@@ -21,6 +21,12 @@ interface AxisContextType {
   triggerAxisMessage: (message: string | ReactNode, state?: AxisState, duration?: number, action?: AxisAction, position?: AxisPosition) => void;
   hideAxis: () => void;
   isVisible: boolean;
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
+  isChatUnlocked: boolean;
+  setChatUnlocked: (unlocked: boolean) => void;
+  isDisabled: boolean;
+  setIsDisabled: (disabled: boolean) => void;
 }
 
 const AxisContext = createContext<AxisContextType | undefined>(undefined);
@@ -31,10 +37,14 @@ export function AxisProvider({ children }: { children: ReactNode }) {
   const [axisAction, setAxisAction] = useState<AxisAction | null>(null);
   const [axisPosition, setAxisPosition] = useState<AxisPosition>('bottom-right');
   const [isVisible, setIsVisible] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatUnlocked, setChatUnlocked] = useState(() => localStorage.getItem('mz_axis_chat_introduced') === 'true');
+  const [isDisabled, setIsDisabled] = useState(() => sessionStorage.getItem('mz_axis_disabled') === 'true');
 
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const triggerAxisMessage = useCallback((message: string | ReactNode, state: AxisState = 'guiding', duration = 5000, action?: AxisAction, position: AxisPosition = 'bottom-right') => {
+    if (sessionStorage.getItem('mz_axis_disabled') === 'true') return;
     setAxisState(state);
     setAxisMessage(message);
     setAxisAction(action || null);
@@ -65,6 +75,12 @@ export function AxisProvider({ children }: { children: ReactNode }) {
     setAxisState('inactive');
   }, []);
 
+  const toggleDisabled = useCallback((disabled: boolean) => {
+    setIsDisabled(disabled);
+    sessionStorage.setItem('mz_axis_disabled', disabled.toString());
+    if (disabled) hideAxis();
+  }, [hideAxis]);
+
   return (
     <AxisContext.Provider value={{
       axisState,
@@ -74,7 +90,13 @@ export function AxisProvider({ children }: { children: ReactNode }) {
       setAxisState,
       triggerAxisMessage,
       hideAxis,
-      isVisible
+      isVisible,
+      isChatOpen,
+      setIsChatOpen,
+      isChatUnlocked,
+      setChatUnlocked,
+      isDisabled,
+      setIsDisabled: toggleDisabled
     }}>
       {children}
     </AxisContext.Provider>

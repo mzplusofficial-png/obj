@@ -1,16 +1,26 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp, getDocFromServer, doc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import firebaseConfig from '../firebase-applet-config.json';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import {
+  getFirestore,
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
+  addDoc,
+  serverTimestamp,
+  getDocFromServer,
+  doc,
+} from "firebase/firestore";
+import firebaseConfig from "../firebase-applet-config.json";
 
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
-export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+export const messaging =
+  typeof window !== "undefined" ? getMessaging(app) : null;
 
 // // Test connection CRITICAL
 // async function testConnection() {
@@ -25,12 +35,12 @@ export const messaging = typeof window !== 'undefined' ? getMessaging(app) : nul
 // testConnection();
 
 export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+  CREATE = "create",
+  UPDATE = "update",
+  DELETE = "delete",
+  LIST = "list",
+  GET = "get",
+  WRITE = "write",
 }
 
 export interface FirestoreErrorInfo {
@@ -47,88 +57,96 @@ export interface FirestoreErrorInfo {
       providerId?: string | null;
       email?: string | null;
     }[];
-  }
+  };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null,
+) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
+      userId: null,
+      email: null,
+      emailVerified: null,
+      isAnonymous: null,
+      tenantId: null,
+      providerInfo: [],
     },
     operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+    path,
+  };
+  console.error("Firestore Error: ", JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
-export async function addLivePulseEvent(event: { user_name: string; type: 'gain' | 'join' | 'premium' | 'coaching'; detail: string }) {
+export async function addLivePulseEvent(event: {
+  user_name: string;
+  type: "gain" | "join" | "premium" | "coaching";
+  detail: string;
+}) {
   try {
-    await addDoc(collection(db, 'live_pulse'), {
+    await addDoc(collection(db, "live_pulse"), {
       ...event,
       created_at: serverTimestamp(),
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, 'live_pulse');
+    handleFirestoreError(error, OperationType.CREATE, "live_pulse");
   }
 }
 
 export const requestNotificationPermission = async (vapidKey: string) => {
   if (!messaging) {
-    console.error('FCM: Messaging not supported or initialized');
-    return { token: null, status: 'unsupported' };
+    console.error("FCM: Messaging not supported or initialized");
+    return { token: null, status: "unsupported" };
   }
 
   try {
-    if (!('Notification' in window)) {
-      console.error('FCM: Notifications not supported by browser');
-      return { token: null, status: 'unsupported' };
+    if (!("Notification" in window)) {
+      console.error("FCM: Notifications not supported by browser");
+      return { token: null, status: "unsupported" };
     }
 
     let registration;
-    if ('serviceWorker' in navigator) {
+    if ("serviceWorker" in navigator) {
       try {
         // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
-        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=MZ4', { scope: '/' });
-        console.log('FCM: Service Worker registered:', registration.scope);
+        registration = await navigator.serviceWorker.register(
+          "/firebase-messaging-sw.js?v=MZ4",
+          { scope: "/" },
+        );
+        console.log("FCM: Service Worker registered:", registration.scope);
       } catch (swError) {
-        console.error('FCM: Service Worker registration failed:', swError);
+        console.error("FCM: Service Worker registration failed:", swError);
       }
     }
 
     // alert('Demande de permission en cours...');
     const permission = await Notification.requestPermission();
     // alert('Résultat permission: ' + permission);
-    console.log('FCM: Permission result:', permission);
+    console.log("FCM: Permission result:", permission);
 
-    if (permission === 'granted') {
+    if (permission === "granted") {
       const token = await getToken(messaging, {
         vapidKey: vapidKey,
-        serviceWorkerRegistration: registration
+        serviceWorkerRegistration: registration,
       });
-      return { token, status: 'granted' };
+      return { token, status: "granted" };
     } else {
       return { token: null, status: permission };
     }
   } catch (error) {
-    console.error('FCM: Error in requestNotificationPermission:', error);
-    return { token: null, status: 'error' };
+    console.error("FCM: Error in requestNotificationPermission:", error);
+    return { token: null, status: "error" };
   }
 };
 
 export const onMessageListener = (callback: (payload: any) => void) => {
   if (!messaging) return;
   return onMessage(messaging, (payload) => {
-    console.log('FCM: Foreground message received:', payload);
+    console.log("FCM: Foreground message received:", payload);
     callback(payload);
   });
 };

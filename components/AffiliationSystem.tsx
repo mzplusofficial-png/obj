@@ -206,12 +206,18 @@ export const AffiliationSystem: React.FC<AffiliationSystemProps> = ({
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm("Supprimer ce produit du catalogue ?")) return;
+    if (!confirm("Voulez-vous vraiment supprimer ce produit ? Cela le retirera de la boutique de tout le monde et supprimera les statistiques associées.")) return;
     try {
+      // 1. Clean up dependencies first
+      await supabase.from('mz_user_store').delete().eq('product_id', id);
+      await supabase.from('product_stats').delete().eq('product_id', id);
+      await supabase.from('commissions').delete().eq('product_id', id);
+      
+      // 2. Delete the product
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
       fetchData();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { alert("Erreur: " + err.message); }
   };
 
   const openEditProduct = (product: Product) => {

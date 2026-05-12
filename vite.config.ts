@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       optimizeDeps: {
-        include: ['firebase/app', 'firebase/firestore', 'firebase/auth', 'firebase/messaging'],
+        include: ['firebase/app', 'firebase/firestore', 'firebase/messaging'],
       },
       plugins: [
         react(),

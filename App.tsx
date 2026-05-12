@@ -28,6 +28,7 @@ import { ProductSalesPage } from './components/ProductSalesPage.tsx';
 import { EspacePrive } from './components/EspacePrive.tsx';
 import { MZPlusFlashOfferOverlay } from './components/features/mz-plus-offer/MZPlusFlashOfferOverlay.tsx';
 import { MZPlusPresentationOverlay } from './components/features/mz-plus-presentation/MZPlusPresentationOverlay.tsx';
+import { LiveWithdrawalsView } from './components/features/withdrawals/LiveWithdrawalsView.tsx';
 import { LeaderboardTab } from './components/features/leaderboard/LeaderboardTab.tsx';
 import { LunaChatPage } from './components/LunaChatPage.tsx';
 import { SQLConsole } from './components/SQLConsole.tsx';
@@ -42,12 +43,16 @@ import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate
 import { requestNotificationPermission, onMessageListener } from './services/firebase.ts';
 import { useAxis } from './components/features/axis/AxisProvider.tsx';
 import { AxisGuideFlow } from './components/features/axis/AxisGuideFlow.tsx';
+import { AxisChat } from './components/features/axis/AxisChat.tsx';
 import { XPRewardModal } from './components/features/gamification/XPRewardModal.tsx';
 import { ShareModal } from './components/features/gamification/ShareModal.tsx';
 import { ChallengePresentation } from './components/features/challenges/ChallengePresentation.tsx';
 import { WeeklyChallenge } from './components/features/challenges/WeeklyChallenge.tsx';
 import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
+
+import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
+import { BONUS_CONTENTS } from './components/features/formation/bonusContentData.ts';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -98,8 +103,99 @@ const App: React.FC = () => {
   const [challengeCelebratedStep, setChallengeCelebratedStep] = useState(1);
   const [showDay2UpsellPopup, setShowDay2UpsellPopup] = useState(false);
   const [showDay2FailedUpsellPopup, setShowDay2FailedUpsellPopup] = useState(false);
+  const [bonusContent, setBonusContent] = useState<{ id: string; title: string; content: string } | null>(null);
   
-  const { triggerAxisMessage, hideAxis } = useAxis();
+  const { triggerAxisMessage, hideAxis, setIsChatOpen, setChatUnlocked } = useAxis();
+
+  useEffect(() => {
+    if (!userProfile || loading) return;
+    const chatIntroduced = localStorage.getItem('mz_axis_chat_introduced') === 'true';
+    if (chatIntroduced) return;
+
+    const checkUnlock = () => {
+      const challengeState = userProfile.store_preferences?.challenge_3j || {};
+      const day1Done = challengeState.j1Completed === true;
+      
+      const sessionStart = localStorage.getItem('mz_first_visit_time') || Date.now().toString();
+      if (!localStorage.getItem('mz_first_visit_time')) {
+        localStorage.setItem('mz_first_visit_time', sessionStart);
+      }
+      
+      const fiveMinutesPassed = (Date.now() - parseInt(sessionStart)) > 5 * 60 * 1000;
+
+      if (day1Done || fiveMinutesPassed) {
+        setTimeout(() => {
+          triggerAxisMessage(
+            "Tu es maintenant un vrai Elite… 👁️\nTu peux désormais discuter avec moi en direct à tout moment. Je serai toujours là pour t'épauler dans ton ascension.",
+            "success",
+            15000,
+            {
+              label: "Essayer le chat",
+              action: () => setIsChatOpen(true)
+            }
+          );
+          localStorage.setItem('mz_axis_chat_introduced', 'true');
+          setChatUnlocked(true);
+        }, 2000);
+        return true;
+      }
+      return false;
+    };
+
+    // Initial check
+    if (checkUnlock()) return;
+
+    // Background timer to check every 30 seconds
+    const interval = setInterval(() => {
+      if (checkUnlock()) {
+        clearInterval(interval);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [userProfile, loading, triggerAxisMessage, setIsChatOpen, setChatUnlocked]);
+
+  useEffect(() => {
+    const handlePlaySound = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ sound: string }>;
+      const soundCategory = customEvent.detail?.sound;
+      if (!soundCategory) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('mz_sound_effects')
+          .select('url')
+          .eq('category', soundCategory)
+          .single();
+        
+        if (error) {
+          console.warn(`Could not find sound for category: ${soundCategory}`, error);
+          return;
+        }
+
+        if (data?.url) {
+          const audio = new Audio(data.url);
+          audio.play().catch(err => console.warn("Audio play blocked", err));
+        }
+      } catch (err) {
+        console.error("Sound play error:", err);
+      }
+    };
+    window.addEventListener('mz-play-sound', handlePlaySound);
+    return () => window.removeEventListener('mz-play-sound', handlePlaySound);
+  }, []);
+
+  useEffect(() => {
+    const handleSwitchTab = (e: any) => {
+      if (e.detail) {
+        setActiveTab(e.detail);
+        if (e.detail === 'axis') setIsChatOpen(true);
+        else setIsChatOpen(false);
+      }
+    };
+    window.addEventListener('switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('switch-tab', handleSwitchTab);
+  }, [setIsChatOpen]);
 
   useEffect(() => {
     if (activeTab === 'dashboard' && pendingDay3TriggerAfterPremium) {
@@ -850,9 +946,26 @@ const App: React.FC = () => {
     window.addEventListener('view-product-details', handleViewProduct);
     window.addEventListener('close-product-details', handleCloseProduct);
 
+    const handleOpenReward = (e: any) => {
+      const { rewardId, id, text, content, title } = e.detail || {};
+      const actualId = rewardId || id;
+      const actualContent = text || content || (actualId ? BONUS_CONTENTS[actualId] : null);
+      
+      if (actualContent) {
+        setBonusContent({
+          id: actualId || 'dynamic-reward',
+          title: title || "CONTENU BONUS ÉLITE",
+          content: actualContent
+        });
+      }
+    };
+
+    window.addEventListener('mz-open-reward-content', handleOpenReward);
+
     return () => {
       window.removeEventListener('view-product-details', handleViewProduct);
       window.removeEventListener('close-product-details', handleCloseProduct);
+      window.removeEventListener('mz-open-reward-content', handleOpenReward);
     };
   }, []);
 
@@ -1073,6 +1186,7 @@ const App: React.FC = () => {
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
           wallet={wallet}
+          onRefresh={triggerRefresh}
         />
       )}
       <AffiliationGuide 
@@ -1090,6 +1204,8 @@ const App: React.FC = () => {
         onComplete={() => setIsTeamGuideActive(false)} 
       />
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
+      {activeTab === 'live_withdrawals' && <LiveWithdrawalsView onBack={() => setActiveTab('dashboard')} />}
+      {activeTab === 'axis' && <AxisChat profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'leaderboard' && <LeaderboardTab profile={userProfile} mode="global" />}
       {activeTab === 'leaderboard_local' && <LeaderboardTab profile={userProfile} mode="local" />}
       {activeTab === 'weekly_challenge' && <WeeklyChallenge profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
@@ -1137,7 +1253,15 @@ const App: React.FC = () => {
       {activeTab === 'sql_console' && isAdmin && <SQLConsole profile={userProfile} />}
       {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
       <AxisGuideFlow session={session} userProfile={userProfile} isReady={!loading && !initSequence} />
-      <RankRewardChecker profile={userProfile} onRedirectProfile={() => setActiveTab('profile')} />
+      <RankRewardChecker profile={userProfile} onRedirectProfile={() => {
+        setActiveTab('profile');
+        setTimeout(() => {
+          const tube = document.getElementById('progression-section');
+          if (tube) {
+            tube.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }} />
       <XPRewardModal 
         isVisible={showXpReward} 
         amount={xpRewardAmount} 
@@ -1367,13 +1491,36 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
       <PWAInstallBanner />
+      {bonusContent && (
+        <TextFormationReader 
+          title={bonusContent.title}
+          content={bonusContent.content}
+          formationId={bonusContent.id}
+          type="bonus"
+          onClose={() => setBonusContent(null)}
+          onComplete={() => {}}
+        />
+      )}
     </DashboardLayout>
   );
 };
 
+const QUOTES = [
+  { text: "Le risque le plus grand est de ne prendre aucun risque.", author: "Mark Zuckerberg" },
+  { text: "Les riches investissent leur argent et dépensent ce qui reste.", author: "Jim Rohn" },
+  { text: "Le meilleur investissement que vous puissiez faire est d’investir en vous-même.", author: "Warren Buffett" },
+  { text: "La discipline crée des résultats que la motivation seule ne peut pas maintenir.", author: "Confucius" },
+  { text: "Le succès n’est pas final, l’échec n’est pas fatal : c’est le courage de continuer qui compte.", author: "Winston Churchill" },
+  { text: "Les opportunités ne se présentent pas. Vous les créez.", author: "Chris Grosser" },
+  { text: "La régularité est la clé de la croissance exponentielle.", author: "Conseil MZ+" },
+  { text: "Votre réseau est votre valeur nette. Connectez-vous avec les élites.", author: "Conseil MZ+" },
+  { text: "Le défi 3J est conçu pour tester votre engagement initial.", author: "Conseil MZ+" },
+  { text: "Ne travaillez pas pour l'argent, faites en sorte que l'argent travaille pour vous.", author: "Conseil MZ+" }
+];
+
 const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('Synchronisation du noyau...');
+  const [quoteIndex, setQuoteIndex] = useState(0);
 
   useEffect(() => {
     if (loading) return;
@@ -1383,67 +1530,89 @@ const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
           clearInterval(interval);
           return 100;
         }
-        return prev + 2;
+        return prev + 1.5;
       });
-    }, 30);
+    }, 40);
 
-    const statusTimers = [
-      setTimeout(() => setStatus('Vérification des protocoles de sécurité...'), 800),
-      setTimeout(() => setStatus('Accès au réseau neuronal MZ+...'), 1600),
-      setTimeout(() => setStatus('Identité Élite confirmée.'), 2400),
-      setTimeout(() => setStatus('Initialisation de l\'interface...'), 3000),
-    ];
+    const quoteInterval = setInterval(() => {
+      setQuoteIndex(prev => (prev + 1) % QUOTES.length);
+    }, 4500);
 
     return () => {
       clearInterval(interval);
-      statusTimers.forEach(clearTimeout);
+      clearInterval(quoteInterval);
     };
   }, [loading]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-[#050505] flex flex-col items-center justify-center p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,16,16,1),rgba(5,5,5,1))]"></div>
+    <div className="fixed inset-0 z-[1000] bg-[#050505] flex flex-col items-center justify-center p-6 sm:p-12 overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(20,20,20,1),rgba(5,5,5,1))]" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-600/5 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-yellow-600/5 blur-[120px] rounded-full" />
       
-      <div className="relative z-10 w-full max-w-sm space-y-12 flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-2xl space-y-16 flex flex-col items-center">
+        {/* Animated Icon */}
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className="w-20 h-20 bg-yellow-600 rounded-[2rem] flex items-center justify-center text-black shadow-[0_0_50px_rgba(202,138,4,0.3)] mb-4"
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          className="w-24 h-24 bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-[2.5rem] flex items-center justify-center text-black shadow-[0_0_60px_rgba(202,138,4,0.2)]"
         >
-          <Crown size={40} fill="currentColor" />
+          <Crown size={48} fill="currentColor" />
         </motion.div>
 
-        <div className="space-y-4 w-full text-center">
-           <motion.h1 
-             initial={{ opacity: 0, y: 10 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="text-2xl font-black uppercase tracking-[0.5em] text-white"
-           >
-             MZ+ Elite System
-           </motion.h1>
-           <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest animate-pulse">
-             {status}
-           </p>
+        {/* Content Area */}
+        <div className="space-y-8 w-full min-h-[160px] flex flex-col items-center justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={quoteIndex}
+              initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+              className="space-y-6 text-center"
+            >
+              <p className="text-xl sm:text-2xl md:text-3xl font-medium text-white/90 leading-tight tracking-tight italic font-serif max-w-lg mx-auto">
+                “{QUOTES[quoteIndex].text}”
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="h-[1px] w-8 bg-yellow-600/30" />
+                <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-yellow-600">
+                  {QUOTES[quoteIndex].author}
+                </p>
+                <div className="h-[1px] w-8 bg-yellow-600/30" />
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden relative">
-          <motion.div 
-            className="absolute inset-y-0 left-0 bg-yellow-600 shadow-[0_0_15px_rgba(202,138,4,0.5)]"
-            initial={{ width: "0%" }}
-            animate={{ width: loading ? "10%" : `${progress}%` }}
-            transition={{ duration: 0.1 }}
-          />
+        {/* Progress System */}
+        <div className="w-full max-w-md space-y-4">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Initialisation de votre système</span>
+            <span className="text-[10px] font-mono text-yellow-600/60">{loading ? '...' : `${Math.round(progress)}%`}</span>
+          </div>
+          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden relative border border-white/[0.02]">
+            <motion.div 
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-600 to-yellow-500 shadow-[0_0_20px_rgba(202,138,4,0.4)]"
+              initial={{ width: "0%" }}
+              animate={{ width: loading ? "10%" : `${progress}%` }}
+              transition={{ duration: 0.2 }}
+            />
+          </div>
         </div>
 
-        <div className="flex justify-between w-full text-[8px] font-black uppercase tracking-[0.2em] text-neutral-700">
-           <span>Core v7.4.2</span>
-           <span>Status: Secure</span>
+        {/* Footer Meta */}
+        <div className="grid grid-cols-3 w-full max-w-md pt-8 border-t border-white/5 text-[8px] font-black uppercase tracking-[0.2em] text-white/10 uppercase">
+           <div className="text-left">Intelligence MZ+</div>
+           <div className="text-center">Élite Business</div>
+           <div className="text-right">v7.4.2</div>
         </div>
       </div>
 
-      <div className="absolute bottom-10 opacity-10">
-         <p className="text-[9px] font-black tracking-[1em] text-white uppercase">Neural Link Established</p>
+      <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-30">
+         <p className="text-[9px] font-black tracking-[0.5em] text-white/40 uppercase animate-pulse">L'ambition n'attends pas</p>
       </div>
     </div>
   );

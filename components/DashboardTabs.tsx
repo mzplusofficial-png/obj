@@ -1,9 +1,8 @@
-
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Users, 
-  UserPlus, 
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Users,
+  UserPlus,
   Lock,
   Target,
   Crown,
@@ -31,196 +30,313 @@ import {
   Settings,
   Bell,
   Rocket,
-  MapPin
-} from 'lucide-react';
-import { UserProfile, RPASubmission, CoachingRequest, WithdrawalRequest, TabId, Wallet } from '../types.ts';
-import { SectionTitle, GoldBorderCard, EliteBadge, GoldText, PrimaryButton, UpgradeGate, PurpleText } from './UI.tsx';
-import { supabase } from '../services/supabase.ts';
-import { AcademieMain } from './features/formation/AcademieMain.tsx';
-import { RpaDashboard } from './features/rpa/RpaDashboard.tsx';
-import { CoachingDashboard } from './features/coaching/CoachingDashboard.tsx';
-import { ReferralDashboard } from './features/referral/ReferralDashboard.tsx';
-import { GuidesTab as GuidesTabComponent } from './GuidesTab.tsx';
-import { WithdrawalSystem } from './features/withdrawals/WithdrawalSystem.tsx';
-import { WithdrawalForm as WithdrawalFormView } from './features/withdrawals/WithdrawalForm.tsx';
-import { LivePulse } from './features/LivePulse.tsx';
-import { CurrencyDisplay } from './ui/CurrencyDisplay.tsx';
-import { useCurrency } from '../hooks/useCurrency.ts';
-import { useAxis } from './features/axis/AxisProvider.tsx';
-import { LiquidProgressionTube, getCurrentLevel } from './features/progression/LiquidProgressionTube.tsx';
-import { Download, Gift } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+  MapPin,
+  FileText,
+} from "lucide-react";
+import {
+  UserProfile,
+  RPASubmission,
+  CoachingRequest,
+  WithdrawalRequest,
+  TabId,
+  Wallet,
+} from "../types.ts";
+import {
+  SectionTitle,
+  GoldBorderCard,
+  EliteBadge,
+  GoldText,
+  PrimaryButton,
+  UpgradeGate,
+  PurpleText,
+} from "./UI.tsx";
+import { supabase } from "../services/supabase.ts";
+import { AcademieMain } from "./features/formation/AcademieMain.tsx";
+import { RpaDashboard } from "./features/rpa/RpaDashboard.tsx";
+import { CoachingDashboard } from "./features/coaching/CoachingDashboard.tsx";
+import { ReferralDashboard } from "./features/referral/ReferralDashboard.tsx";
+import { GuidesTab as GuidesTabComponent } from "./GuidesTab.tsx";
+import { WithdrawalSystem } from "./features/withdrawals/WithdrawalSystem.tsx";
+import { WithdrawalForm as WithdrawalFormView } from "./features/withdrawals/WithdrawalForm.tsx";
+import { LivePulse } from "./features/LivePulse.tsx";
+import { CurrencyDisplay } from "./ui/CurrencyDisplay.tsx";
+import { useCurrency } from "../hooks/useCurrency.ts";
+import { useAxis } from "./features/axis/AxisProvider.tsx";
+import {
+  LiquidProgressionTube,
+  getCurrentLevel,
+} from "./features/progression/LiquidProgressionTube.tsx";
+import { Download, Gift } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { TextFormationReader } from "./features/formation/TextFormationReader.tsx";
+import { DailyMission } from "./features/challenges/DailyMission.tsx";
 
-const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({ profile }) => {
+import { BONUS_CONTENTS } from "./features/formation/bonusContentData.ts";
+
+const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
+  profile,
+}) => {
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedContent, setSelectedContent] = useState<{title: string, text: string, imageUrl?: string} | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [lastViewedRewards, setLastViewedRewards] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("mz_read_rewards") || "[]");
+    } catch { return []; }
+  });
+
+  const unreadCount = rewards.filter(r => !lastViewedRewards.includes(r.id)).length;
+
+  useEffect(() => {
+    if (isOpen) {
+      const newRead = Array.from(new Set([...lastViewedRewards, ...rewards.map(r => r.id)]));
+      setLastViewedRewards(newRead);
+      localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
+    }
+  }, [isOpen, rewards]);
 
   useEffect(() => {
     if (!profile) return;
     const fetchMyRewards = async () => {
       try {
         const { data, error } = await supabase
-          .from('user_rewards')
-          .select('*, reward:rank_rewards(*)')
-          .eq('user_id', profile.id)
-          .order('claimed_at', { ascending: false });
+          .from("user_rank_rewards")
+          .select("*, reward:rank_rewards(*)")
+          .eq("user_id", profile.id)
+          .order("claimed_at", { ascending: false });
         if (data) setRewards(data as any);
-      } catch (err) {} finally { setLoading(false); }
+      } catch (err) {
+      } finally {
+        setLoading(false);
+      }
     };
     fetchMyRewards();
   }, [profile]);
 
-  if (loading) return <div className="text-center py-4"><span className="animate-pulse text-purple-500 text-xs uppercase font-black tracking-widest">Chargement...</span></div>;
-  if (!rewards.length) return null;
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (loading)
+    return (
+      <div className="flex flex-col items-center justify-center p-2 transition-all">
+        <div className="w-12 h-12 rounded-full bg-neutral-800/50 animate-pulse mb-2 border border-white/5"></div>
+      </div>
+    );
+
 
   return (
-    <div className="w-full space-y-4 mb-8">
-      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 pl-2 border-l-2 border-purple-500 mb-4 flex items-center gap-2">
-        <Gift size={12} className="text-purple-500" /> VOS FORMATIONS DÉBLOQUÉES
-      </h3>
-      
-      <div className="flex flex-wrap gap-3">
-        {rewards.map((userReward) => {
-          const rw = userReward.reward;
-          if (!rw) return null;
-          const isUrl = rw.file_url?.startsWith('http') && !rw.file_url.includes(' ');
-          
-          return (
-            <div key={userReward.id} className="relative group w-full p-4 rounded-3xl bg-[#111] border border-white/5 hover:border-purple-500/50 transition-colors cursor-pointer overflow-hidden flex items-center gap-4 shadow-xl"
-                 onClick={() => {
-                   if (isUrl) {
-                     window.open(rw.file_url, '_blank');
-                   } else if (rw.file_url) {
-                     setSelectedContent({ title: rw.title, text: rw.file_url, imageUrl: rw.image_url });
-                   }
-                 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              
-              {rw.image_url ? (
-                <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0">
-                  <img src={rw.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex flex-col items-center justify-center p-2 transition-all group relative"
+      >
+        {unreadCount > 0 && (
+          <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.8)]"></span>
+          </div>
+        )}
+        <div className={`w-12 h-12 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-pink-500/20 transition-all ${unreadCount > 0 ? 'ring-2 ring-pink-500/50 ring-offset-2 ring-offset-black animate-pulse' : ''}`}>
+          <Gift size={20} className={unreadCount > 0 ? "text-pink-400 drop-shadow-[0_0_5px_rgba(244,114,182,0.8)]" : "text-neutral-500 opacity-50"} />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+          Bonus
+        </span>
+        <span className="text-[8px] font-bold uppercase tracking-widest text-pink-400/70 mt-0.5">
+          ({rewards.length}) Obtenus
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="relative w-full h-full md:h-[85vh] md:max-w-2xl bg-[#0a0a09] md:rounded-[2.5rem] shadow-[0_0_100px_rgba(168,85,247,0.15)] flex flex-col">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111] z-10 sticky top-0">
+              <div className="flex items-center gap-3">
+                <Gift size={24} className="text-purple-500" />
+                <h3 className="text-2xl font-black text-white">Mes Bonus</h3>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {rewards.length === 0 ? (
+                <div className="text-center py-12 text-neutral-500 font-bold tracking-widest uppercase text-xs">
+                  Tu n'as reçu aucun bonus pour l'instant
                 </div>
               ) : (
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600/20 to-fuchsia-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                  {isUrl ? <Download size={20} /> : <BookOpen size={20} />}
-                </div>
-              )}
+                rewards.map((userReward) => {
+                  const rw = userReward.reward;
+                  if (!rw) return null;
+                  const isUrl =
+                    rw.file_url?.startsWith("http") &&
+                    !rw.file_url.includes(" ");
 
-              <div className="flex-1">
-                 <h4 className="font-bold text-white text-sm line-clamp-1">{rw.title}</h4>
-                 <p className="text-[10px] text-neutral-400 uppercase font-black tracking-widest">{isUrl ? 'Kit Premium' : 'Formation Interne'}</p>
-              </div>
-              <div className="p-2 bg-white/5 rounded-full text-neutral-400 group-hover:text-purple-400 transition-colors">
-                 {isUrl ? <Download size={14} /> : <ChevronRight size={14} />}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  return (
+                    <div
+                      key={userReward.id}
+                      className="relative group w-full p-4 rounded-[2rem] bg-[#111] border border-white/5 hover:border-purple-500/50 transition-colors cursor-pointer overflow-hidden flex items-center gap-4 shadow-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        
+                        // If it's a URL but the user wants it to open in the reader (if text is available)
+                        const textContent = BONUS_CONTENTS[rw.id] || rw.description || (isUrl ? "" : rw.file_url) || "";
+                        
+                        if (textContent.length > 20 || !isUrl) {
+                          window.dispatchEvent(new CustomEvent('mz-open-reward-content', {
+                            detail: {
+                              title: rw.title,
+                              text: textContent || rw.file_url || rw.description || "Aucun contenu disponible.",
+                              id: rw.id,
+                              imageUrl: rw.image_url
+                            }
+                          }));
+                          setIsOpen(false);
+                        } else if (isUrl) {
+                          window.open(rw.file_url, "_blank");
+                        }
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-      {selectedContent && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-4">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setSelectedContent(null)} />
-          <div className="relative w-full h-full md:h-auto md:max-w-4xl bg-[#0a0a09] md:rounded-[2rem] shadow-[0_0_100px_rgba(168,85,247,0.15)] overflow-hidden flex flex-col md:max-h-[90vh]">
-             
-             {/* Header */}
-             <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#111] z-10 sticky top-0">
-                <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                      <BookOpen size={20} className="text-purple-400" />
-                   </div>
-                   <h3 className="text-lg md:text-xl font-black text-white line-clamp-1">{selectedContent.title}</h3>
-                </div>
-                <button onClick={() => setSelectedContent(null)} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-colors shrink-0">✕</button>
-             </div>
-             
-             {/* Content Body */}
-             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-neutral-950">
-                <div className="max-w-3xl mx-auto space-y-8">
-                  {selectedContent.imageUrl && (
-                    <div className="w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl mb-10">
-                      <img src={selectedContent.imageUrl} alt="Formation" className="w-full h-full object-cover" />
+                      {rw.image_url ? (
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+                          <img
+                            src={rw.image_url}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600/20 to-amber-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                          {isUrl ? (
+                            <Download size={24} />
+                          ) : (
+                            <BookOpen size={24} />
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <h4 className="font-bold text-white text-base line-clamp-1">
+                          {rw.title}
+                        </h4>
+                        <p className="text-[10px] sm:text-xs text-neutral-400 uppercase font-black tracking-widest mt-1">
+                          {isUrl ? "Kit Premium" : "Bonus Interne"}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-full text-neutral-400 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+                        {isUrl ? (
+                          <Download size={18} />
+                        ) : (
+                          <ChevronRight size={18} />
+                        )}
+                      </div>
                     </div>
-                  )}
-                  
-                  <div className="text-neutral-300 leading-relaxed max-w-none [&>h1]:text-4xl [&>h1]:font-black [&>h1]:text-white [&>h1]:mb-6 [&>h2]:text-3xl [&>h2]:font-bold [&>h2]:text-white [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-2xl [&>h3]:font-bold [&>h3]:text-white [&>h3]:mt-8 [&>h3]:mb-4 [&>p]:mb-6 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-6 [&>ul>li]:mb-2 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-6 [&>a]:text-purple-400 [&>a]:underline hover:[&>a]:text-purple-300 [&>blockquote]:border-l-4 [&>blockquote]:border-purple-500 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-neutral-400">
-                    <ReactMarkdown>{selectedContent.text}</ReactMarkdown>
-                  </div>
-                </div>
-             </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
-}
+};
 
-type HubCategory = 'main' | 'business' | 'academy' | 'community';
+type HubCategory = "main" | "business" | "academy" | "community";
 
-export const GlobalView: React.FC<any> = ({ 
-  profile, 
-  onSwitchTab, 
+export const GlobalView: React.FC<any> = ({
+  profile,
+  onSwitchTab,
   onStartGuide,
   activeCategory,
   setActiveCategory,
-  wallet
+  wallet,
+  onRefresh,
 }) => {
   const [showBalance, setShowBalance] = useState(true);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [isShopHighlighted, setIsShopHighlighted] = useState(false);
   const { convertAndFormat } = useCurrency();
   const { triggerAxisMessage } = useAxis();
-  const isMzPlus = profile?.user_level === 'niveau_mz_plus';
+  const isMzPlus = profile?.user_level === "niveau_mz_plus";
 
   const [loginCount, setLoginCount] = useState(1);
   const [isChallengeActive, setIsChallengeActive] = useState(false);
   const [forceRender, setForceRender] = useState(0);
 
   useEffect(() => {
-    const savedCount = parseInt(localStorage.getItem('mz_login_count') || '0');
-    if (!sessionStorage.getItem('mz_session_counted_gv')) {
+    const savedCount = parseInt(localStorage.getItem("mz_login_count") || "0");
+    if (!sessionStorage.getItem("mz_session_counted_gv")) {
       const newCount = savedCount + 1;
-      localStorage.setItem('mz_login_count', newCount.toString());
-      sessionStorage.setItem('mz_session_counted_gv', 'true');
+      localStorage.setItem("mz_login_count", newCount.toString());
+      sessionStorage.setItem("mz_session_counted_gv", "true");
       setLoginCount(newCount);
     } else {
       setLoginCount(savedCount);
     }
-    setIsChallengeActive(profile?.store_preferences?.challenge_3j?.presented === true);
-    
+    setIsChallengeActive(
+      profile?.store_preferences?.challenge_3j?.presented === true,
+    );
+
     // Listen to custom event for challenge start
     const handleChallengeChange = () => setIsChallengeActive(true);
-    const handleAction = () => setForceRender(prev => prev + 1);
-    
-    window.addEventListener('mz-challenge-3j-started', handleChallengeChange);
-    window.addEventListener('mz-product-added-to-store', handleAction);
-    window.addEventListener('mz-new-sale', handleAction);
-    
+    const handleAction = () => setForceRender((prev) => prev + 1);
+
+    window.addEventListener("mz-challenge-3j-started", handleChallengeChange);
+    window.addEventListener("mz-product-added-to-store", handleAction);
+    window.addEventListener("mz-new-sale", handleAction);
+
     return () => {
-      window.removeEventListener('mz-challenge-3j-started', handleChallengeChange);
-      window.removeEventListener('mz-product-added-to-store', handleAction);
-      window.removeEventListener('mz-new-sale', handleAction);
+      window.removeEventListener(
+        "mz-challenge-3j-started",
+        handleChallengeChange,
+      );
+      window.removeEventListener("mz-product-added-to-store", handleAction);
+      window.removeEventListener("mz-new-sale", handleAction);
     };
   }, []);
 
   useEffect(() => {
     const handleHighlight = () => {
       setIsShopHighlighted(true);
-      setTimeout(() => setIsShopHighlighted(false), 9000); 
+      setTimeout(() => setIsShopHighlighted(false), 9000);
     };
 
     const handleScroll = () => {
-      const shopBtn = document.getElementById('shop-category-btn');
-      const targetY = shopBtn ? shopBtn.getBoundingClientRect().top + window.scrollY - (window.innerHeight / 2) + 50 : 300;
-      
+      const shopBtn = document.getElementById("shop-category-btn");
+      const targetY = shopBtn
+        ? shopBtn.getBoundingClientRect().top +
+          window.scrollY -
+          window.innerHeight / 2 +
+          50
+        : 300;
+
       const startY = window.scrollY;
       const difference = targetY - startY;
       let startTime: number | null = null;
       const duration = 1500; // 1.5 seconds
 
-      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
       const step = (now: number) => {
         if (!startTime) startTime = now;
@@ -232,11 +348,11 @@ export const GlobalView: React.FC<any> = ({
       window.requestAnimationFrame(step);
     };
 
-    window.addEventListener('mz-highlight-shop', handleHighlight);
-    window.addEventListener('mz-scroll-to-shop', handleScroll);
+    window.addEventListener("mz-highlight-shop", handleHighlight);
+    window.addEventListener("mz-scroll-to-shop", handleScroll);
     return () => {
-      window.removeEventListener('mz-highlight-shop', handleHighlight);
-      window.removeEventListener('mz-scroll-to-shop', handleScroll);
+      window.removeEventListener("mz-highlight-shop", handleHighlight);
+      window.removeEventListener("mz-scroll-to-shop", handleScroll);
     };
   }, []);
 
@@ -244,40 +360,69 @@ export const GlobalView: React.FC<any> = ({
   const todayGain = wallet?.today_gain || 0;
   const totalCash = (wallet?.balance || 0) + (profile?.rpa_balance || 0);
 
-  const { formatted, originalFormatted, isXAF } = convertAndFormat(currentBalance);
+  const { formatted, originalFormatted, isXAF } =
+    convertAndFormat(currentBalance);
   const todayGainFormatted = convertAndFormat(todayGain).formatted;
 
   // Calcul de la progression (simulée selon le niveau)
-  const progressPercent = 62; 
+  const progressPercent = 62;
   const currentLevel = "Argent";
   const nextLevel = "Or";
 
   const categories = [
-    { id: 'business', title: 'Ma Boutique', desc: 'Mon Empire', emoji: '🏪', badge: 'ACTIF', color: 'bg-red-500/20 text-red-500 border-red-500/10' },
-    { id: 'referral', title: 'Inviter & Gagner', desc: 'Gains passifs', emoji: '🔗', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/10' },
-    { id: 'academy', title: 'Académie', desc: 'Formations', emoji: '🎓', color: 'bg-purple-500/20 text-purple-400 border-purple-500/10' },
+    {
+      id: "business",
+      title: "Ma Boutique",
+      desc: "Mon Empire",
+      emoji: "🏪",
+      badge: "ACTIF",
+      color: "bg-red-500/20 text-red-500 border-red-500/10",
+    },
+    {
+      id: "referral",
+      title: "Inviter & Gagner",
+      desc: "Gains passifs",
+      emoji: "🔗",
+      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/10",
+    },
+    {
+      id: "academy",
+      title: "Académie",
+      desc: "Formations",
+      emoji: "🎓",
+      color: "bg-purple-500/20 text-purple-400 border-purple-500/10",
+    },
   ];
 
   const handleShare = async (platform?: string) => {
     const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || 'elite'}`;
+    const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || "elite"}`;
     const shareText = `Je viens de tomber sur MZ+.\nC’est un système en ligne qui permettrait de générer des revenus en ligne assez simplement.\nJ'ai deja commnecz et franchement ça a l’air intéressant.\nSi tu veux jeter un œil 👇\n\n${shareUrl}`;
 
-    if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-    } else if (platform === 'facebook') {
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank');
-    } else if (platform === 'gmail') {
-      window.open(`mailto:?subject=Découvre MZ+ Elite&body=${encodeURIComponent(shareText)}`, '_blank');
+    if (platform === "whatsapp") {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+        "_blank",
+      );
+    } else if (platform === "facebook") {
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`,
+        "_blank",
+      );
+    } else if (platform === "gmail") {
+      window.open(
+        `mailto:?subject=Découvre MZ+ Elite&body=${encodeURIComponent(shareText)}`,
+        "_blank",
+      );
     } else if (navigator.share) {
       try {
         await navigator.share({
-          title: 'MZ+ Elite Business',
+          title: "MZ+ Elite Business",
           text: shareText,
-          url: shareUrl
+          url: shareUrl,
         });
       } catch (err) {
-        console.error('Error sharing:', err);
+        console.error("Error sharing:", err);
       }
     } else {
       navigator.clipboard.writeText(shareText);
@@ -287,111 +432,158 @@ export const GlobalView: React.FC<any> = ({
 
   const copyToClipboard = () => {
     const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || 'elite'}`;
+    const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || "elite"}`;
     navigator.clipboard.writeText(shareUrl);
     alert("Lien de parrainage copié !");
   };
 
   const renderCategoryDetails = () => {
-    switch(activeCategory) {
-      case 'business':
+    switch (activeCategory) {
+      case "business":
         return (
           <div className="grid grid-cols-2 gap-3 animate-fade-in text-left">
-             <SubServiceCard title="Ma Boutique" desc="Gérer mes liens" icon={Store} onClick={() => onSwitchTab('affiliation')} />
-             <SubServiceCard title="Vidéo" desc="TikTok/Reels" icon={Video} locked={!isMzPlus} onClick={() => onSwitchTab('rpa')} />
-             <SubServiceCard title="Mon Équipe" desc="Communauté" icon={UserPlus} onClick={() => onSwitchTab('team')} />
+            <SubServiceCard
+              title="Ma Boutique"
+              desc="Gérer mes liens"
+              icon={Store}
+              onClick={() => onSwitchTab("affiliation")}
+            />
+            <SubServiceCard
+              title="Vidéo"
+              desc="TikTok/Reels"
+              icon={Video}
+              locked={!isMzPlus}
+              onClick={() => onSwitchTab("rpa")}
+            />
+            <SubServiceCard
+              title="Mon Équipe"
+              desc="Communauté"
+              icon={UserPlus}
+              onClick={() => onSwitchTab("team")}
+            />
           </div>
         );
-      case 'referral':
+      case "referral":
         return (
           <div className="grid grid-cols-1 gap-3 animate-fade-in text-left">
-             <div className="grid grid-cols-2 gap-3 pb-2">
-                <button 
-                  onClick={() => handleShare('whatsapp')}
-                  className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-center"
-                >
-                  <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.319 1.592 5.548 0 10.058-4.51 10.06-10.059.002-2.689-1.047-5.215-2.951-7.121-1.905-1.905-4.432-2.954-7.122-2.956-5.549 0-10.06 4.511-10.063 10.06-.001 2.032.547 3.513 1.488 5.13l-.999 3.648 3.731-.979zm11.367-7.393c-.31-.154-1.829-.903-2.11-.1.282-.102-.338-.204-.984-1.392-.506-.21-.422-.224-.744-.095-.547-.223-2.01-.739-3.344-1.928-1.037-.926-1.74-2.069-1.942-2.422-.204-.353-.021-.544.155-.72.158-.159.352-.412.529-.617.175-.206.234-.352.352-.588.117-.235.059-.441-.03-.617-.089-.176-.744-1.792-1.018-2.454-.267-.643-.538-.556-.744-.567-.19-.009-.41-.01-.63-.01-.22 0-.58.083-.884.412-.303.33-1.157 1.132-1.157 2.76 0 1.629 1.186 3.203 1.353 3.424.167.221 2.335 3.563 5.656 4.996.79.341 1.405.544 1.886.696.791.248 1.512.213 2.081.127.635-.095 1.829-.747 2.086-1.468.257-.721.257-1.341.18-1.468-.077-.127-.282-.204-.593-.352z"/></svg>
-                  </div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">WhatsApp</p>
-                </button>
-
-                <button 
-                  onClick={() => handleShare('facebook')}
-                  className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-center"
-                >
-                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                    <Facebook size={22} />
-                  </div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">Facebook</p>
-                </button>
-
-                <button 
-                  onClick={() => handleShare('gmail')}
-                  className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-center"
-                >
-                  <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20">
-                    <Mail size={22} />
-                  </div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">Gmail</p>
-                </button>
-
-                <button 
-                  onClick={() => handleShare()}
-                  className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-center"
-                >
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white">
-                    <Share2 size={22} />
-                  </div>
-                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">Autres</p>
-                </button>
-             </div>
-
-             <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
-                <div>
-                   <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Presse-papier</p>
-                   <p className="text-[12px] font-black text-[var(--color-gold-main)] tracking-tight">Code : {profile?.referral_code?.toUpperCase() || 'ELITE'}</p>
+            <div className="grid grid-cols-2 gap-3 pb-2">
+              <button
+                onClick={() => handleShare("whatsapp")}
+                className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                  <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.319 1.592 5.548 0 10.058-4.51 10.06-10.059.002-2.689-1.047-5.215-2.951-7.121-1.905-1.905-4.432-2.954-7.122-2.956-5.549 0-10.06 4.511-10.063 10.06-.001 2.032.547 3.513 1.488 5.13l-.999 3.648 3.731-.979zm11.367-7.393c-.31-.154-1.829-.903-2.11-.1.282-.102-.338-.204-.984-1.392-.506-.21-.422-.224-.744-.095-.547-.223-2.01-.739-3.344-1.928-1.037-.926-1.74-2.069-1.942-2.422-.204-.353-.021-.544.155-.72.158-.159.352-.412.529-.617.175-.206.234-.352.352-.588.117-.235.059-.441-.03-.617-.089-.176-.744-1.792-1.018-2.454-.267-.643-.538-.556-.744-.567-.19-.009-.41-.01-.63-.01-.22 0-.58.083-.884.412-.303.33-1.157 1.132-1.157 2.76 0 1.629 1.186 3.203 1.353 3.424.167.221 2.335 3.563 5.656 4.996.79.341 1.405.544 1.886.696.791.248 1.512.213 2.081.127.635-.095 1.829-.747 2.086-1.468.257-.721.257-1.341.18-1.468-.077-.127-.282-.204-.593-.352z" />
+                  </svg>
                 </div>
-                <button 
-                  onClick={copyToClipboard}
-                  className="px-4 py-2 rounded-xl bg-[var(--color-gold-main)] text-black text-[10px] font-black uppercase shadow-lg shadow-yellow-600/20"
-                >
-                  COPIER LE LIEN
-                </button>
-             </div>
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter">
+                  WhatsApp
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleShare("facebook")}
+                className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                  <Facebook size={22} />
+                </div>
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter">
+                  Facebook
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleShare("gmail")}
+                className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20">
+                  <Mail size={22} />
+                </div>
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter">
+                  Gmail
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleShare()}
+                className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white">
+                  <Share2 size={22} />
+                </div>
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter">
+                  Autres
+                </p>
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                  Presse-papier
+                </p>
+                <p className="text-[12px] font-black text-[var(--color-gold-main)] tracking-tight">
+                  Code : {profile?.referral_code?.toUpperCase() || "ELITE"}
+                </p>
+              </div>
+              <button
+                onClick={copyToClipboard}
+                className="px-4 py-2 rounded-xl bg-[var(--color-gold-main)] text-black text-[10px] font-black uppercase shadow-lg shadow-yellow-600/20"
+              >
+                COPIER LE LIEN
+              </button>
+            </div>
           </div>
         );
-      case 'academy':
+      case "academy":
         return (
           <div className="grid grid-cols-1 gap-3 animate-fade-in">
-             <SubServiceCard title="Formations MZ+" desc="Cours vidéo" icon={BookOpen} locked={!isMzPlus} onClick={() => onSwitchTab('formation')} />
-             <SubServiceCard title="Coaching" desc="Expert" icon={Target} locked={!isMzPlus} onClick={() => onSwitchTab('coaching')} />
+            <SubServiceCard
+              title="Formations MZ+"
+              desc="Cours vidéo"
+              icon={BookOpen}
+              locked={!isMzPlus}
+              onClick={() => onSwitchTab("formation")}
+            />
+            <SubServiceCard
+              title="Coaching"
+              desc="Expert"
+              icon={Target}
+              locked={!isMzPlus}
+              onClick={() => onSwitchTab("coaching")}
+            />
           </div>
         );
-      default: return null;
+      default:
+        return null;
     }
   };
 
-  if (activeCategory !== 'main') {
+  if (activeCategory !== "main") {
     return (
       <div className="max-w-md mx-auto px-6 py-8 space-y-8 animate-fade-in min-h-screen">
-        <button 
-          onClick={() => setActiveCategory('main')}
+        <button
+          onClick={() => setActiveCategory("main")}
           className="flex items-center gap-2 text-[var(--color-text-gray)] hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest opacity-60"
         >
           <ArrowLeft size={14} /> Retour
         </button>
-        
+
         <div className="space-y-6">
-           <div className="flex items-center gap-4">
-              <h3 className="text-xl font-black uppercase tracking-tighter text-white">
-                {activeCategory === 'business' ? 'Ma Boutique' : 
-                 activeCategory === 'referral' ? 'Inviter' :
-                 activeCategory === 'academy' ? 'Académie' : activeCategory}
-              </h3>
-              <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-gold-main)]/20 to-transparent"></div>
-           </div>
-           {renderCategoryDetails()}
+          <div className="flex items-center gap-4">
+            <h3 className="text-xl font-black uppercase tracking-tighter text-white">
+              {activeCategory === "business"
+                ? "Ma Boutique"
+                : activeCategory === "referral"
+                  ? "Inviter"
+                  : activeCategory === "academy"
+                    ? "Académie"
+                    : activeCategory}
+            </h3>
+            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-gold-main)]/20 to-transparent"></div>
+          </div>
+          {renderCategoryDetails()}
         </div>
       </div>
     );
@@ -399,22 +591,25 @@ export const GlobalView: React.FC<any> = ({
 
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-24 pt-10 px-5 relative min-h-screen font-sans">
-      
       {/* GREETING */}
       <div className="flex items-end justify-between mb-8 mt-6">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2.5">
             <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-tight">
-              Salut <span className="relative inline-block">
+              Salut{" "}
+              <span className="relative inline-block">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-gold-light)] to-[var(--color-gold-main)] drop-shadow-[0_4px_8px_rgba(201,168,76,0.3)]">
-                  {profile?.full_name?.split(' ')[0] || 'Élite'}
+                  {profile?.full_name?.split(" ")[0] || "Élite"}
                 </span>
                 <span className="absolute -bottom-1 left-0 w-full h-[1.5px] bg-gradient-to-r from-[var(--color-gold-main)]/60 to-transparent rounded-full shadow-[0_0_8px_var(--color-gold-main)]"></span>
-              </span>, <br />
-              <span className="text-[14px] font-bold text-white/90 normal-case tracking-tight not-italic">Ravi de te revoir !</span>
+              </span>
+              , <br />
+              <span className="text-[14px] font-bold text-white/90 normal-case tracking-tight not-italic">
+                Ravi de te revoir !
+              </span>
             </h2>
-            <motion.div 
-              animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }} 
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
               transition={{ repeat: Infinity, duration: 2 }}
               className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]"
             />
@@ -425,9 +620,22 @@ export const GlobalView: React.FC<any> = ({
       {(() => {
         const challengeDb = profile?.store_preferences?.challenge_3j || {};
         
-        if (!challengeDb.presented || challengeDb.cancelled) return null;
-        if (loginCount < 2) return null;
+        // Priority logic for DailyMission:
+        // 1. Must have logged in at least 3 times (ensures they are familiar with the UI).
+        // 2. AND the 3J challenge must be either Cancelled OR Finished (J3 completed).
+        const is3JFinished = challengeDb.j3Completed === true;
+        const is3JCancelled = challengeDb.cancelled === true;
         
+        if (loginCount >= 3 && (is3JCancelled || is3JFinished)) {
+          return <DailyMission onSwitchTab={onSwitchTab} profile={profile} onRefresh={onRefresh} />;
+        }
+        
+        // If not enough logins or hasn't even seen the challenge yet, show nothing (normal dashboard)
+        // This avoids confusing the user at the very beginning.
+        if (loginCount < 3 || !challengeDb.presented) {
+          return null;
+        }
+
         const j1Completed = challengeDb.j1Completed === true;
         const j2Presented = challengeDb.j2Presented === true;
         const j2Completed = challengeDb.j2Completed === true;
@@ -436,50 +644,50 @@ export const GlobalView: React.FC<any> = ({
 
         let mission = null;
         let isWaiting = false;
-        
+
         if (!j1Completed) {
-          mission = { 
-            day: 1, 
-            title: 'Choisir le bon produit', 
+          mission = {
+            day: 1,
+            title: "Choisir le bon produit",
             desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique.",
-            action: 'Ouvrir le catalogue',
-            tab: 'affiliation'
+            action: "Ouvrir le catalogue",
+            tab: "affiliation",
           };
         } else if (j1Completed && !j2Presented) {
           isWaiting = true;
           mission = {
             day: 1,
-            title: 'Mission Accomplie !',
+            title: "Mission Accomplie !",
             desc: "Bravo ! Reviens demain pour la prochaine mission.",
-            action: 'Patienter',
-            tab: 'dashboard'
+            action: "Patienter",
+            tab: "dashboard",
           };
         } else if (j2Presented && !j2Completed) {
-          mission = { 
-            day: 2, 
-            title: 'Vendre ton produit', 
+          mission = {
+            day: 2,
+            title: "Vendre ton produit",
             desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation.",
-            action: 'Suivre la formation',
-            tab: 'formation',
-            event: 'open-formation',
-            detail: { id: 'default-free-video' }
+            action: "Suivre la formation",
+            tab: "formation",
+            event: "open-formation",
+            detail: { id: "default-free-video" },
           };
         } else if (j2Completed && !j3Presented) {
           isWaiting = true;
           mission = {
             day: 2,
-            title: 'Mission Accomplie !',
+            title: "Mission Accomplie !",
             desc: "Parfait ! Reviens demain pour ton dernier défi.",
-            action: 'Patienter',
-            tab: 'dashboard'
+            action: "Patienter",
+            tab: "dashboard",
           };
         } else if (j3Presented && !j3Completed) {
-          mission = { 
-            day: 3, 
-            title: 'Faire exploser tes ventes', 
+          mission = {
+            day: 3,
+            title: "Faire exploser tes ventes",
             desc: "Partage ta boutique pour faire une nouvelle vente et confirmer ton succès !",
-            action: 'Voir ma boutique',
-            tab: 'my_store'
+            action: "Voir ma boutique",
+            tab: "my_store",
           };
         }
 
@@ -494,19 +702,25 @@ export const GlobalView: React.FC<any> = ({
             <div className="absolute top-0 right-0 p-3 opacity-10 text-emerald-500 group-hover:scale-110 group-hover:opacity-20 transition-all duration-300 pointer-events-none">
               <Rocket size={40} />
             </div>
-            
+
             <div className="flex flex-col relative z-10">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                   J{mission.day}
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">{isWaiting ? 'Objectif Atteint' : "Ta mission aujourd'hui"}</p>
-                  <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">{mission.title}</h3>
-                  <p className="text-xs text-neutral-400 font-medium leading-relaxed">{mission.desc}</p>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">
+                    {isWaiting ? "Objectif Atteint" : "Ta mission aujourd'hui"}
+                  </p>
+                  <h3 className="text-[14px] font-black leading-tight text-white mb-1.5">
+                    {mission.title}
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                    {mission.desc}
+                  </p>
                 </div>
               </div>
-              
+
               {!isWaiting && (
                 <button
                   onClick={() => {
@@ -514,7 +728,11 @@ export const GlobalView: React.FC<any> = ({
                     if (mission?.event) {
                       // Small delay to allow tab switch
                       setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent(mission.event as string, { detail: mission.detail }));
+                        window.dispatchEvent(
+                          new CustomEvent(mission.event as string, {
+                            detail: mission.detail,
+                          }),
+                        );
                       }, 100);
                     }
                   }}
@@ -523,14 +741,22 @@ export const GlobalView: React.FC<any> = ({
                   {mission.action} 👉
                 </button>
               )}
-              <button 
+              <button
                 onClick={async () => {
-                   if (!window.confirm("Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.")) return;
-                   const newPrefs = { ...(profile.store_preferences || {}) };
-                   if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
-                   newPrefs.challenge_3j.cancelled = true;
-                   await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', profile?.id);
-                   window.location.reload();
+                  if (
+                    !window.confirm(
+                      "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
+                    )
+                  )
+                    return;
+                  const newPrefs = { ...(profile.store_preferences || {}) };
+                  if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
+                  newPrefs.challenge_3j.cancelled = true;
+                  await supabase
+                    .from("users")
+                    .update({ store_preferences: newPrefs })
+                    .eq("id", profile?.id);
+                  window.location.reload();
                 }}
                 className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
               >
@@ -542,42 +768,50 @@ export const GlobalView: React.FC<any> = ({
       })()}
 
       {/* 1. CARTE SOLDE (ELITE BUSINESS HUB) */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={`w-full bg-gradient-to-br from-[#111009] via-[#161410] to-[#0A0908] rounded-[3rem] p-7 border relative overflow-hidden group shadow-[0_30px_60px_rgba(0,0,0,0.6)] ${
-          isMzPlus ? 'border-[var(--color-gold-main)]/40 shadow-[0_0_40px_rgba(201,168,76,0.1)]' : 'border-[var(--color-border-gold)]'
+          isMzPlus
+            ? "border-[var(--color-gold-main)]/40 shadow-[0_0_40px_rgba(201,168,76,0.1)]"
+            : "border-[var(--color-border-gold)]"
         }`}
       >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-[var(--color-gold-main)]/10 blur-[80px] rounded-full -mr-20 -mt-20 group-hover:bg-[var(--color-gold-main)]/20 transition-all duration-1000"></div>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-[var(--color-academy-purple)]/5 blur-[60px] rounded-full -ml-10 -mb-10"></div>
-        
+
         <div className="flex justify-between items-start relative z-10 mb-6">
           <div className="space-y-1.5">
             {/* Status Badge (REPOSITIONED & HIGH IMPACT) */}
-            <div 
-              onClick={() => !isMzPlus && onSwitchTab('upgrade')}
+            <div
+              onClick={() => !isMzPlus && onSwitchTab("upgrade")}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg ${
-                !isMzPlus ? 'cursor-pointer hover:border-[#F9D074]/50 hover:bg-[#C9A84C]/20 hover:scale-105 active:scale-95' : ''
+                !isMzPlus
+                  ? "cursor-pointer hover:border-[#F9D074]/50 hover:bg-[#C9A84C]/20 hover:scale-105 active:scale-95"
+                  : ""
               } ${
-              isMzPlus 
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-700 border-white/20 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)] scale-100' 
-                : 'bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/30 text-[var(--color-gold-main)] shadow-[0_0_15px_rgba(201,168,76,0.1)]'
-            }`}>
-              <Crown size={12} className={isMzPlus ? 'animate-pulse' : 'opacity-70'} />
+                isMzPlus
+                  ? "bg-gradient-to-r from-purple-600 to-indigo-700 border-white/20 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)] scale-100"
+                  : "bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/30 text-[var(--color-gold-main)] shadow-[0_0_15px_rgba(201,168,76,0.1)]"
+              }`}
+            >
+              <Crown
+                size={12}
+                className={isMzPlus ? "animate-pulse" : "opacity-70"}
+              />
               <span className="text-[10px] font-black uppercase tracking-[0.1em] italic select-none">
-                {isMzPlus ? 'ACCÈS PREMIUM' : 'COMPTE STANDARD'}
+                {isMzPlus ? "ACCÈS PREMIUM" : "COMPTE STANDARD"}
               </span>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-2 mb-4 relative z-10">
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-baseline">
-              <motion.div 
-                key={showBalance ? 'visible' : 'hidden'}
+              <motion.div
+                key={showBalance ? "visible" : "hidden"}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex flex-col"
@@ -600,30 +834,30 @@ export const GlobalView: React.FC<any> = ({
                 )}
               </motion.div>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setShowBalance(!showBalance)}
               className="p-2.5 bg-white/5 rounded-xl text-[var(--color-text-gray)] hover:text-[var(--color-gold-main)] transition-all border border-white/5 active:scale-95 shadow-lg flex items-center justify-center translate-y-[-4px]"
             >
               {showBalance ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          
+
           <div className="mt-3 flex items-center gap-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-               <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
-               <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                 Gains Aujourd'hui : <span className="text-white">+{todayGainFormatted}</span>
-               </span>
+              <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                Gains Aujourd'hui :{" "}
+                <span className="text-white">+{todayGainFormatted}</span>
+              </span>
             </div>
           </div>
         </div>
-
       </motion.div>
 
       {/* 2. BOUTON RETIRER (SLEEK) */}
-      <motion.button 
-        whileHover={{ scale: 1.01, boxShadow: '0 0 20px rgba(201,168,76,0.1)' }}
+      <motion.button
+        whileHover={{ scale: 1.01, boxShadow: "0 0 20px rgba(201,168,76,0.1)" }}
         whileTap={{ scale: 0.99 }}
         onClick={() => {
           setShowWithdrawForm(true);
@@ -634,7 +868,7 @@ export const GlobalView: React.FC<any> = ({
       </motion.button>
 
       {showWithdrawForm && (
-        <WithdrawalFormView 
+        <WithdrawalFormView
           profile={profile}
           balance={totalCash}
           onClose={() => setShowWithdrawForm(false)}
@@ -642,51 +876,59 @@ export const GlobalView: React.FC<any> = ({
         />
       )}
 
-
-
       {/* 4. ACTIONS (NEW CIRCULAR ALIGNMENT) */}
       <div className="space-y-4 pt-4">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-[9px] font-black uppercase text-[var(--color-text-gray)] tracking-[0.4em]">Que veux-tu faire ?</h3>
+          <h3 className="text-[9px] font-black uppercase text-[var(--color-text-gray)] tracking-[0.4em]">
+            Que veux-tu faire ?
+          </h3>
           <div className="h-[1px] flex-1 ml-4 bg-[var(--color-border-gold)] opacity-20"></div>
         </div>
-        
+
         <div className="flex items-center justify-center gap-8 px-2 py-4">
           {categories.map((cat, idx) => (
             <motion.div
               key={cat.id}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 * idx, type: 'spring' }}
+              transition={{ delay: 0.1 * idx, type: "spring" }}
               className="flex flex-col items-center gap-3 active:scale-95 transition-transform"
             >
               <button
-                id={cat.id === 'business' ? 'shop-category-btn' : undefined}
+                id={cat.id === "business" ? "shop-category-btn" : undefined}
                 onClick={() => {
-                  if (cat.id === 'business') {
-                    onSwitchTab('affiliation');
+                  if (cat.id === "business") {
+                    onSwitchTab("affiliation");
                     setIsShopHighlighted(false); // remove highlight on click
-                    window.dispatchEvent(new CustomEvent('mz-shop-opened'));
+                    window.dispatchEvent(new CustomEvent("mz-shop-opened"));
                   } else {
                     setActiveCategory(cat.id as any);
                   }
                 }}
                 className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-700 ease-out
-                  ${cat.id === 'business' && isShopHighlighted 
-                      ? 'bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/30 border-[3px] border-[#C9A84C] shadow-[0_0_60px_rgba(201,168,76,0.8)] scale-110 z-50 ring-4 ring-[#C9A84C]/50 ring-offset-4 ring-offset-[#0A0908]' 
-                      : 'bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]'
+                  ${
+                    cat.id === "business" && isShopHighlighted
+                      ? "bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/30 border-[3px] border-[#C9A84C] shadow-[0_0_60px_rgba(201,168,76,0.8)] scale-110 z-50 ring-4 ring-[#C9A84C]/50 ring-offset-4 ring-offset-[#0A0908]"
+                      : "bg-gradient-to-br from-[#1A1814] to-[#0A0908] border border-[var(--color-border-gold)] shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-[var(--color-gold-main)]/50 hover:shadow-[0_0_30px_rgba(201,168,76,0.1)]"
                   }
                 `}
               >
                 {/* Ping effect when highlighted */}
-                {cat.id === 'business' && isShopHighlighted && (
+                {cat.id === "business" && isShopHighlighted && (
                   <>
                     <div className="absolute inset-0 rounded-full border-[2px] border-[#C9A84C] animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
-                    <motion.div 
+                    <motion.div
                       className="absolute -top-16 flex flex-col items-center pointer-events-none"
                       initial={{ y: -10, opacity: 0 }}
                       animate={{ y: [0, 8, 0], opacity: 1 }}
-                      transition={{ y: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.3 } }}
+                      transition={{
+                        y: {
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        },
+                        opacity: { duration: 0.3 },
+                      }}
                     >
                       <div className="bg-[#C9A84C] text-black font-black text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(201,168,76,0.6)]">
                         Clique ici
@@ -704,8 +946,12 @@ export const GlobalView: React.FC<any> = ({
                 )}
               </button>
               <div className="text-center space-y-0.5">
-                <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-main)] drop-shadow-sm">{cat.title}</span>
-                <p className="text-[8px] font-bold text-[var(--color-text-gray)] opacity-40 uppercase tracking-tighter">{cat.desc}</p>
+                <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-main)] drop-shadow-sm">
+                  {cat.title}
+                </span>
+                <p className="text-[8px] font-bold text-[var(--color-text-gray)] opacity-40 uppercase tracking-tighter">
+                  {cat.desc}
+                </p>
               </div>
             </motion.div>
           ))}
@@ -717,466 +963,89 @@ export const GlobalView: React.FC<any> = ({
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.4)]"></span>
-            <h3 className="text-[12px] font-black uppercase text-white tracking-[0.2em]">Retraits en temps réel</h3>
+            <h3 className="text-[12px] font-black uppercase text-white tracking-[0.2em]">
+              Retraits en temps réel
+            </h3>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
-              <span className="text-[7px] font-bold text-[var(--color-text-gray)] uppercase tracking-widest">Connecté</span>
+              <span className="text-[7px] font-bold text-[var(--color-text-gray)] uppercase tracking-widest">
+                Connecté
+              </span>
             </div>
           </div>
         </div>
-        
-        <div className="bg-gradient-to-r from-transparent via-purple-500/5 to-transparent py-1 text-center">
-          <p className="text-[8px] font-bold text-purple-400/60 uppercase tracking-[0.2em]">Les utilisateurs qui génèrent le plus de revenus sont des membres PREMIUM.</p>
+
+        <div className="bg-gradient-to-r from-transparent via-purple-500/5 to-transparent py-1 text-center mb-4">
+          <p className="text-[8px] font-bold text-purple-400/60 uppercase tracking-[0.2em]">
+            Les utilisateurs qui génèrent le plus de revenus sont des membres
+            PREMIUM.
+          </p>
         </div>
-        
-        <LiveWithdrawalFeed />
-      </div>
-    </div>
-  );
-};
 
-const xmur3 = (str: string) => {
-    let h = 1779033703;
-    for(let i = 0; i < str.length; i++) {
-        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-        h = (h << 13) | (h >>> 19);
-    }
-    return function() {
-        h = Math.imul(h ^ (h >>> 16), 2246822507);
-        h = Math.imul(h ^ (h >>> 13), 3266489909);
-        return (h ^= h >>> 16) >>> 0;
-    }
-};
-
-const sfc32 = (a: number, b: number, c: number, d: number) => {
-    return function() {
-      a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0; 
-      let t = (a + b) | 0;
-      a = b ^ b >>> 9;
-      b = c + (c << 3) | 0;
-      c = (c << 21 | c >>> 11);
-      d = d + 1 | 0;
-      t = t + d | 0;
-      c = c + t | 0;
-      return (t >>> 0) / 4294967296;
-    }
-};
-
-interface LiveWithdrawalEvent {
-    id: string;
-    name: string;
-    amountXAF: number;
-    currency: string;
-    type: 'validated' | 'rejected' | 'pending';
-    finalType?: 'validated' | 'rejected';
-    waitDuration?: number;
-    method: string;
-    reason: string;
-    time: number;
-    isPremium: boolean;
-    showFlash: boolean;
-    progress: number;
-}
-
-const LiveWithdrawalFeed = () => {
-  const names = [
-    // --- West Africa ---
-    "Abdoulaye", "Aminata", "Moussa", "Fatoumata", "Ibrahim", "Mariam", "Ousmane", "Aissatou", "Sekou", "Kadidiatou",
-    "Cheick", "Djeneba", "Bakary", "Sira", "Modibo", "Tene", "Lamine", "Awa", "Youssouf", "Fanta",
-    "Issa", "Koumba", "Amadou", "Hawa", "Boubacar", "Salimatou", "Adama", "Ouleymatou", "Souleymane", "Djenebou",
-    "Aliou", "Bintou", "Mamoudou", "Kadiatou", "Bréhima", "Ramata", "Daouda", "Safiatou", "Sidi", "Rokiatou",
-    "Mahamadou", "Nana", "Yaya", "Maimouna", "Ishaq", "Alimatou", "Oumar", "Zeynab", "Yacouba", "Nènè",
-    "Seydou", "Aicha", "Tidiane", "Assétou", "Bassirou", "Fatim", "Drissa", "Korotoumou", "Mory", "Mariame",
-    "Dramane", "Sali", "Karim", "Zali", "Hamidou", "Penda", "Kalifa", "Kadia", "Ouro", "Binta",
-    "Lassina", "Assetou", "Adou", "Oumou", "Demba", "Fadima", "Samba", "Founé", "Mamadou", "Kadi",
-    "Aboubacar", "Fatou", "Sidiki", "Hadja", "Yero", "Aïssata", "Alpha", "Djeynabou", "Ibrahima", "Zainab",
-    "Karamoko", "Oulèye", "Sékouba", "Nafi", "Tidjani", "Oumi", "Moustapha", "Siré", "Amara", "Aminatou",
-    "Habib", "Nene", "Mohamed", "Téning", "Ismael", "Coumba", "Broulaye", "Goundo", "Soumaila", "Nantènè",
-    "Gaoussou", "Houlaymatou", "Oury", "Fatima", "Lansana", "Balkissa", "Bafodé", "Soukeyna", "Aly", "M'Mah",
-    // --- Central Africa ---
-    "Dieudonné", "Marie-Noëlle", "Bienvenu", "Espérance", "Prosper", "Clémence", "Désiré", "Prudence", "Innocent", "Divine",
-    "Célestin", "Fidèle", "Aristide", "Chantal", "Rodrigue", "Bernadette", "Florent", "Yvonne", "Gervais", "Félicité",
-    "Arsène", "Solange", "Théophile", "Eulalie", "Constant", "Brigitte", "Urbain", "Odette", "Landry", "Chantal",
-    "Parfait", "Evelyne", "Gaspard", "Marceline", "Godefroy", "Rosalie", "Léopold", "Germaine", "Pacôme", "Blanche",
-    // --- Biblical / Christian ---
-    "Victor", "Hélène", "Arnaud", "Esther", "Samuel", "Marthe", "David", "Ruth", "Isaac", "Sarah",
-    "Daniel", "Léa", "Joseph", "Rachel", "Noé", "Noémie", "Gédéon", "Déborah", "Élie", "Patience",
-    "Joël", "Grâce", "Josué", "Victoire", "Siméon", "Espérance", "Silas", "Miséricorde", "Jonas", "Joie",
-    "Barnabé", "Félicité", "Timothée", "Bénédicte", "Stéphane", "Angèle", "Yannick", "Sonia", "Franck", "Carine",
-    // --- North Africa / Arabic ---
-    "Abdel", "Noura", "Riad", "Layla", "Sami", "Farida", "Omar", "Siham", "Yassin", "Amira",
-    "Khaled", "Ines", "Malek", "Dounia", "Walid", "Lina", "Zied", "Myriam", "Mehdi", "Hana",
-    "Anas", "Meriem", "Hamza", "Salma", "Sofiane", "Rym", "Oualid", "Nadia", "Bilal", "Asma",
-    "Tarek", "Imane", "Fouad", "Faten", "Nabil", "Houda", "Adel", "Zohra", "Wissem", "Latifa",
-    // --- French / International ---
-    "Thierry", "Nadège", "Olivier", "Mireille", "Christian", "Berthe", "Alain", "Céline", "Patrice", "Muriel",
-    "Gilles", "Christelle", "Hervé", "Sylvie", "Laurent", "Isabelle", "Marc", "Françoise", "Eric", "Pascale",
-    "Denis", "Béatrice", "Luc", "Véronique", "Guy", "Dominique", "Bruno", "Brigitte", "Didier", "Colette",
-    "Richard", "Nicole", "Serge", "Denise", "Dominique", "Jacqueline", "Jean-Pierre", "Janine", "Jean-Claude", "Suzanne",
-    "Jean-Marie", "Madeleine", "Jean-Paul", "Josiane", "Jean-Luc", "Gisèle", "Philippe", "Andrée", "Michel", "Paulette",
-    "Claude", "Raymonde", "Gérard", "Simone", "Bernard", "Yvette", "Robert", "Renée", "Marcel", "Marcelle",
-    // --- New Unique Mix (to reach 500+) ---
-    "Aron", "Zora", "Tarik", "Safia", "Yosra", "Majid", "Laila", "Nourdine", "Houria", "Mounir",
-    "Sonia", "Farid", "Rania", "Aissa", "Salim", "Fatina", "Rachid", "Dounia", "Malik", "Anissa",
-    "Yacine", "Karima", "Faysal", "Leila", "Hakim", "Zahra", "Omar", "Samiha", "Ilias", "Imen",
-    "Hassen", "Mouna", "Sofiane", "Rym", "Adel", "Zohra", "Walid", "Alya", "Skander", "Mayssa",
-    "Anouar", "Chourouk", "Raouf", "Sawssen", "Faouzi", "Sarra", "Salem", "Wiem", "Jamel", "Linda",
-    "Rami", "Amel", "Samir", "Najeh", "Wissem", "Jouda", "Kamel", "Samia", "Fida", "Zouhair",
-    "Rokaia", "Lamine", "Malika", "Hafid", "Assia", "Brahim", "Latifa", "Messaoud", "Fatiha", "Aziz",
-    "Mina", "Said", "Lila", "Nacer", "Soumaya", "Djamel", "Nora", "Ryad", "Zina", "Slim",
-    "Ines", "Mehdi", "Hana", "Anis", "Meriem", "Hamza", "Salma", "Sofiane", "Rym", "Oualid",
-    "Nadia", "Bilal", "Asma", "Tarek", "Imane", "Fouad", "Faten", "Nabil", "Houda", "Adel",
-    "Zohra", "Wissem", "Latifa", "Skander", "Mounira", "Jalel", "Fafani", "Hassen", "Mina", "Rached",
-    "Baya", "Ridha", "Najet", "Chiheb", "Faiza", "Mondher", "Dalila", "Lotfi", "Souad", "Habib",
-    "Bassem", "Marwa", "Nizar", "Dorra", "Slim", "Olfa", "Wajdi", "Emna", "Haythem", "Jihene",
-    "Makrem", "Sabrine", "Ramzi", "Ichrak", "Chaker", "Wafa", "Mohsen", "Nour", "Fathi", "Ines",
-    "Hichem", "Sana", "Ilyes", "Ons", "Rafik", "Maya", "Walid", "Rim", "Akram", "Eya",
-    "Bechir", "Yasmine", "Mounir", "Chaima", "Salah", "Hela", "Fares", "Ameni", "Zied", "Sirine",
-    "Amine", "Nour", "Hatem", "Yousra", "Slimen", "Ghada", "Sadok", "Islem", "Taieb", "Rania",
-    "Tijani", "Donia", "Majdi", "Oumayma", "Marwen", "Rahma", "Wassim", "Molka", "Riadh", "Tasnim",
-    "Hechmi", "Hadil", "Slaheddine", "Zeineb", "Moncef", "Sirine", "Lassaad", "Rawia", "Abderrazzak", "Zina",
-    "Ferid", "Henda", "Mustapha", "Manel", "Fethi", "Khouloud", "Hedi", "Balkis", "Khelil", "Nourhene",
-    "Anouar", "Chourouk", "Raouf", "Mayssa", "Taoufik", "Sawssen", "Faouzi", "Sarra", "Salem", "Nour",
-    "Hajji", "Wiem", "Jamel", "Linda", "Rami", "Amel", "Samir", "Najeh", "Wissem", "Jouda",
-    "Kamel", "Samia", "Adel", "Fida", "Zouhair", "Rokaia", "Lamine", "Malika", "Hafid", "Assia",
-    "Brahim", "Latifa", "Messaoud", "Fatiha", "Aziz", "Mina", "Said", "Lila", "Nacer", "Soumaya",
-    "Koffi", "Ama", "Kwame", "Abena", "Kwesi", "Akua", "Kojo", "Yaa", "Ekow", "Afia",
-    "Chidi", "Chioma", "Emeka", "Ifunanya", "Nnamdi", "Oluchi", "Obinna", "Amaka", "Uche", "Nkechi",
-    "Tunde", "Folake", "Segun", "Bisi", "Femi", "Ronke", "Kunle", "Yinka", "Dapo", "Nike",
-    "Moussa", "Khady", "Souleymane", "Fatou", "Cheikh", "Mariama", "Abdou", "Astou", "Ibrahima", "Penda",
-    "Diallo", "Sow", "Ba", "Barry", "Sy", "Niang", "Diop", "Fall", "Gueye", "Ndiaye",
-    "Camara", "Keita", "Kante", "Traore", "Kourechi", "Dembele", "Coulibaly", "Diakitè", "Sissoko", "Fofana",
-    "Ouedraogo", "Sawadogo", "Zongo", "Kabore", "Sore", "Yameogo", "Ouattara", "Sanogo", "Coulibaly", "Koné",
-    "Gbagbo", "Ouattara", "Konan", "Bedié", "Soro", "Bakayoko", "Hamed", "Duncan", "Achi", "Tanoh",
-    "Sassou", "Nguesso", "Bongo", "Ondimba", "Biya", "Deby", "Patassé", "Bozizé", "Touadera", "Mba",
-    "Tshisekedi", "Kabila", "Mobutu", "Lumumba", "Kasavubu", "Gizenga", "Bemba", "Katumbi", "Fayulu", "Matata",
-    "Museveni", "Kagame", "Kenyatta", "Ruto", "Odinga", "Magufuli", "Samia", "Nkurunziza", "Ndayishimiye", "Buyoya",
-    "Ramaphosa", "Zuma", "Mbeki", "Mandela", "De Klerk", "Botha", "Vorster", "Verwoerd", "Strijdom", "Malan",
-    "Lula", "Dilma", "Temer", "Bolsonaro", "Chavez", "Maduro", "Morales", "Arce", "Correa", "Moreno",
-    "Petro", "Duque", "Santos", "Uribe", "Pastrana", "Samper", "Gaviria", "Barco", "Betancur", "Turbay",
-    "Fernandez", "Macri", "Kirchner", "Duhalde", "Rodriguez", "Puerta", "De la Rua", "Menem", "Alfonsin", "Videla",
-    "Pinochet", "Allende", "Frei", "Lagos", "Bachelet", "Piñera", "Boric", "Aylwin", "Alessandri", "Montalva",
-    "Castro", "Diaz-Canel", "Ortega", "Murillo", "Hernandez", "Zelaya", "Lobo", "Maduro", "Cortizo", "Varela",
-    "Bukele", "Funes", "Saca", "Flores", "Calderon", "Cristiani", "Duarte", "Giammattei", "Morales", "Perez",
-    "Arévalo", "Colom", "Berger", "Portillo", "Arzú", "Serrano", "Cerezo", "Rios", "Lucas", "Laugerud",
-    "Andres", "Sofia", "Mateo", "Valentina", "Sebastian", "Isabella", "Nicolas", "Camila", "Diego", "Mariana",
-    "Samuel", "Luciana", "Daniel", "Daniela", "Alejandro", "Gabriela", "Gabriel", "Victoria", "Joaquin", "Martina",
-    "Emmanuel", "Julieta", "Agustin", "Ximena", "Tomas", "Sara", "Benjamin", "Antonella", "Francisco", "Catalina"
-  ];
-
-  const reasons = [
-    "Identité non conforme",
-    "Numéro Mobile Money invalide",
-    "Hors zone autorisée",
-    "Réseau saturé",
-    "Limite quotidienne atteinte",
-    "Vérification manuelle requise",
-    "Échec opérateur"
-  ];
-
-  // Stable Icons for African Mobile Money Providers
-  const getIcon = (method: string) => {
-    switch(method) {
-      case "Orange Money": return "https://brand.orange.com/app/uploads/2016/10/logo-orange.png";
-      case "MTN MoMo": return "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/New-mtn-logo.jpg/200px-New-mtn-logo.jpg";
-      case "Wave": return "https://dashboard.wave.com/static/favicon.ico"; // Using favicon or a stable logo if known
-      case "Airtel Money": return "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Airtel_logo-01.png/200px-Airtel_logo-01.png";
-      case "Moov Money": return "https://www.moov-africa.ml/PublishingImages/Logo/Logo-Moov-Africa.png";
-      default: return "";
-    }
-  };
-
-  const generateWithdrawalsForDate = (date: Date): LiveWithdrawalEvent[] => {
-     const dateString = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}-withdrawals`;
-     const seed = xmur3(dateString);
-     const rand = sfc32(seed(), seed(), seed(), seed());
-     
-     const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())).getTime();
-     const endOfDay = startOfDay + 24 * 3600000;
-     const events: LiveWithdrawalEvent[] = [];
-     
-     let currentTime = startOfDay;
-     let i = 0;
-     
-     const methods = ["Orange Money", "MTN MoMo", "Wave", "Airtel Money", "Moov Money"];
-     const currencies = ['XAF', 'XOF', 'NGN', 'GHS', 'EUR', 'KES', 'ZAR'];
-
-     while (currentTime < endOfDay) {
-        // Interval entre 15 minutes et 3h (180 minutes)
-        const gapMinutes = Math.floor(rand() * 166) + 15;
-        const gapSeconds = Math.floor(rand() * 60);
-        currentTime += gapMinutes * 60000 + gapSeconds * 1000;
-        
-        if (currentTime >= endOfDay) break;
-        
-        const name = names[Math.floor(rand() * names.length)];
-        const method = methods[Math.floor(rand() * methods.length)];
-        const currency = currencies[Math.floor(rand() * currencies.length)];
-
-        let amountXAF = 0;
-        if (rand() > 0.8) {
-          amountXAF = (Math.floor(rand() * 20) + 11) * 1000; // 11000 to 30000
-        } else {
-          amountXAF = (Math.floor(rand() * 9) + 1) * 1000 + (Math.floor(rand() * 10) * 100); // 1000 to 10000
-        }
-
-        const typeFinal = rand() > 0.85 ? 'rejected' : 'validated';
-        const reason = typeFinal === 'rejected' ? reasons[Math.floor(rand() * reasons.length)] : '';
-        const isPremium = rand() > 0.02;
-
-        const waitDuration = (Math.floor(rand() * 10) + 5) * 60000; // Temps d'attente entre 5 et 15 minutes
-
-        events.push({
-           id: `${dateString}-${i}`,
-           name,
-           amountXAF,
-           currency,
-           type: 'pending', // Will be evaluated dynamically later
-           finalType: typeFinal,
-           waitDuration,
-           method,
-           reason,
-           time: currentTime,
-           isPremium,
-           showFlash: false,
-           progress: 100
-        });
-        i++;
-     }
-     
-     return events;
-  };
-
-  const [visibleFeed, setVisibleFeed] = useState<LiveWithdrawalEvent[]>([]);
-  const [allEvents, setAllEvents] = useState<LiveWithdrawalEvent[]>([]);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-      const today = new Date();
-      const yesterday = new Date(today.getTime() - 86400000);
-      const tomorrow = new Date(today.getTime() + 86400000);
-      
-      const generated = [
-         ...generateWithdrawalsForDate(yesterday),
-         ...generateWithdrawalsForDate(today),
-         ...generateWithdrawalsForDate(tomorrow)
-      ].sort((a,b) => b.time - a.time);
-      
-      setAllEvents(generated);
-  }, []);
-
-  useEffect(() => {
-      const interval = setInterval(() => {
-          const currentNow = Date.now();
-          setNow(currentNow);
-          if (allEvents.length > 0) {
-              const past = allEvents.filter(s => s.time <= currentNow);
-              
-              const dynamicPast = past.map(ev => {
-                  const timeSince = currentNow - ev.time;
-                  if (ev.waitDuration && timeSince < ev.waitDuration) {
-                      return { ...ev, type: 'pending', progress: Math.min(95, (timeSince / ev.waitDuration) * 100) } as LiveWithdrawalEvent;
-                  } else {
-                      const showFlash = ev.waitDuration && timeSince >= ev.waitDuration && timeSince < ev.waitDuration + 5000;
-                      return { ...ev, type: ev.finalType || 'validated', progress: 100, showFlash: !!showFlash } as LiveWithdrawalEvent;
-                  }
-              });
-
-              setVisibleFeed(dynamicPast.slice(0, 5));
-          }
-      }, 1000);
-      return () => clearInterval(interval);
-  }, [allEvents]);
-
-  const getTimeAgo = (time: number) => {
-    const diff = Math.max(0, Math.floor((now - time) / 1000));
-    if (diff < 60) return "à l'instant";
-    const mins = Math.floor(diff / 60);
-    if (mins < 60) return `il y a ${mins} min`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `il y a ${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `il y a ${days}j`;
-  };
-
-  return (
-    <div className="space-y-4">
-      <AnimatePresence mode="popLayout">
-        {visibleFeed.map((ev) => (
-          <motion.div
-            key={ev.id}
-            layout
-            initial={{ opacity: 0, scale: 0.8, x: -30, filter: 'blur(10px)' }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1, 
-              x: 0, 
-              filter: 'blur(0px)',
-              backgroundColor: ev.showFlash ? 'rgba(16, 185, 129, 0.4)' : '#080808'
-            }}
-            exit={{ opacity: 0, scale: 0.9, x: 30, filter: 'blur(5px)' }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className={`group relative overflow-hidden rounded-[2rem] p-5 border transition-all duration-700 shadow-2xl backdrop-blur-3xl ${
-              ev.type === 'validated' ? 'border-emerald-500/40' :
-              ev.type === 'rejected' ? 'border-red-500/40' :
-              'border-[var(--color-border-gold)]/40 animate-pulse'
-            }`}
-          >
-            {ev.isPremium && (
-              <div className="absolute top-3 right-5 flex items-center gap-1.5 z-20 opacity-50">
-                <div className="w-[3px] h-[3px] rounded-full bg-purple-500 shadow-[0_0_5px_#a855f7]" />
-                <span className="text-[6px] font-black text-purple-400 uppercase tracking-[0.2em]">Membre Premium</span>
-              </div>
-            )}
-            {/* Visual Dopamine Layer */}
-            <div className={`absolute inset-0 opacity-[0.03] pointer-events-none ${
-              ev.type === 'validated' ? 'bg-[radial-gradient(circle_at_center,white,transparent)]' : ''
-            }`}></div>
-            
-            {/* Liquid Background Pulse */}
-            <motion.div 
-               animate={{ 
-                 scale: [1, 1.2, 1],
-                 opacity: [0.05, 0.1, 0.05]
-               }}
-               transition={{ duration: 4, repeat: Infinity }}
-               className={`absolute -right-10 -top-10 w-40 h-40 blur-[50px] rounded-full pointer-events-none ${
-                 ev.type === 'validated' ? 'bg-emerald-500' :
-                 ev.type === 'rejected' ? 'bg-red-500' :
-                 'bg-[var(--color-gold-main)]'
-               }`}
-            />
-
-            <div className="relative z-10 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Method Platform Icon */}
-                <div className="relative shrink-0">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center p-2 border transition-all duration-500 ${
-                    ev.type === 'validated' ? 'bg-emerald-500/10 border-emerald-500/20' :
-                    ev.type === 'rejected' ? 'bg-red-500/10 border-red-500/20' :
-                    'bg-white/5 border-white/5'
-                  }`}>
-                    <img 
-                      src={getIcon(ev.method)} 
-                      alt={ev.method} 
-                      className="w-full h-full object-contain" 
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        // Fallback to a financial icon if the logo fails to load
-                        (e.target as HTMLImageElement).src = "https://cdn-icons-png.flaticon.com/512/2169/2169864.png";
-                        (e.target as HTMLImageElement).onerror = null; // Prevent infinite loop
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                       <h4 className="text-[13px] font-black text-white leading-none">{ev.name}</h4>
-                    </div>
-                    <div className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest uppercase border ${
-                      ev.type === 'validated' ? 'bg-emerald-500 text-black border-emerald-400' :
-                      ev.type === 'rejected' ? 'bg-red-500 text-white border-red-400' :
-                      'bg-white/10 text-white border-white/10'
-                    }`}>
-                      {ev.type === 'validated' ? 'REUSSI' : ev.type === 'rejected' ? 'REJETÉ' : 'EN COURS'}
-                    </div>
-                  </div>
-                  
-                  <p className="text-[10px] font-medium leading-tight">
-                    {ev.type === 'validated' ? (
-                      <span className="text-emerald-500">Retrait effectué avec succès via {ev.method}</span>
-                    ) : ev.type === 'rejected' ? (
-                      <span className="text-red-500">Retrait rejeté : {ev.reason}</span>
-                    ) : (
-                      <span className="text-[var(--color-gold-main)] animate-pulse">Vérification du retrait en cours...</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-right shrink-0">
-                <div className="flex flex-col items-end">
-                  <CurrencyDisplay 
-                    amount={ev.amountXAF} 
-                    className={`text-[18px] font-black tracking-tight ${
-                      ev.type === 'validated' ? 'text-emerald-500' : 
-                      ev.type === 'rejected' ? 'text-red-500' : 
-                      'text-white'
-                    }`}
-                    secondaryClassName="hidden"
-                    showOriginal={false}
-                  />
-                  <span className="text-[8px] font-bold text-neutral-500 uppercase">{getTimeAgo(ev.time)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Neural Progress Line */}
-            <div className="mt-4 relative h-[3px] w-full bg-white/5 rounded-full overflow-hidden">
-               {ev.type === 'pending' && (
-                 <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)] opacity-50"></div>
-               )}
-               <motion.div 
-                 initial={{ width: 0 }}
-                 animate={{ width: `${ev.progress}%` }}
-                 transition={{ duration: 1.2, ease: "circOut" }}
-                 className={`h-full relative ${
-                   ev.type === 'validated' ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_20px_#10b981]' : 
-                   ev.type === 'rejected' ? 'bg-red-600' : 
-                   'bg-gradient-to-r from-transparent via-[var(--color-gold-main)] to-white'
-                 }`}
-               >
-                 {ev.type === 'pending' && (
-                   <motion.div 
-                     animate={{ x: ['0%', '200%'] }}
-                     transition={{ repeat: Infinity, duration: 1 }}
-                     className="absolute inset-0 bg-white/20 blur-sm"
-                   />
-                 )}
-               </motion.div>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      <div className="mt-8 p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
-         <div className="flex items-center gap-3">
-            <Shield size={16} className="text-emerald-500" />
-            <p className="text-[10px] font-bold text-white uppercase tracking-tight">Système de paiement sécurisé</p>
-         </div>
-         <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-tighter">Blockchain MZ+</p>
+        <button
+          onClick={() => onSwitchTab('live_withdrawals')}
+          className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <FileText className="text-emerald-400" size={20} />
+             </div>
+             <div className="text-left">
+                <p className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Consulter le registre public</p>
+                <p className="text-[10px] text-neutral-400">Voir les retraits validés en temps réel</p>
+             </div>
+          </div>
+          <ChevronRight className="text-neutral-500 group-hover:text-emerald-400 transition-colors" size={20} />
+        </button>
       </div>
     </div>
   );
 };
 
 const PillarCard = ({ title, desc, icon: Icon, color, onClick }: any) => {
-  const isGold = color === 'gold';
-  const isPurple = color === 'purple';
+  const isGold = color === "gold";
+  const isPurple = color === "purple";
   return (
-    <button 
+    <button
       onClick={onClick}
       className="group relative h-64 md:h-[400px] w-full rounded-[2.5rem] overflow-hidden border border-white/5 bg-[#0a0a08] transition-all hover:scale-[1.01] active:scale-98 duration-500 shadow-xl"
     >
-      <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-700 ${isGold ? 'bg-[var(--color-gold-main)]' : isPurple ? 'bg-[var(--color-academy-purple)]' : 'bg-emerald-600'}`}></div>
+      <div
+        className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-700 ${isGold ? "bg-[var(--color-gold-main)]" : isPurple ? "bg-[var(--color-academy-purple)]" : "bg-emerald-600"}`}
+      ></div>
       <div className="absolute top-0 right-0 p-8 opacity-[0.01] rotate-12 group-hover:rotate-0 transition-transform duration-1000">
-        <Icon size={240} className={isGold ? 'text-[var(--color-gold-main)]' : isPurple ? 'text-[var(--color-academy-purple)]' : 'text-emerald-600'} />
+        <Icon
+          size={240}
+          className={
+            isGold
+              ? "text-[var(--color-gold-main)]"
+              : isPurple
+                ? "text-[var(--color-academy-purple)]"
+                : "text-emerald-600"
+          }
+        />
       </div>
       <div className="relative h-full p-8 flex flex-col justify-between items-start text-left z-10">
-        <div className={`p-4 rounded-2xl border transition-all duration-500 ${isGold ? 'bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/20 text-[var(--color-gold-main)] group-hover:bg-[var(--color-gold-main)] group-hover:text-black' : isPurple ? 'bg-[var(--color-academy-purple)]/10 border-[var(--color-academy-purple)]/20 text-purple-400 group-hover:bg-[var(--color-academy-purple)] group-hover:text-white' : 'bg-emerald-600/10 border-emerald-600/20 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white'}`}>
+        <div
+          className={`p-4 rounded-2xl border transition-all duration-500 ${isGold ? "bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/20 text-[var(--color-gold-main)] group-hover:bg-[var(--color-gold-main)] group-hover:text-black" : isPurple ? "bg-[var(--color-academy-purple)]/10 border-[var(--color-academy-purple)]/20 text-purple-400 group-hover:bg-[var(--color-academy-purple)] group-hover:text-white" : "bg-emerald-600/10 border-emerald-600/20 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white"}`}
+        >
           <Icon size={24} strokeWidth={2.5} />
         </div>
         <div className="space-y-3">
-           <div>
-              <h3 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white italic group-hover:translate-x-1 transition-transform duration-500">{title}</h3>
-              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#6B6050] mt-1 leading-relaxed max-w-[160px] opacity-80">{desc}</p>
-           </div>
-           <div className={`flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500 ${isGold ? 'text-[var(--color-gold-main)]' : isPurple ? 'text-purple-400' : 'text-emerald-400'}`}>
-              Ouvrir <ArrowRight size={10} />
-           </div>
+          <div>
+            <h3 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white italic group-hover:translate-x-1 transition-transform duration-500">
+              {title}
+            </h3>
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#6B6050] mt-1 leading-relaxed max-w-[160px] opacity-80">
+              {desc}
+            </p>
+          </div>
+          <div
+            className={`flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500 ${isGold ? "text-[var(--color-gold-main)]" : isPurple ? "text-purple-400" : "text-emerald-400"}`}
+          >
+            Ouvrir <ArrowRight size={10} />
+          </div>
         </div>
       </div>
     </button>
@@ -1184,15 +1053,22 @@ const PillarCard = ({ title, desc, icon: Icon, color, onClick }: any) => {
 };
 
 const SubServiceCard = ({ title, desc, icon: Icon, onClick, locked }: any) => (
-  <button onClick={onClick} className="group relative w-full p-5 rounded-2xl bg-[#0d0d0c] border border-[var(--color-border-gold)] transition-all hover:border-[var(--color-gold-main)]/20 active:scale-98 flex items-center justify-between shadow-lg">
+  <button
+    onClick={onClick}
+    className="group relative w-full p-5 rounded-2xl bg-[#0d0d0c] border border-[var(--color-border-gold)] transition-all hover:border-[var(--color-gold-main)]/20 active:scale-98 flex items-center justify-between shadow-lg"
+  >
     <div className="flex items-center gap-4">
-       <div className="p-3 bg-white/5 rounded-xl text-[#6B6050] group-hover:text-[var(--color-gold-main)] group-hover:bg-[var(--color-gold-main)]/10 transition-all border border-transparent group-hover:border-[var(--color-gold-main)]/10">
-          <Icon size={20} />
-       </div>
-       <div className="text-left">
-          <h4 className="text-xs font-black uppercase text-white tracking-tight group-hover:text-[var(--color-gold-main)] transition-colors">{title}</h4>
-          <p className="text-[8px] font-bold text-[#6B6050] uppercase mt-0.5 tracking-wider opacity-70">{desc}</p>
-       </div>
+      <div className="p-3 bg-white/5 rounded-xl text-[#6B6050] group-hover:text-[var(--color-gold-main)] group-hover:bg-[var(--color-gold-main)]/10 transition-all border border-transparent group-hover:border-[var(--color-gold-main)]/10">
+        <Icon size={20} />
+      </div>
+      <div className="text-left">
+        <h4 className="text-xs font-black uppercase text-white tracking-tight group-hover:text-[var(--color-gold-main)] transition-colors">
+          {title}
+        </h4>
+        <p className="text-[8px] font-bold text-[#6B6050] uppercase mt-0.5 tracking-wider opacity-70">
+          {desc}
+        </p>
+      </div>
     </div>
     {locked ? (
       <div className="p-1.5 bg-black/40 rounded-lg text-[#6B6050] border border-white/5 opacity-50">
@@ -1206,129 +1082,172 @@ const SubServiceCard = ({ title, desc, icon: Icon, onClick, locked }: any) => (
   </button>
 );
 
-export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitchTab, onRefresh }) => {
-  const isMzPlus = profile?.user_level === 'niveau_mz_plus';
+export const ProfileTab: React.FC<any> = ({
+  profile,
+  onLogout,
+  isAdmin,
+  onSwitchTab,
+  onRefresh,
+}) => {
+  const isMzPlus = profile?.user_level === "niveau_mz_plus";
   const challengeState = profile?.store_preferences?.challenge_3j || {};
   // Considere the challenge active if it has been presented, not cancelled, and not completely finished
-  const isChallengeActive = challengeState.presented && !challengeState.cancelled && !challengeState.j3Completed;
-  
+  const isChallengeActive =
+    challengeState.presented &&
+    !challengeState.cancelled &&
+    !challengeState.j3Completed;
+
   const handleCancelChallenge = async () => {
-    if (!window.confirm("Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.")) return;
+    if (
+      !window.confirm(
+        "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
+      )
+    )
+      return;
     const newPrefs = { ...(profile.store_preferences || {}) };
     if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
     newPrefs.challenge_3j.cancelled = true;
-    await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', profile.id);
+    await supabase
+      .from("users")
+      .update({ store_preferences: newPrefs })
+      .eq("id", profile.id);
     if (onRefresh) onRefresh();
     window.location.reload();
   };
-  
+
   return (
     <div className="max-w-xl mx-auto space-y-8 pb-24 pt-10 px-5 animate-fade-in font-sans">
-      <SectionTitle 
-        title="Mon Espace Élite" 
-        subtitle="Gérez votre identité et vos paramètres de compte." 
+      <SectionTitle
+        title="Mon Espace Élite"
+        subtitle="Gérez votre identité et vos paramètres de compte."
       />
 
       {/* Admin Panel Quick Access */}
       {isAdmin && (
-        <button 
-          onClick={() => onSwitchTab('admin')}
+        <button
+          onClick={() => onSwitchTab("admin")}
           className="w-full flex items-center gap-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all border-dashed"
         >
           <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500">
             <Lock size={20} />
           </div>
           <div className="text-left">
-            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Accès Prioritaire</p>
-            <h4 className="text-sm font-black text-white uppercase tracking-tighter">Panel Administration</h4>
+            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
+              Accès Prioritaire
+            </p>
+            <h4 className="text-sm font-black text-white uppercase tracking-tighter">
+              Panel Administration
+            </h4>
           </div>
           <ChevronRight size={18} className="ml-auto text-amber-500" />
         </button>
       )}
 
-      {/* Mes Récompenses Débloquées */}
-      <UserRewardsSection profile={profile} />
-
       <div className="relative group">
-         <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-gold-main)] to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-         <div className="relative bg-[#0d0d0c] border border-white/5 rounded-[2.5rem] p-8">
-            <div className="flex flex-col items-center text-center gap-6">
-               <div className="relative">
-                  {(() => {
-                    const userLevel = getCurrentLevel(profile?.xp || 0);
-                    const ProfileIcon = userLevel.icon;
-                    return (
-                      <div 
-                        className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 flex items-center justify-center shadow-2xl relative z-10"
-                        style={{ borderColor: `${userLevel.hex}50`, boxShadow: `0 0 30px ${userLevel.hex}30` }}
-                      >
-                         <ProfileIcon size={40} color={userLevel.hex} style={{ filter: `drop-shadow(0 0 10px ${userLevel.hex}80)` }} />
-                      </div>
-                    );
-                  })()}
-                  {isMzPlus && (
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 z-20">
-                       <Crown size={14} fill="currentColor" />
-                    </div>
-                  )}
-               </div>
-
-               <div className="space-y-1">
-                  <h3 className="text-xl font-black uppercase tracking-tighter text-white italic">
-                    {profile?.full_name || 'Utilisateur Élite'}
-                  </h3>
-                  <div className="flex items-center justify-center gap-2">
-                    {(() => {
-                      const userLevel = getCurrentLevel(profile?.xp || 0);
-                      const Icon = userLevel.icon;
-                      return (
-                         <div 
-                           className="px-3 py-1 flex items-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg transition-transform hover:scale-105"
-                           style={{ 
-                              borderColor: `${userLevel.hex}40`,
-                              color: userLevel.hex, 
-                              backgroundColor: `${userLevel.hex}15`,
-                              boxShadow: `0 0 15px ${userLevel.hex}40`
-                           }}
-                         >
-                           <Icon size={12} strokeWidth={3} />
-                           {userLevel.name}
-                         </div>
-                      );
-                    })()}
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">•</span>
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{profile?.email}</span>
+        <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-gold-main)] to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+        <div className="relative bg-[#0d0d0c] border border-white/5 rounded-[2.5rem] p-8">
+          <div className="flex flex-col items-center text-center gap-6">
+            <div className="relative">
+              {(() => {
+                const userLevel = getCurrentLevel(profile?.xp || 0);
+                const ProfileIcon = userLevel.icon;
+                return (
+                  <div
+                    className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 flex items-center justify-center shadow-2xl relative z-10"
+                    style={{
+                      borderColor: `${userLevel.hex}50`,
+                      boxShadow: `0 0 30px ${userLevel.hex}30`,
+                    }}
+                  >
+                    <ProfileIcon
+                      size={40}
+                      color={userLevel.hex}
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${userLevel.hex}80)`,
+                      }}
+                    />
                   </div>
-               </div>
-
-               <div className="w-full h-[1px] bg-white/5"></div>
-
-
-               <div className="grid grid-cols-2 w-full gap-4">
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                     <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Points Acquis</p>
-                     <p className="text-sm font-black text-[var(--color-gold-main)] uppercase tracking-tighter">{profile?.xp || 0} XP</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                     <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Membre Depuis</p>
-                     <p className="text-sm font-black text-white uppercase tracking-tighter">
-                        {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '---'}
-                     </p>
-                  </div>
-               </div>
+                );
+              })()}
+              {isMzPlus && (
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 z-20">
+                  <Crown size={14} fill="currentColor" />
+                </div>
+              )}
             </div>
-         </div>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-black uppercase tracking-tighter text-white italic">
+                {profile?.full_name || "Utilisateur Élite"}
+              </h3>
+              <div className="flex items-center justify-center gap-2">
+                {(() => {
+                  const userLevel = getCurrentLevel(profile?.xp || 0);
+                  const Icon = userLevel.icon;
+                  return (
+                    <div
+                      className="px-3 py-1 flex items-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg transition-transform hover:scale-105"
+                      style={{
+                        borderColor: `${userLevel.hex}40`,
+                        color: userLevel.hex,
+                        backgroundColor: `${userLevel.hex}15`,
+                        boxShadow: `0 0 15px ${userLevel.hex}40`,
+                      }}
+                    >
+                      <Icon size={12} strokeWidth={3} />
+                      {userLevel.name}
+                    </div>
+                  );
+                })()}
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                  •
+                </span>
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                  {profile?.email}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full h-[1px] bg-white/5"></div>
+
+            <div className="grid grid-cols-2 w-full gap-4">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+                <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">
+                  Points Acquis
+                </p>
+                <p className="text-sm font-black text-[var(--color-gold-main)] uppercase tracking-tighter">
+                  {profile?.xp || 0} XP
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+                <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">
+                  Membre Depuis
+                </p>
+                <p className="text-sm font-black text-white uppercase tracking-tighter">
+                  {profile?.created_at
+                    ? new Date(profile.created_at).toLocaleDateString()
+                    : "---"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <LiquidProgressionTube currentXp={profile?.xp || 0} />
+      <div id="progression-tube">
+        <LiquidProgressionTube currentXp={profile?.xp || 0} />
+      </div>
 
       <div className="flex flex-col items-center mt-6">
-        <button 
-          onClick={() => onSwitchTab('flash_offer')}
+        <button
+          onClick={() => onSwitchTab("flash_offer")}
           className="group relative flex items-center justify-center gap-3 w-full max-w-sm py-4 px-6 rounded-2xl bg-[#0a0a09] border border-[var(--color-border-gold)] hover:border-[var(--color-gold-main)]/50 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-gold-main)]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
-          <Crown size={18} className="text-[var(--color-gold-main)] transition-transform group-hover:scale-110" />
+          <Crown
+            size={18}
+            className="text-[var(--color-gold-main)] transition-transform group-hover:scale-110"
+          />
           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-main)]">
             Passer au niveau supérieur
           </span>
@@ -1336,66 +1255,92 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
       </div>
 
       {/* Icon Grid Actions */}
-      <div className="grid grid-cols-3 gap-3 mt-4">
-        <button 
-          onClick={() => onSwitchTab('leaderboard')}
+      <div className="grid grid-cols-4 gap-2 mt-4">
+        <button
+          onClick={() => onSwitchTab("leaderboard")}
           className="flex flex-col items-center justify-center p-2 transition-all group"
         >
           <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-yellow-500/20 transition-all">
             <Trophy size={20} className="text-yellow-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Classement</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-500/70 mt-0.5">Mondial</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+            Class.
+          </span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-500/70 mt-0.5">
+            Mondial
+          </span>
         </button>
 
-        <button 
-          onClick={() => onSwitchTab('leaderboard_local')}
+        <button
+          onClick={() => onSwitchTab("leaderboard_local")}
           className="flex flex-col items-center justify-center p-2 transition-all group"
         >
           <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all">
             <MapPin size={20} className="text-purple-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Classement</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-purple-400/70 mt-0.5">Local</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+            Class.
+          </span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-purple-400/70 mt-0.5">
+            Local
+          </span>
         </button>
 
-        <button 
-          onClick={() => onSwitchTab('weekly_challenge')}
+        <button
+          onClick={() => {
+            onSwitchTab("weekly_challenge");
+            localStorage.setItem('mz_weekly_challenge_seen', 'true');
+          }}
           className="flex flex-col items-center justify-center p-2 transition-all group relative"
         >
-          <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-          </div>
-          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all">
+          {localStorage.getItem('mz_weekly_challenge_seen') !== 'true' && (
+            <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></span>
+            </div>
+          )}
+          <div className={`w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all ${localStorage.getItem('mz_weekly_challenge_seen') !== 'true' ? 'animate-bounce shadow-[0_0_15px_rgba(59,130,246,0.2)] border-blue-400/50' : ''}`}>
             <Target size={20} className="text-blue-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Défi</span>
-          <span className="text-[8px] font-bold uppercase tracking-widest text-blue-400/70 mt-0.5">Hebdo.</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+            Défi
+          </span>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-blue-400/70 mt-0.5">
+            Hebdo.
+          </span>
         </button>
+
+        <UserRewardsSection profile={profile} />
       </div>
 
       {isChallengeActive && (
-         <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-red-500/5 to-red-900/5 border border-red-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-red-500/10">
-            <div className="flex flex-col">
-               <span className="text-[10px] font-black uppercase text-red-400 tracking-widest">Défi Actif</span>
-               <span className="text-xs font-bold text-neutral-400">Ta première vente en 3 Jours</span>
-            </div>
-            <button 
-               onClick={handleCancelChallenge}
-               className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
-            >
-               Renoncer au défi
-            </button>
-         </div>
+        <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-red-500/5 to-red-900/5 border border-red-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-red-500/10">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase text-red-400 tracking-widest">
+              Défi Actif
+            </span>
+            <span className="text-xs font-bold text-neutral-400">
+              Ta première vente en 3 Jours
+            </span>
+          </div>
+          <button
+            onClick={handleCancelChallenge}
+            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
+          >
+            Renoncer au défi
+          </button>
+        </div>
       )}
 
       <div className="pt-8 border-t border-white/5 space-y-4">
-        <button 
+        <button
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-red-500/5 group"
         >
-          <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" /> 
+          <LogOut
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
           Déconnexion Sécurisée
         </button>
         <p className="text-center text-[8px] text-neutral-600 font-bold uppercase tracking-[0.3em] mt-6 opacity-30">
@@ -1408,11 +1353,7 @@ export const ProfileTab: React.FC<any> = ({ profile, onLogout, isAdmin, onSwitch
 
 export const RevenueTab: React.FC<any> = ({ profile, wallet, onRefresh }) => {
   return (
-    <WithdrawalSystem 
-      profile={profile} 
-      wallet={wallet} 
-      onRefresh={onRefresh} 
-    />
+    <WithdrawalSystem profile={profile} wallet={wallet} onRefresh={onRefresh} />
   );
 };
 
@@ -1420,34 +1361,65 @@ export const TeamTab: React.FC<any> = ({ profile, teamCount }) => (
   <ReferralDashboard profile={profile} teamCount={teamCount} />
 );
 
-export const RPADashboard: React.FC<any> = ({ profile, onRefresh, onSwitchTab }) => (
-  <RpaDashboard profile={profile} onRefresh={onRefresh} onSwitchTab={onSwitchTab} />
+export const RPADashboard: React.FC<any> = ({
+  profile,
+  onRefresh,
+  onSwitchTab,
+}) => (
+  <RpaDashboard
+    profile={profile}
+    onRefresh={onRefresh}
+    onSwitchTab={onSwitchTab}
+  />
 );
 
 export const CoachingTab: React.FC<any> = ({ profile, onSwitchTab }) => (
   <CoachingDashboard profile={profile} onSwitchTab={onSwitchTab} />
 );
 
-export const FormationTab: React.FC<any> = ({ profile, onSwitchTab }) => (<AcademieMain profile={profile} onSwitchTab={onSwitchTab} />);
+export const FormationTab: React.FC<any> = ({ profile, onSwitchTab }) => (
+  <AcademieMain profile={profile} onSwitchTab={onSwitchTab} />
+);
 
-export const SuggestionsTab: React.FC<{ profile: UserProfile | null }> = ({ profile }) => {
-  const [suggestion, setSuggestion] = useState('');
+export const SuggestionsTab: React.FC<{ profile: UserProfile | null }> = ({
+  profile,
+}) => {
+  const [suggestion, setSuggestion] = useState("");
   const [isSending, setIsSending] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
     try {
-      await supabase.from('user_suggestions').insert([{ user_id: profile?.id, suggestion, type: 'suggestion' }]);
-      setSuggestion(''); alert("Merci pour votre idée !");
-    } catch (e: any) { alert(e.message); } finally { setIsSending(false); }
+      await supabase
+        .from("user_suggestions")
+        .insert([{ user_id: profile?.id, suggestion, type: "suggestion" }]);
+      setSuggestion("");
+      alert("Merci pour votre idée !");
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSending(false);
+    }
   };
   return (
     <div className="max-w-3xl mx-auto space-y-12 animate-fade-in pb-20 pt-10">
-      <SectionTitle title="Suggestions" subtitle="Aidez-nous à améliorer MZ+." />
+      <SectionTitle
+        title="Suggestions"
+        subtitle="Aidez-nous à améliorer MZ+."
+      />
       <GoldBorderCard className="p-10 bg-black/40 border-white/5">
         <form onSubmit={handleSubmit} className="space-y-8">
-           <textarea required rows={5} placeholder="Votre idée..." className="w-full bg-black border border-white/10 rounded-xl p-6 text-sm text-white resize-none" value={suggestion} onChange={e => setSuggestion(e.target.value)} />
-           <PrimaryButton fullWidth isLoading={isSending} type="submit">Envoyer mon message</PrimaryButton>
+          <textarea
+            required
+            rows={5}
+            placeholder="Votre idée..."
+            className="w-full bg-black border border-white/10 rounded-xl p-6 text-sm text-white resize-none"
+            value={suggestion}
+            onChange={(e) => setSuggestion(e.target.value)}
+          />
+          <PrimaryButton fullWidth isLoading={isSending} type="submit">
+            Envoyer mon message
+          </PrimaryButton>
         </form>
       </GoldBorderCard>
     </div>
@@ -1460,7 +1432,9 @@ export const UpgradeTab: React.FC = () => (
       <Crown className="text-yellow-600 animate-pulse" size={32} />
     </div>
     <h3 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white leading-tight max-w-2xl">
-      L'accès <GoldText>MZ+ Premium</GoldText> est maintenant <GoldText>OUVERT</GoldText>. <br/> Profitez de l'offre flash pour débloquer tout le système.
+      L'accès <GoldText>MZ+ Premium</GoldText> est maintenant{" "}
+      <GoldText>OUVERT</GoldText>. <br /> Profitez de l'offre flash pour
+      débloquer tout le système.
     </h3>
     <div className="mt-12 p-8 border border-dashed border-white/5 rounded-[3rem] opacity-30">
       <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-[0.5em] leading-relaxed">
@@ -1470,10 +1444,14 @@ export const UpgradeTab: React.FC = () => (
   </div>
 );
 
-export const GuidesTab: React.FC<any> = ({ onStartAffiliationGuide, onStartRPAGuide, onStartTeamGuide }) => (
-  <GuidesTabComponent 
-    onStartAffiliationGuide={onStartAffiliationGuide} 
-    onStartRPAGuide={onStartRPAGuide} 
-    onStartTeamGuide={onStartTeamGuide} 
+export const GuidesTab: React.FC<any> = ({
+  onStartAffiliationGuide,
+  onStartRPAGuide,
+  onStartTeamGuide,
+}) => (
+  <GuidesTabComponent
+    onStartAffiliationGuide={onStartAffiliationGuide}
+    onStartRPAGuide={onStartRPAGuide}
+    onStartTeamGuide={onStartTeamGuide}
   />
 );

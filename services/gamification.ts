@@ -4,7 +4,7 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
   try {
     const { data: user, error: fetchError } = await supabase
       .from('users')
-      .select('xp, weekly_xp, monthly_xp, last_xp_update')
+      .select('xp, weekly_xp, monthly_xp, last_xp_update, rank_id')
       .eq('id', userId)
       .single();
 
@@ -40,15 +40,45 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
       currentMonthlyXp = 0; // Reset monthly XP
     }
 
+    const newXp = currentXp + xpAmount;
+    
+    // Calculate new rank
+    const PROGRESSION_LEVELS = [
+      { id: 'debutant', name: 'Débutant', xp: 0 },
+      { id: 'expert', name: 'Expert', xp: 120 },
+      { id: 'legende', name: 'Légende', xp: 250 },
+      { id: 'pro', name: 'Pro', xp: 700 },
+      { id: 'elite', name: 'Élite', xp: 1500 },
+    ];
+
+    let newRankId = 0;
+    let newRankName = PROGRESSION_LEVELS[0].name;
+    for (let i = 0; i < PROGRESSION_LEVELS.length; i++) {
+      if (newXp >= PROGRESSION_LEVELS[i].xp) {
+        newRankId = i;
+        newRankName = PROGRESSION_LEVELS[i].name;
+      }
+    }
+
+    const currentRankId = user?.rank_id || 0;
+
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
-        xp: currentXp + xpAmount,
+        xp: newXp,
         weekly_xp: currentWeeklyXp + xpAmount,
         monthly_xp: currentMonthlyXp + xpAmount,
-        last_xp_update: new Date().toISOString()
+        last_xp_update: new Date().toISOString(),
+        rank_id: newRankId,
+        rank_name: newRankName
       })
       .eq('id', userId);
+
+    if (!updateError && newRankId > currentRankId) {
+      window.dispatchEvent(new CustomEvent('mz-rank-up-detected', { 
+        detail: { rankId: newRankId, rankName: newRankName, oldXp: currentXp, newXp: newXp } 
+      }));
+    }
 
     if (updateError) {
       if (updateError.code === '42703') {

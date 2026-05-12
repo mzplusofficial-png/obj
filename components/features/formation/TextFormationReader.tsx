@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, MessageCircle, Share2, Copy, Check } from 'lucide-react';
-import { supabase } from '../../../services/supabase.ts';
-import { QuestionAnswerSection } from './QuestionAnswerSection.tsx';
+import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { motion } from "motion/react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  MessageCircle,
+  Check,
+} from "lucide-react";
+import { supabase } from "../../../services/supabase.ts";
+import { QuestionAnswerSection } from "./QuestionAnswerSection.tsx";
+import ReactMarkdown from "react-markdown";
 
 interface TextFormationReaderProps {
   title: string;
@@ -14,26 +20,25 @@ interface TextFormationReaderProps {
   isAdmin?: boolean;
   previewUrl?: string;
   onUpgrade?: () => void;
+  type?: "formation" | "bonus";
 }
 
-export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title, content, onClose, onComplete, formationId, isAdmin, previewUrl, onUpgrade }) => {
+export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
+  title,
+  content,
+  onClose,
+  onComplete,
+  formationId,
+  isAdmin,
+  previewUrl,
+  type = "formation",
+}) => {
   const [markedAsDone, setMarkedAsDone] = useState(false);
-  const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const qaSectionRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string>();
-  const [showVideoCTA, setShowVideoCTA] = useState(false);
-
-  useEffect(() => {
-    if (formationId === 'default-free-video') {
-      const timer = setTimeout(() => {
-        setShowVideoCTA(true);
-      }, 60000);
-      return () => clearTimeout(timer);
-    }
-  }, [formationId]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -41,15 +46,9 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
     });
   }, []);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText('Rejoins-moi sur la MZ+ ! https://mzplus.app');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleScrollToQA = () => {
     if (qaSectionRef.current) {
-      qaSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+      qaSectionRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -57,49 +56,74 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
     if (!containerRef.current || !textContainerRef.current) return;
     const { scrollTop, clientHeight } = containerRef.current;
     
-    // offsetTop of text container relative to scroll container
-    // We add article padding to get the exact start position but offsetTop relative to container is reliable if container has position relative.
-    const textHeight = textContainerRef.current.offsetHeight;
-    
-    // Si le texte est plus petit que l'écran, on est direct à 100%
-    if (textHeight <= clientHeight) {
+    const scrollHeight = containerRef.current.scrollHeight;
+    const scrollableHeight = scrollHeight - clientHeight;
+
+    if (scrollableHeight <= 0) {
       setProgress(100);
       return;
     }
 
-    // Le containerRef n'est pas position: relative, donc scrollHeight/scrollTop est plus simple. 
-    // On veut 100% quand on a scrollé toute la hauteur du texte.
-    const maxScroll = textHeight - clientHeight + 80; // 80px pour le padding top estimé
-    
-    if (maxScroll <= 0) {
-      setProgress(100);
-      return;
-    }
-
-    const currentProgress = Math.round((scrollTop / maxScroll) * 100);
+    const currentProgress = Math.round((scrollTop / scrollableHeight) * 100);
     setProgress(Math.min(100, Math.max(0, currentProgress)));
   };
 
   useEffect(() => {
-    // Calculer le contenu après le chargement pour ajuster le pourcentage si pas de scroll possible
-    setTimeout(handleScroll, 100);
+    // Lock body scroll
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Force scroll to top on mount and when content changes
+    const resetScroll = () => {
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollTo(0, 0); // extra safety
+      }
+    };
+
+    resetScroll();
+    requestAnimationFrame(() => {
+      resetScroll();
+      handleScroll();
+    });
+
+    // Double check after a small delay for smooth layout transitions
+    const timer = setTimeout(() => {
+      resetScroll();
+      handleScroll();
+    }, 150);
+
+    return () => {
+      document.body.style.overflow = originalStyle;
+      clearTimeout(timer);
+    };
   }, [content]);
 
   const triggerXPIfNeeded = () => {
-    if (progress === 100 && formationId) {
+    if (progress >= 95 && formationId) {
       const storageKey = `mz_formation_xp_${currentUserId}_${formationId}`;
       const hasGottenXP = localStorage.getItem(storageKey);
-      
+
       if (!hasGottenXP || isAdmin) {
-        localStorage.setItem(storageKey, 'true');
-        window.dispatchEvent(new CustomEvent('mz-xp-reward', {
-          detail: { 
-            amount: 10, 
-            title: "🎉 Bien joué.", 
-            description: "Tu as reçu 10 points pour avoir terminé la formation MZ+.", 
-            source: formationId === 'default-free-video' ? 'formation_day2_complete' : 'formation_complete' 
-          }
-        }));
+        localStorage.setItem(storageKey, "true");
+        window.dispatchEvent(
+          new CustomEvent("mz-xp-reward", {
+            detail: {
+              amount: 10,
+              title: "🎉 Bien joué.",
+              description:
+                type === "bonus"
+                  ? "Tu as reçu 10 points pour avoir consulté ce bonus."
+                  : "Tu as reçu 10 points pour avoir terminé la formation MZ+.",
+              source:
+                formationId === "default-free-video"
+                  ? "formation_day2_complete"
+                  : type === "bonus"
+                    ? "bonus_complete"
+                    : "formation_complete",
+            },
+          }),
+        );
       }
     }
   };
@@ -119,251 +143,221 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({ title,
 
   const readerContent = (
     <div className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden animate-fade-in">
-      {/* Top Bar - TOUJOURS VISIBLE */}
+      {/* Top Bar */}
       <div className="flex-shrink-0 sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/5">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          <button 
+          <button
             onClick={handleClose}
             className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60 hover:text-white flex items-center gap-2"
           >
             <ArrowLeft size={20} />
-            <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Retour</span>
+            <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">
+              Quitter
+            </span>
           </button>
+          <div className="flex-1 flex justify-center px-4">
+             <div className="max-w-[200px] md:max-w-sm w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  className="h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                />
+             </div>
+          </div>
           <div className="flex items-center gap-4">
             <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-              <span className="text-xs font-black text-emerald-500">{progress}%</span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500/70 hidden sm:inline">Lu</span>
+              <span className="text-xs font-black text-emerald-500">
+                {progress}%
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* Progress Bar Header */}
-        <div className="h-1.5 bg-white/5 w-full">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.1 }}
-            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-          />
-        </div>
       </div>
 
-      {/* Floating Progress Indicator (Visible on Mobile) */}
-      <motion.div 
-         initial={{ opacity: 0, y: 20 }}
-         animate={{ opacity: 1, y: 0 }}
-         className="fixed bottom-6 right-6 z-50 flex items-center justify-center md:hidden"
+      {/* Floating Progress */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`fixed bottom-6 right-6 z-[10000] flex items-center justify-center transition-all duration-300 ${progress === 100 ? 'scale-110' : ''}`}
       >
-         <div className="w-14 h-14 relative flex items-center justify-center bg-black/80 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
-            <svg viewBox="0 0 36 36" className="absolute inset-0 w-full h-full -rotate-90 stroke-emerald-500" strokeWidth="3" fill="none">
-              <path strokeDasharray={`${progress}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
-            </svg>
-            <span className="text-[10px] font-black text-white pointer-events-none">{progress}%</span>
-         </div>
+        <button 
+          onClick={handleScrollToQA}
+          className="w-14 h-14 relative flex items-center justify-center bg-black/80 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl group"
+        >
+          <svg
+            viewBox="0 0 36 36"
+            className="absolute inset-0 w-full h-full -rotate-90 stroke-emerald-500"
+            strokeWidth="3"
+            fill="none"
+          >
+            <circle cx="18" cy="18" r="16" className="stroke-white/5" />
+            <path
+              strokeDasharray={`${progress}, 100`}
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="flex flex-col items-center">
+             <span className="text-[10px] font-black text-white">
+               {progress}%
+             </span>
+             <MessageCircle size={10} className="text-emerald-500 mt-0.5" />
+          </div>
+        </button>
       </motion.div>
 
-      {/* Content Area - SEULE CETTE ZONE DEFILE */}
-      <div 
+      {/* Content Area */}
+      <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto pb-32 scroll-smooth"
+        className="flex-1 overflow-y-auto pb-40 scroll-smooth"
       >
-        <article className="max-w-3xl mx-auto px-6 py-12 md:py-20 text-neutral-300 leading-relaxed text-lg font-sans">
+        <article className="max-w-3xl mx-auto px-6 py-12 md:py-24">
           <div ref={textContainerRef}>
-            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight mb-16 tracking-tight">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl md:text-6xl font-black text-white leading-[1.1] mb-12 tracking-tight"
+            >
               {title}
-            </h1>
+            </motion.h1>
 
             {previewUrl && (
-              <div className="mb-16">
-                <div className="w-full aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl relative">
-                  {(previewUrl.includes('youtube.com') || previewUrl.includes('youtu.be')) ? (() => {
-                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-                    const match = previewUrl.match(regExp);
-                    const youtubeId = (match && match[2].length === 11) ? match[2] : null;
-                    
-                    if (youtubeId) {
+              <div className="mb-20">
+                <div className="w-full aspect-video rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative bg-[#050505]">
+                  {previewUrl.includes("youtube.com") ||
+                  previewUrl.includes("youtu.be") ? (
+                    (() => {
+                      const regExp =
+                        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                      const match = previewUrl.match(regExp);
+                      const youtubeId =
+                        match && match[2].length === 11 ? match[2] : null;
+
+                      if (youtubeId) {
+                        return (
+                          <iframe
+                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                            title={title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                            allowFullScreen
+                            className="w-full h-full absolute inset-0 z-10 border-0"
+                          />
+                        );
+                      }
+
                       return (
-                        <iframe
-                          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-                          title={title}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          referrerPolicy="strict-origin-when-cross-origin"
-                          allowFullScreen
-                          className="w-full h-full absolute inset-0 z-10 border-0 bg-[#050505]"
+                        <div
+                          className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full"
+                          dangerouslySetInnerHTML={{ __html: previewUrl }}
                         />
                       );
-                    }
-                    
-                    return (
-                        <div className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: previewUrl }} />
-                    );
-                  })() : (
-                    <video 
+                    })()
+                  ) : previewUrl
+                      .split("?")[0]
+                      .match(/\.(jpeg|jpg|gif|png|webp|avif)$/i) ? (
+                    <img
                       src={previewUrl}
-                      className="w-full h-full object-cover bg-[#050505]"
+                      alt={title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <video
+                      src={previewUrl}
+                      className="w-full h-full object-cover"
                       controls
                       playsInline
                       autoPlay
                     />
                   )}
                 </div>
-                {showVideoCTA && onUpgrade && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="mt-8 relative"
-                  >
-                    <button
-                      onClick={() => {
-                        localStorage.setItem('mz_premium_cta_clicked', 'true');
-                        onClose();
-                        if (onUpgrade) onUpgrade();
-                      }}
-                      className="w-full py-5 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white font-black uppercase tracking-[0.2em] md:text-lg rounded-2xl shadow-[0_10px_30px_rgba(147,51,234,0.3)] hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all overflow-hidden relative group border border-purple-400/30"
-                    >
-                       <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                       <span className="relative z-10 flex items-center justify-center gap-3">
-                         Passer au niveau supérieur
-                       </span>
-                       <div className="absolute inset-0 -translate-x-[150%] animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:opacity-100 opacity-60 z-20 pointer-events-none mix-blend-overlay" />
-                    </button>
-                  </motion.div>
-                )}
               </div>
             )}
 
-            <div className="space-y-8">
-              {content.split('\n\n').map((paragraph, idx) => {
-              if (paragraph.startsWith('👉')) {
-                return (
-                  <div key={idx} className="bg-emerald-500/5 border-l-4 border-emerald-500 p-6 rounded-r-2xl my-8">
-                    <p className="font-bold text-emerald-500 text-xl leading-snug">
-                      {paragraph.replace('👉 ', '')}
-                    </p>
-                  </div>
-                );
-              }
-              
-              if (paragraph.startsWith('“') || paragraph.startsWith('"')) {
-                return (
-                   <blockquote key={idx} className="text-2xl font-medium italic text-white/90 border-l-[3px] border-white/20 pl-6 my-10">
-                     {paragraph}
-                   </blockquote>
-                )
-              }
-
-              const iframeRegex = /(<iframe[\s\S]*?<\/iframe>)/i;
-              if (iframeRegex.test(paragraph)) {
-                const parts = paragraph.split(iframeRegex);
-                return (
-                  <div key={idx} className="tracking-wide">
-                    {parts.map((part, i) => {
-                      if (part.toLowerCase().startsWith('<iframe')) {
-                        return (
-                          <div key={i} className="my-10 aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl [&>iframe]:w-full [&>iframe]:h-full" dangerouslySetInnerHTML={{ __html: part }} />
-                        );
-                      }
-                      return part.trim() ? (
-                        <p key={i} className="my-4">
-                          {part.split('\n').map((line, j, arr) => (
-                            <React.Fragment key={j}>
-                              {line}
-                              {j < arr.length - 1 && <br />}
-                            </React.Fragment>
-                          ))}
-                        </p>
-                      ) : null;
-                    })}
-                  </div>
-                );
-              }
-
-              return (
-                <p key={idx} className="tracking-wide">
-                  {paragraph.split('\n').map((line, i) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      {i < paragraph.split('\n').length - 1 && <br />}
-                    </React.Fragment>
-                  ))}
-                </p>
-              );
-            })}
+            <div className="prose prose-invert prose-emerald max-w-none 
+              prose-headings:text-white prose-headings:font-black prose-headings:tracking-tight
+              prose-h1:text-emerald-400 prose-h1:mb-16
+              prose-h2:text-emerald-500 prose-h2:text-3xl prose-h2:mt-32 prose-h2:mb-12 prose-h2:border-b prose-h2:border-emerald-500/10 prose-h2:pb-6
+              prose-h3:text-2xl prose-h3:mt-20 prose-h3:mb-8 prose-h3:text-white/90
+              prose-p:text-neutral-300 prose-p:text-xl prose-p:leading-[1.9] prose-p:mb-12
+              prose-strong:text-emerald-400 prose-strong:font-black
+              prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-emerald-500/10 prose-blockquote:p-12 prose-blockquote:rounded-r-[2.5rem] prose-blockquote:not-italic prose-blockquote:text-white prose-blockquote:text-2xl prose-blockquote:font-black prose-blockquote:my-20 prose-blockquote:shadow-2xl
+              prose-li:text-neutral-300 prose-li:text-xl prose-li:mb-6 prose-li:leading-[1.8]
+              prose-img:rounded-[2.5rem] prose-img:border prose-img:border-emerald-500/20 prose-img:my-20 prose-img:shadow-[0_0_50px_rgba(16,185,129,0.1)]
+              selection:bg-emerald-500/30 selection:text-white
+            ">
+              <ReactMarkdown>{content || ""}</ReactMarkdown>
             </div>
           </div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            className="mt-32 pt-16 flex flex-col items-center"
+            viewport={{ once: true }}
+            className="mt-40 border-t border-white/5 pt-20 flex flex-col items-center"
           >
-            <h3 className="text-xl font-black text-white mb-8 text-center uppercase tracking-widest">
-              Tu as terminé cette leçon
-            </h3>
-            
-            <div className="flex flex-col items-center gap-4 w-full justify-center max-w-lg mb-8">
-               <button 
-                  onClick={handleScrollToQA}
-                  className="w-full sm:w-auto px-8 py-5 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-colors backdrop-blur-sm shadow-xl"
-               >
-                  <MessageCircle size={18} />
-                  Poser une question
-               </button>
+            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-10 border border-emerald-500/20">
+               <CheckCircle2 size={40} className="text-emerald-500" />
             </div>
 
-            <button
-               onClick={handleComplete}
-               disabled={markedAsDone}
-               className={`
-                 relative px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-500 shadow-2xl overflow-hidden group w-full max-w-sm
-                 ${markedAsDone 
-                    ? 'bg-emerald-500 text-black scale-[0.98]' 
-                    : 'bg-white text-black hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)]'}
-               `}
-            >
-               <div className="flex items-center justify-center gap-3 relative z-10 w-full">
-                 {markedAsDone ? (
-                   <>
-                     <CheckCircle2 className="animate-ping absolute opacity-50" size={24} />
-                     <CheckCircle2 className="relative" size={24} />
-                     <span>Terminé !</span>
-                   </>
-                 ) : (
-                   <span>Marquer comme terminé</span>
-                 )}
-               </div>
-               
-               {!markedAsDone && (
-                 <div className="absolute inset-0 bg-neutral-200 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-0"></div>
-               )}
-            </button>
+            <h3 className="text-2xl font-black text-white mb-4 text-center uppercase tracking-widest">
+              L'Aventure Continue !
+            </h3>
+            <p className="text-neutral-500 text-center mb-12 max-w-md">
+               {type === "bonus"
+                ? "Félicitations pour avoir consulté ce bonus exclusif. Ton ascension ne fait que commencer."
+                : "Tu as terminé cette leçon avec succès. Es-tu prêt pour la suite ?"}
+            </p>
 
-            {formationId === 'default-free-video' && onUpgrade && (
-               <button
-                 onClick={() => {
-                   localStorage.setItem('mz_premium_cta_clicked', 'true');
-                   onUpgrade();
-                   if (onClose) onClose();
-                 }}
-                 className="mt-6 relative px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-500 shadow-2xl overflow-hidden group w-full max-w-sm bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(168,85,247,0.4)]"
-               >
-                 <div className="flex items-center justify-center gap-3 relative z-10 w-full">
-                    <span>Passer au niveau supérieur</span>
-                 </div>
-               </button>
-            )}
+            <div className="flex flex-col gap-4 w-full max-w-sm">
+              <button
+                onClick={handleComplete}
+                disabled={markedAsDone}
+                className={`
+                  relative py-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-500 shadow-xl overflow-hidden
+                  ${
+                    markedAsDone
+                      ? "bg-emerald-500 text-black translate-y-1"
+                      : "bg-white text-black hover:scale-105 active:scale-95"
+                  }
+                `}
+              >
+                <div className="flex items-center justify-center gap-3 relative z-10 w-full">
+                  {markedAsDone ? (
+                    <>
+                      <Check size={20} />
+                      <span>Progression Validée (+10 XP)</span>
+                    </>
+                  ) : (
+                    <span>
+                      {type === "bonus"
+                        ? "J'ai tout lu !"
+                        : "Marquer comme terminé"}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={handleScrollToQA}
+                className="py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
+              >
+                <MessageCircle size={18} />
+                Une question ?
+              </button>
+            </div>
           </motion.div>
 
           {/* Section Q&A */}
-          {formationId && currentUserId && (
-             <div ref={qaSectionRef}>
-               <QuestionAnswerSection formationId={formationId} currentUserId={currentUserId} />
-             </div>
+          {formationId && currentUserId && type !== "bonus" && (
+            <div ref={qaSectionRef} className="mt-32">
+              <QuestionAnswerSection
+                formationId={formationId}
+                currentUserId={currentUserId}
+              />
+            </div>
           )}
-
         </article>
       </div>
     </div>

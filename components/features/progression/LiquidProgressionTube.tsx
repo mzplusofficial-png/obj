@@ -26,30 +26,50 @@ interface ProgressionTubeProps {
 export const LiquidProgressionTube: React.FC<ProgressionTubeProps> = ({ currentXp }) => {
   const [fillWidth, setFillWidth] = useState(0);
   const [displayXp, setDisplayXp] = useState(0);
-  const prevXpRef = useRef(0);
+  const [showRankSparkle, setShowRankSparkle] = useState(false);
+  const prevXpRef = useRef(currentXp);
+  const prevLevelIdRef = useRef(getCurrentLevel(currentXp).id);
+
+  const startXpRef = useRef(currentXp);
+  const endXpRef = useRef(currentXp);
 
   useEffect(() => {
-    const updateFillWidth = (val: number) => {
-      let pct = 0;
-      if (val <= 0) {
-        pct = 0;
-      } else if (val >= 1500) {
-        pct = 100;
-      } else {
-        for (let i = 0; i < PROGRESSION_LEVELS.length - 1; i++) {
-          if (val >= PROGRESSION_LEVELS[i].xp && val < PROGRESSION_LEVELS[i + 1].xp) {
-            const stepSize = 100 / (PROGRESSION_LEVELS.length - 1);
-            const ratio = (val - PROGRESSION_LEVELS[i].xp) / (PROGRESSION_LEVELS[i + 1].xp - PROGRESSION_LEVELS[i].xp);
-            pct = (i * stepSize) + (ratio * stepSize);
-            break;
-          }
+    const handleOverride = (e: any) => {
+      const { oldXp, newXp } = e.detail;
+      startXpRef.current = oldXp;
+      endXpRef.current = newXp;
+      runAnimation();
+    };
+    window.addEventListener('mz-trigger-tube-animation', handleOverride);
+    return () => window.removeEventListener('mz-trigger-tube-animation', handleOverride);
+  }, []);
+
+  const updateFillWidth = (val: number) => {
+    let pct = 0;
+    if (val <= 0) {
+      pct = 0;
+    } else if (val >= 1500) {
+      pct = 100;
+    } else {
+      for (let i = 0; i < PROGRESSION_LEVELS.length - 1; i++) {
+        if (val >= PROGRESSION_LEVELS[i].xp && val < PROGRESSION_LEVELS[i + 1].xp) {
+          const stepSize = 100 / (PROGRESSION_LEVELS.length - 1);
+          const ratio = (val - PROGRESSION_LEVELS[i].xp) / (PROGRESSION_LEVELS[i + 1].xp - PROGRESSION_LEVELS[i].xp);
+          pct = (i * stepSize) + (ratio * stepSize);
+          break;
         }
       }
-      setFillWidth(pct);
-    };
+    }
+    setFillWidth(pct);
+  };
 
-    const startXp = prevXpRef.current;
-    const endXp = currentXp;
+  const runAnimation = () => {
+    const startXp = startXpRef.current;
+    const endXp = endXpRef.current;
+
+    const startLevel = getCurrentLevel(startXp);
+    const endLevel = getCurrentLevel(endXp);
+    const isRankUp = startLevel.id !== endLevel.id && endXp > startXp;
 
     if (startXp === endXp) {
         setDisplayXp(endXp);
@@ -58,7 +78,7 @@ export const LiquidProgressionTube: React.FC<ProgressionTubeProps> = ({ currentX
     }
 
     let startTimestamp: number | null = null;
-    const duration = 2000;
+    const duration = 2500; 
     let animationFrameId: number;
 
     const step = (timestamp: number) => {
@@ -77,17 +97,43 @@ export const LiquidProgressionTube: React.FC<ProgressionTubeProps> = ({ currentX
         prevXpRef.current = endXp;
         setDisplayXp(endXp);
         updateFillWidth(endXp);
+
+        if (isRankUp) {
+          // Play sound immediately at the start of rank up animation
+          try { window.dispatchEvent(new CustomEvent('mz-play-sound', { detail: { sound: 'surprise' } })); } catch(e) {}
+          
+          const element = document.getElementById('progression-section');
+          if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          setTimeout(() => {
+            setShowRankSparkle(true);
+            
+            setTimeout(() => {
+              setShowRankSparkle(false);
+              window.dispatchEvent(new CustomEvent('mz-rank-up-celebration', { 
+                detail: { rankId: endLevel.id, rankName: endLevel.name } 
+              }));
+            }, 2500);
+          }, 500);
+        }
       }
     };
     
-    const timeoutId = setTimeout(() => {
-        animationFrameId = requestAnimationFrame(step);
-    }, 100);
+    animationFrameId = requestAnimationFrame(step);
 
+    return () => cancelAnimationFrame(animationFrameId);
+  };
+
+  useEffect(() => {
+    startXpRef.current = prevXpRef.current;
+    endXpRef.current = currentXp;
+
+    const cancel = runAnimation();
     return () => {
-       clearTimeout(timeoutId);
-       cancelAnimationFrame(animationFrameId);
-    };
+      if (cancel) cancel();
+    }
   }, [currentXp]);
 
   let currentLevelIdx = 0;
@@ -101,7 +147,7 @@ export const LiquidProgressionTube: React.FC<ProgressionTubeProps> = ({ currentX
   const isMaxLevel = currentLevelIdx === PROGRESSION_LEVELS.length - 1;
 
   return (
-    <div className="w-full bg-[#0a0a09] border border-white/5 rounded-[2.5rem] p-6 sm:p-10 relative overflow-hidden group shadow-2xl">
+    <div id="progression-section" className="w-full bg-[#0a0a09] border border-white/5 rounded-[2.5rem] p-6 sm:p-10 relative overflow-hidden group shadow-2xl">
       {/* Dynamic environmental glow */}
       <div 
          className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] opacity-10 pointer-events-none transition-all duration-[3000ms] animate-spin-slow"
@@ -111,6 +157,33 @@ export const LiquidProgressionTube: React.FC<ProgressionTubeProps> = ({ currentX
          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-br opacity-20 blur-[100px] pointer-events-none transition-all duration-1000"
          style={{ backgroundImage: `linear-gradient(to right, transparent, ${currentLvlConfig.hex}, transparent)` }}
       />
+
+      {/* Rank Up Sparkle Overlay */}
+      {showRankSparkle && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 bg-white/20 animate-pulse backdrop-blur-sm" />
+          <div className="relative group/sparkle">
+             {[...Array(24)].map((_, i) => (
+               <div 
+                 key={i}
+                 className="absolute w-1 h-3 rounded-full animate-ping"
+                 style={{ 
+                   backgroundColor: currentLvlConfig.hex,
+                   left: `${Math.cos(i * 15 * Math.PI / 180) * 150}px`,
+                   top: `${Math.sin(i * 15 * Math.PI / 180) * 150}px`,
+                   animationDelay: `${i * 0.05}s`,
+                   transform: `rotate(${i * 15}deg)`,
+                   boxShadow: `0 0 20px ${currentLvlConfig.hex}`
+                 }}
+               />
+             ))}
+             <div className="scale-[5] opacity-50 animate-bounce">
+                <currentLvlConfig.icon size={48} color={currentLvlConfig.hex} className="drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]" />
+             </div>
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] border-2 border-dashed rounded-full animate-spin-slow opacity-20" style={{ borderColor: currentLvlConfig.hex }} />
+          </div>
+        </div>
+      )}
 
       {/* Header Info */}
       <div className="flex flex-col flex-wrap sm:flex-row justify-between sm:items-end gap-3 mb-16 relative z-10">

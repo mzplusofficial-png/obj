@@ -33,6 +33,15 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
   useEffect(() => {
     const fetchRewards = async () => {
       try {
+        // 1. Fetch already claimed rewards by this user
+        const { data: claimedData } = await supabase
+          .from('user_rank_rewards')
+          .select('reward_id')
+          .eq('user_id', profile.id);
+        
+        const claimedIds = claimedData?.map(c => c.reward_id) || [];
+
+        // 2. Fetch active rewards
         const { data, error } = await supabase
           .from('rank_rewards')
           .select('*')
@@ -41,8 +50,17 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
         if (error) throw error;
         
         if (data && data.length > 0) {
-          const shuffled = data.sort(() => 0.5 - Math.random());
-          setRewards(shuffled.slice(0, 5)); // show up to 5
+          // 3. Filter out already claimed rewards
+          const availableRewards = data.filter(r => !claimedIds.includes(r.id));
+          
+          if (availableRewards.length === 0) {
+              setRewards([]);
+              return;
+          }
+
+          // 4. Shuffle and pick exactly 3 (if possible)
+          const shuffled = availableRewards.sort(() => 0.5 - Math.random());
+          setRewards(shuffled.slice(0, 3)); 
         }
       } catch (e) {
         console.error("Error fetching rewards:", e);
@@ -51,7 +69,7 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
       }
     };
     fetchRewards();
-  }, []);
+  }, [profile.id]);
 
   const handleClaim = async (reward: RankReward) => {
     setSelectedReward(reward);
@@ -323,10 +341,23 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
                   </a>
                 ) : (
                   <button 
-                    onClick={onClose}
+                    onClick={() => {
+                      if (selectedReward.file_url) {
+                        window.dispatchEvent(new CustomEvent('mz-open-reward-content', { 
+                          detail: { 
+                            title: selectedReward.title, 
+                            text: selectedReward.file_url,
+                            id: selectedReward.id,
+                            imageUrl: selectedReward.image_url
+                          } 
+                        }));
+                      }
+                      onClose();
+                    }}
                     className="w-full flex items-center justify-center gap-3 py-4 bg-white text-neutral-950 hover:bg-neutral-200 rounded-2xl font-black text-lg transition-all shadow-xl"
                   >
-                    DÉCOUVRIR MA FORMATION (SUR MON PROFIL)
+                    <Sparkles size={20} className="text-purple-600" />
+                    DÉCOUVRIR MON BONUS MAINTENANT
                   </button>
                 )}
                 <button 

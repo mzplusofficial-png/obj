@@ -53,6 +53,13 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
   const [period, setPeriod] = useState<Period>('week');
   const [showPastRewards, setShowPastRewards] = useState(false);
 
+  const [prevRank, setPrevRank] = useState<number | null>(() => {
+    const saved = localStorage.getItem(`mz_prev_rank_${mode}_${period}`);
+    return saved ? parseInt(saved) : null;
+  });
+  const [hasRankChanged, setHasRankChanged] = useState(false);
+  const [rankTrend, setRankTrend] = useState<'up' | 'down' | 'stable' | null>(null);
+
   useEffect(() => {
     fetchLeaderboard();
   }, [mode, profile?.country_code, period]);
@@ -65,10 +72,10 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
 
       if (period === 'week') {
         query = query.order('weekly_xp', { ascending: false, nullsFirst: false })
-                     .order('xp', { ascending: false }); // Fallback sorting
+                     .order('xp', { ascending: false }); 
       } else if (period === 'month') {
         query = query.order('monthly_xp', { ascending: false, nullsFirst: false })
-                     .order('xp', { ascending: false }); // Fallback sorting
+                     .order('xp', { ascending: false }); 
       } else {
         query = query.order('xp', { ascending: false, nullsFirst: false });
       }
@@ -86,7 +93,25 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
 
       const { data, error } = await query;
       if (error) throw error;
-      setLeaders(data || []);
+      const results = data || [];
+      setLeaders(results);
+
+      // Check for rank change
+      if (profile) {
+        const myRank = results.findIndex(u => u.id === profile.id) + 1;
+        if (myRank > 0) {
+          if (prevRank !== null && myRank !== prevRank) {
+            setHasRankChanged(true);
+            setRankTrend(myRank < prevRank ? 'up' : 'down');
+            setTimeout(() => {
+              setHasRankChanged(false);
+              setRankTrend(null);
+            }, 8000);
+          }
+          setPrevRank(myRank);
+          localStorage.setItem(`mz_prev_rank_${mode}_${period}`, myRank.toString());
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -225,12 +250,23 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
                    <div 
                      key={user.id} 
                      className={`flex items-center p-3 sm:p-4 rounded-2xl border transition-all duration-300 hover:bg-white/5
-                       ${isMe ? 'bg-purple-900/20 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'bg-[#111] border-white/5'}
+                       ${isMe ? 'bg-purple-900/20 border-purple-500/30' : 'bg-[#111] border-white/5'}
+                       ${isMe && hasRankChanged ? 'animate-pulse ring-2 ring-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.4)]' : isMe ? 'shadow-[0_0_15px_rgba(168,85,247,0.1)]' : ''}
                      `}
                    >
                      {/* Rank */}
-                     <div className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-lg flex items-center justify-center border font-black text-xs sm:text-sm ${getRankStyle(index)}`}>
+                     <div className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-lg flex items-center justify-center border font-black text-xs sm:text-sm relative ${getRankStyle(index)}`}>
                         {index < 3 ? <Crown size={16} /> : index + 1}
+                        {isMe && hasRankChanged && (
+                           <>
+                             <div className="absolute inset-0 bg-white rounded-full blur-xl animate-ping opacity-30" />
+                             <div className={`absolute -top-1 -right-1 px-1 rounded-sm text-[8px] font-black uppercase flex items-center gap-0.5 shadow-lg z-10 ${
+                               rankTrend === 'up' ? 'bg-emerald-500 text-white animate-bounce' : 'bg-red-500 text-white animate-pulse'
+                             }`}>
+                               {rankTrend === 'up' ? '▲ UP' : '▼ DOWN'}
+                             </div>
+                           </>
+                        )}
                      </div>
 
                      {/* Flag & Name */}

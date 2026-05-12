@@ -92,10 +92,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   const menuItems = [
     { id: 'dashboard' as TabId, label: 'Tableau de Bord', icon: Home },
+    { id: 'axis' as TabId, label: 'Axis AI', icon: Sparkles },
     { id: 'profile' as TabId, label: 'Mon Profil Élite', icon: User },
     { id: 'revenus' as TabId, label: 'Trésorerie & Gains', icon: Coins },
     { id: 'recompense' as TabId, label: "L'Arène Élite", icon: Trophy },
-    { id: 'luna_chat' as TabId, label: 'Luna AI', icon: Sparkles },
     { id: 'guides' as TabId, label: 'Guides & Aide', icon: HelpCircle },
   ];
 

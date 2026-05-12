@@ -92,15 +92,19 @@ export const RankRewardsAdmin: React.FC = () => {
   const handleSave = async () => {
     try {
       if (isAdding) {
-        const { error } = await supabase.from('rank_rewards').insert([editForm]);
+        const { data, error } = await supabase.from('rank_rewards').insert([editForm]).select().single();
         if (error) throw error;
+        
+        setIsAdding(false);
+        setIsEditing(data.id);
+        setEditForm(data);
       } else if (isEditing) {
         const { error } = await supabase.from('rank_rewards').update(editForm).eq('id', isEditing);
         if (error) throw error;
+        setIsAdding(false);
+        setIsEditing(null);
+        setEditForm({});
       }
-      setIsAdding(false);
-      setIsEditing(null);
-      setEditForm({});
       fetchRewards();
     } catch (e) {
       console.error('Error saving reward', e);
@@ -109,13 +113,18 @@ export const RankRewardsAdmin: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer cette récompense ?')) return;
+    if (!window.confirm('Voulez-vous vraiment supprimer cette récompense ? Cela supprimera également cette récompense des profils utilisateurs qui l\'ont déjà obtenue.')) return;
     try {
+      // 1. Delete associated user_rewards to handle foreign key constraints
+      await supabase.from('user_rank_rewards').delete().eq('reward_id', id);
+      
+      // 2. Delete the actual reward
       const { error } = await supabase.from('rank_rewards').delete().eq('id', id);
       if (error) throw error;
       fetchRewards();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error deleting reward', e);
+      alert('Erreur lors de la suppression: ' + e.message);
     }
   };
 
@@ -132,13 +141,14 @@ export const RankRewardsAdmin: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={async () => {
-              if (window.confirm('Voulez-vous vraiment TOUT supprimer ? Cette action est irréversible.')) {
+              if (window.confirm('Voulez-vous vraiment TOUT supprimer ? Cette action est irréversible et supprimera les récompenses des profils.')) {
                 try {
+                  await supabase.from('user_rank_rewards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
                   const { error } = await supabase.from('rank_rewards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
                   if (error) throw error;
                   fetchRewards();
-                } catch(e) {
-                  alert('Erreur lors de la suppression');
+                } catch(e: any) {
+                  alert('Erreur lors de la suppression: ' + e.message);
                 }
               }
             }}
@@ -162,11 +172,28 @@ export const RankRewardsAdmin: React.FC = () => {
       {(isAdding || isEditing) && (
         <div className="p-6 bg-[#0a0a09] border border-purple-500/30 rounded-2xl space-y-4 shadow-[0_0_30px_rgba(168,85,247,0.1)]">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-lg text-purple-400">{isAdding ? 'Ajouter une Récompense' : 'Modifier la Récompense'}</h3>
+            <h3 className="font-bold text-lg text-purple-400">
+              {isAdding ? 'Ajouter une Récompense' : 'Modifier la Récompense'}
+            </h3>
             <button onClick={() => { setIsAdding(false); setIsEditing(null); }} className="p-2 bg-white/5 rounded-full hover:bg-white/10">
               <X size={16} />
             </button>
           </div>
+
+          {!isAdding && isEditing && (
+             <div className="mb-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded-xl flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">ID / Code Produit (à copier)</p>
+                   <code className="text-sm text-white font-mono">{isEditing}</code>
+                </div>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(isEditing)}
+                  className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Copier
+                </button>
+             </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -296,19 +323,35 @@ export const RankRewardsAdmin: React.FC = () => {
               <div className="p-5 flex-1 flex flex-col">
                 <h4 className="font-bold text-white text-lg line-clamp-1 mb-2">{reward.title}</h4>
                 <p className="text-xs text-neutral-400 line-clamp-2 flex-1">{reward.description}</p>
-                <div className="mt-4 pt-4 border-t border-white/5 flex gap-2 justify-end">
-                  <button 
-                    onClick={() => { setIsEditing(reward.id); setIsAdding(false); setEditForm(reward); }}
-                    className="p-2 bg-white/5 hover:bg-purple-600/20 border border-transparent hover:border-purple-500/50 text-neutral-400 hover:text-purple-400 rounded-xl transition-all"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(reward.id)}
-                    className="p-2 bg-white/5 hover:bg-red-600/20 border border-transparent hover:border-red-500/50 text-neutral-400 hover:text-red-400 rounded-xl transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                <div className="mt-4 pt-4 border-t border-white/5 flex gap-2 justify-between items-center">
+                  <div className="flex-1 truncate">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[9px] font-mono text-purple-400 font-bold uppercase tracking-widest truncate max-w-[120px]" title={reward.id}>
+                        ID: {reward.id}
+                      </p>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(reward.id); alert('ID Copié !'); }}
+                        className="px-2 py-1 bg-purple-500/10 hover:bg-purple-500/30 text-purple-400 rounded-md transition-all border border-purple-500/20 text-[8px] font-black"
+                        title="Copier ID Complet"
+                      >
+                        COPIER ID
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { setIsEditing(reward.id); setIsAdding(false); setEditForm(reward); }}
+                      className="p-2 bg-white/5 hover:bg-purple-600/20 border border-transparent hover:border-purple-500/50 text-neutral-400 hover:text-purple-400 rounded-xl transition-all"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(reward.id)}
+                      className="p-2 bg-white/5 hover:bg-red-600/20 border border-transparent hover:border-red-500/50 text-neutral-400 hover:text-red-400 rounded-xl transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

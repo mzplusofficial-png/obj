@@ -29,6 +29,7 @@ import { PremiumAccessAdmin } from './premium-access/PremiumAccessAdmin.tsx';
 import { SoundEffectsAdmin } from './features/gamification/SoundEffectsAdmin.tsx';
 import { AdminImages } from './features/admin-images/AdminImages.tsx';
 import { RankRewardsAdmin } from './features/rank-rewards/RankRewardsAdmin.tsx';
+import { DeepAnalyticsPanel } from './features/admin-analytics/DeepAnalyticsPanel.tsx';
 
 type AdminTab = 'stats' | 'users' | 'formations' | 'validation' | 'withdrawals' | 'rpa_validations' | 'coaching' | 'catalog' | 'admin_push' | 'marketing_announcements' | 'flash_offer' | 'activity_audit' | 'home_landing' | 'user_behavior' | 'premium_welcome' | 'mz_presentation' | 'premium_access' | 'pwa_branding' | 'store_settings' | 'axis_test' | 'sound_effects' | 'challenge_3j' | 'images' | 'rank_rewards';
 
@@ -42,6 +43,7 @@ export const AdminPanel: React.FC<{
   const isAnyAdmin = isSuperAdmin || isMarketing;
 
   const [activeSubTab, setActiveSubTab] = useState<AdminTab>('stats');
+  const [viewMode, setViewMode] = useState<'analytics' | 'management'>('analytics');
   const [users, setUsers] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [activitySummary, setActivitySummary] = useState<any[]>([]);
@@ -153,24 +155,46 @@ export const AdminPanel: React.FC<{
 
   return (
     <div className="space-y-10 animate-fade-in pb-24 text-white">
-      <div className="flex flex-col gap-8 mb-12">
-        <SectionTitle 
-            title={isSuperAdmin ? "Cercle Décisionnel" : "Marketing Console"} 
-            subtitle={isSuperAdmin ? "Gestion intégrale de l'écosystème MZ+" : "Gestion des contenus et de la communication"} 
-        />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          {/* Tableau de bord / App */}
-          <div className="space-y-3">
-             <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Tableau de Bord</h3>
-             <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
-               <TabButton active={activeSubTab === 'stats'} onClick={() => setActiveSubTab('stats')} icon={LayoutGrid} label="Synthèse" />
-               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'user_behavior'} onClick={() => setActiveSubTab('user_behavior')} icon={MousePointer2} label="Comportement" color="text-emerald-400" />
-               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'users'} onClick={() => setActiveSubTab('users')} icon={Users} label="Membres" />
-               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'activity_audit'} onClick={() => setActiveSubTab('activity_audit')} icon={History} label="Audit Temps" />
-               <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'challenge_3j'} onClick={() => setActiveSubTab('challenge_3j')} icon={CheckCircle2} label="Défis 3J" color="text-amber-400" />
-             </div>
-          </div>
+      {/* Top View Mode Toggler */}
+      <div className="flex justify-center mb-8">
+         <div className="bg-neutral-900 border border-white/10 p-1.5 rounded-full flex gap-2">
+            <button 
+               onClick={() => setViewMode('analytics')}
+               className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'analytics' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'text-neutral-500 hover:text-white hover:bg-white/5'}`}
+            >
+               🧠 Analyse Approfondie
+            </button>
+            <button 
+               onClick={() => setViewMode('management')}
+               className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'management' ? 'bg-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)]' : 'text-neutral-500 hover:text-white hover:bg-white/5'}`}
+            >
+               ⚙️ Gestion Opérationnelle
+            </button>
+         </div>
+      </div>
+
+      {viewMode === 'analytics' ? (
+         <DeepAnalyticsPanel adminProfile={adminProfile} />
+      ) : (
+        <>
+          <div className="flex flex-col gap-8 mb-12">
+            <SectionTitle 
+                title={isSuperAdmin ? "Cercle Décisionnel" : "Marketing Console"} 
+                subtitle={isSuperAdmin ? "Gestion intégrale de l'écosystème MZ+" : "Gestion des contenus et de la communication"} 
+            />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+              {/* Tableau de bord / App */}
+              <div className="space-y-3">
+                 <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2">Tableau de Bord</h3>
+                 <div className="flex flex-wrap bg-neutral-900/50 border border-neutral-800 p-1.5 rounded-3xl gap-1.5 shadow-xl">
+                   <TabButton active={activeSubTab === 'stats'} onClick={() => setActiveSubTab('stats')} icon={LayoutGrid} label="Synthèse" />
+                   <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'user_behavior'} onClick={() => setActiveSubTab('user_behavior')} icon={MousePointer2} label="Comportement" color="text-emerald-400" />
+                   <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'users'} onClick={() => setActiveSubTab('users')} icon={Users} label="Membres" />
+                   <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'activity_audit'} onClick={() => setActiveSubTab('activity_audit')} icon={History} label="Audit Temps" />
+                   <TabButton hidden={!isAnyAdmin} active={activeSubTab === 'challenge_3j'} onClick={() => setActiveSubTab('challenge_3j')} icon={CheckCircle2} label="Défis 3J" color="text-amber-400" />
+                 </div>
+              </div>
 
           {/* Ventes & Finances */}
           <div className="space-y-3">
@@ -313,6 +337,8 @@ export const AdminPanel: React.FC<{
         {activeSubTab === 'activity_audit' && isAnyAdmin && <AdminActivityAudit />}
         {activeSubTab === 'rank_rewards' && <RankRewardsAdmin />}
       </div>
+      </>
+      )}
     </div>
   );
 };
@@ -680,9 +706,18 @@ const FormationAdmin = () => {
               <div className="w-10 h-10 rounded-lg bg-neutral-900 overflow-hidden shrink-0"><img src={f.thumbnail_url} className="w-full h-full object-cover opacity-50" /></div>
               <div className="flex flex-col">
                 <span className="font-bold uppercase text-[11px] md:text-xs text-white truncate max-w-[150px] sm:max-w-none">{f.title}</span>
-                <span className={`text-[9px] font-black uppercase ${f.is_free ? 'text-emerald-500' : 'text-purple-500'}`}>
-                  {f.is_free ? 'Gratuite' : 'Premium'}
-                </span>
+                <div className="flex items-center gap-2">
+                   <span className={`text-[9px] font-black uppercase ${f.is_free ? 'text-emerald-500' : 'text-purple-500'}`}>
+                    {f.is_free ? 'Gratuite' : 'Premium'}
+                  </span>
+                  <span className="text-[8px] font-mono text-neutral-600 bg-black/50 px-1 rounded uppercase">ID: {f.id.split('-')[0]}...</span>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(f.id); alert('ID Formations Copié !'); }}
+                    className="p-1 hover:text-white transition-colors"
+                  >
+                    <ClipboardList size={10} />
+                  </button>
+                </div>
               </div>
             </div>
             <button onClick={async (e) => { e.stopPropagation(); if(confirm("Supprimer ?")) { await supabase.from('mz_formations').delete().eq('id', f.id); fetchFormations(); } }} className="p-2 text-neutral-600 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
