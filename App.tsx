@@ -655,10 +655,18 @@ const App: React.FC = () => {
     if (session) {
       if ('serviceWorker' in navigator) {
          navigator.serviceWorker.ready.then(() => {
-            setupFCM();
+            if ('Notification' in window) {
+              if (Notification.permission === 'granted') {
+                setupFCM(false);
+              } else if (Notification.permission === 'default') {
+                setShowPermissionBanner(true);
+              }
+            }
          });
       } else {
-         setupFCM();
+         if ('Notification' in window && Notification.permission === 'granted') {
+           setupFCM(false);
+         }
       }
     }
   }, [session]);
@@ -1548,7 +1556,7 @@ const QUOTES = [
 
 const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
   const [progress, setProgress] = useState(0);
-  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * QUOTES.length));
 
   useEffect(() => {
     if (loading) return;

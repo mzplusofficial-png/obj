@@ -382,7 +382,7 @@ export const PushAdmin: React.FC = () => {
                 <button 
                   onClick={async () => {
                     alert("Tentative de demande de permission...");
-                    const VAPID_KEY = "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
+                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BAwxNENrQumeZKV97HVoBkQvB8b4USCMBRVACIVBtLGDSYWll-6F_8wFwN6dhpcbMdh-tNwmdGKWa7FuRjbzCtg";
                     const result = await requestNotificationPermission(VAPID_KEY);
                     alert("Résultat: " + result.status + (result.token ? " (Token généré !)" : " (Pas de token)"));
                     window.location.reload();
@@ -417,8 +417,17 @@ export const PushAdmin: React.FC = () => {
             </div>
 
             <button 
-              onClick={() => {
-                const token = localStorage.getItem('fcm_token');
+              onClick={async () => {
+                let token = localStorage.getItem('fcm_token');
+                
+                if (!token) {
+                   const { data } = await supabase.auth.getSession();
+                   if (data?.session?.user?.id) {
+                      const { data: userData } = await supabase.from('users').select('fcm_token').eq('id', data.session.user.id).single();
+                      if (userData?.fcm_token) token = userData.fcm_token;
+                   }
+                }
+
                 if (token) {
                   navigator.clipboard.writeText(token).then(() => {
                     alert("✅ Token copié dans le presse-papier !\n\nVous pouvez maintenant le coller dans la Console Firebase (Messaging) pour envoyer un message de test réel sur cet appareil.");
@@ -427,7 +436,7 @@ export const PushAdmin: React.FC = () => {
                     alert("Token: " + token + "\n\n(La copie automatique a échoué, veuillez le copier manuellement ci-dessus)");
                   });
                 } else {
-                  alert("❌ Token non trouvé.\n\nAssurez-vous d'avoir cliqué sur 'Activer maintenant' sur la page d'accueil (dans un nouvel onglet).");
+                  alert("❌ Token non trouvé.\n\nAssurez-vous d'avoir cliqué sur 'Activer maintenant' ou 'Synchroniser mon Token'. Si le bouton ne vous demande pas la permission, vous avez peut-être bloqué les notifications dans les paramètres de votre navigateur. Veuillez réinitialiser les permissions pour ce site en cliquant sur l'icône de cadenas à côté de l'URL.");
                 }
               }}
               className="w-full mt-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase text-white transition-all flex items-center justify-center gap-3"
