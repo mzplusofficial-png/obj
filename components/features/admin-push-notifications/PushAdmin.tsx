@@ -273,7 +273,7 @@ export const PushAdmin: React.FC = () => {
               <div className="pt-2 space-y-2">
                 <button 
                   onClick={async () => {
-                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
+                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo";
                     const result = await requestNotificationPermission(VAPID_KEY);
                     if (result.token) {
                       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -339,7 +339,7 @@ export const PushAdmin: React.FC = () => {
                 <button 
                   onClick={async () => {
                     alert("Tentative de demande de permission...");
-                    const VAPID_KEY = "BPeext5m41k5huwpZYzaaxvzz4vJjEdh7ZSy6zDXemZENhgEEVtsTxv1wEBwnkF02PefYOw1hArICTEzO4Ab2wg";
+                    const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo";
                     const result = await requestNotificationPermission(VAPID_KEY);
                     alert("Résultat: " + result.status + (result.token ? " (Token généré !)" : " (Pas de token)"));
                     window.location.reload();

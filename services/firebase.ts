@@ -112,18 +112,38 @@ export const requestNotificationPermission = async (vapidKey: string) => {
     let registration;
     if ("serviceWorker" in navigator) {
       try {
-        // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
-        registration = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js?v=MZ4",
-          { scope: "/" },
-        );
-        console.log("FCM: Service Worker registered:", registration.scope);
+        console.log("FCM: Checking for existing service worker...");
+        // Essayer d'abord de récupérer une registration existante
+        registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+        
+        if (!registration) {
+          console.log("FCM: No existing SW found, registering new one...");
+          // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
+          registration = await navigator.serviceWorker.register(
+            "/firebase-messaging-sw.js?v=MZ5",
+            { scope: "/" },
+          );
+        } else {
+          console.log("FCM: Found existing SW registration");
+        }
+        
+        // Attendre que le SW soit actif (important pour getToken)
+        if (registration.installing) {
+            console.log("FCM: SW is installing...");
+            await new Promise<void>((resolve) => {
+                registration!.installing!.onstatechange = (e: any) => {
+                    if (e.target.state === 'activated') resolve();
+                };
+            });
+        }
+        
+        console.log("FCM: Service Worker is active:", registration.scope);
       } catch (swError) {
         console.error("FCM: Service Worker registration failed:", swError);
       }
     }
 
-    // alert('Demande de permission en cours...');
+    console.log("FCM: Requesting permission with VAPID:", vapidKey);
     const permission = await Notification.requestPermission();
     // alert('Résultat permission: ' + permission);
     console.log("FCM: Permission result:", permission);

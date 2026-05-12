@@ -593,11 +593,17 @@ const App: React.FC = () => {
 
     // Vérifier si nous sommes dans une iframe (AI Studio preview)
     const isInIframe = window.self !== window.top;
-    if (isInIframe && !isManual) {
-      console.log('FCM: Running in iframe, skipping automatic permission request to avoid browser block.');
-      // On n'affiche même pas le bandeau automatiquement dans l'iframe pour éviter de polluer l'expérience
-      // Sauf si l'utilisateur n'a jamais été sollicité
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default' && !localStorage.getItem('fcm_permission_dismissed')) {
+    
+    // Si la permission est déjà refusée, on n'insiste pas sauf si c'est manuel
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied' && !isManual) {
+      console.log('FCM: Notification permission is denied. Skipping.');
+      return;
+    }
+
+    // Si on est dans une iframe et que la permission n'est pas encore accordée
+    if (isInIframe && !isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      console.log('FCM: Running in iframe with default permission, showing banner.');
+      if (!localStorage.getItem('fcm_permission_dismissed')) {
         setShowPermissionBanner(true);
       }
       return;
