@@ -25,7 +25,6 @@ dist-ssr
 
 # Firebase & Secrets
 service-account.json
-firebase-applet-config.json
 .env
 .env.local
 .env.*.local
