@@ -548,18 +548,12 @@ export const MyStore: React.FC<MyStoreProps> = ({
         setActiveSegment("my_products");
         setShowAllProducts(true); // Force show all to guarantee rendering
 
-        // Envoi de la notification Push via le serveur si le token est disponible
+        // Envoi de la notification Push via le service client
         const fcmToken = localStorage.getItem('fcm_token') || profile.fcm_token;
         if (fcmToken) {
-           fetch('/api/send-push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                token: fcmToken,
-                title: 'MZ+ Boutique',
-                body: `${addedProduct.name} a été ajouté à votre boutique ! 🚀`
-              })
-           }).catch(err => console.warn("FCM push failed:", err));
+           import('../../../services/notificationService.client.ts').then(service => {
+             service.notifyProductImported(fcmToken, addedProduct.name);
+           }).catch(err => console.warn("Failed to load notification service:", err));
         }
 
         // Wait for AnimatePresence mode="wait" to finish the exit animation of catalog

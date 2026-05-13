@@ -2,8 +2,8 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import admin from 'firebase-admin';
 import { createClient } from '@supabase/supabase-js';
+import { initAdmin, sendPush } from './notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,112 +84,33 @@ async function startServer() {
     }
   });
 
-  // Initialize Firebase Admin
-  let serviceAccount;
-  const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-  let firebaseAdminReady = false;
+  initAdmin();
 
-  if (serviceAccountStr) {
-    try {
-      serviceAccount = JSON.parse(serviceAccountStr);
-    } catch (e) {
-      console.error('Error parsing FIREBASE_SERVICE_ACCOUNT env var:', e);
-    }
-  } else {
-    try {
-      const fs = await import('fs');
-      const saPath = path.join(process.cwd(), 'service-account.json');
-      if (fs.existsSync(saPath)) {
-        serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
-        console.log('Using service-account.json file for Firebase Admin');
-      }
-    } catch (error) {
-      console.warn('service-account.json not found or invalid');
-    }
-  }
-
-  if (serviceAccount) {
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      firebaseAdminReady = true;
-      console.log('Firebase Admin initialized successfully');
-    } catch (error) {
-      console.error('Error initializing Firebase Admin:', error);
-    }
-  } else {
-    console.warn('No Firebase Service Account found (env or file)');
-  }
-
-  // API Route to send real FCM Push
+  // API Route to send real FCM Push (using the new service)
   app.post('/api/send-push', async (req, res) => {
-    if (!firebaseAdminReady) {
-      return res.status(500).json({ error: 'Firebase Admin not configured' });
-    }
-
-    const { token, tokens, title, body, target } = req.body;
+    const { token, title, body, url, icon } = req.body;
 
     try {
-      const { data: config } = await supabase.from('mz_app_config').select('icon_base64').eq('id', 'main-config').maybeSingle();
-      const appIcon = config?.icon_base64 || 'https://ui-avatars.com/api/?name=MZ&background=ca8a04&color=fff&size=512&format=png';
-
-      const messagePayload = {
-        notification: {
-          title: title,
-          body: body,
-          image: appIcon
-        },
-        data: { 
-          title: title, 
-          body: body, 
-          url: '/',
-          icon: appIcon
-        },
-        android: { 
-          priority: 'high' as const,
-          notification: {
-            sound: 'default',
-            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-            icon: 'stock_ticker_update' // generic icon reference or URL
-          }
-        },
-        webpush: { 
-          headers: { 
-            'Urgency': 'high'
-          }, 
-          notification: {
-            icon: appIcon,
-            badge: appIcon
-          },
-          fcmOptions: { 
-            link: '/' 
-          }
-        }
-      };
-
-      if (target === 'all' || tokens) {
-        const targetTokens = Array.from(new Set(tokens || [])).filter(Boolean); // Déduplication
-        console.log(`FCM: Sending to ${targetTokens.length} unique tokens`);
-        
-        const response = await admin.messaging().sendEach(targetTokens.map((t: any) => ({
-          ...messagePayload,
-          token: t
-        })));
-        
-        console.log('FCM Multicast Results:', JSON.stringify(response.responses.map(r => r.success ? 'OK' : r.error?.message)));
-        return res.json({ success: true, details: response });
-      } else if (token) {
-        console.log(`FCM: Sending to single token: ${token.substring(0, 15)}...`);
-        const response = await admin.messaging().send({ ...messagePayload, token });
-        console.log('FCM Success ID:', response);
-        return res.json({ success: true, messageId: response });
+      if (!token) {
+        return res.status(400).json({ error: 'Token manquant' });
       }
 
-      res.status(400).json({ error: 'Missing token(s)' });
-    } catch (error: any) {
-      console.error('CRITICAL FCM ERROR:', error);
-      res.status(500).json({ error: error.message });
+      const result = await sendPush(token, title, body, { url, icon });
+
+      if (!result.success) {
+        if (result.error === 'invalid_token') {
+          console.log(`Cleaning up invalid token: ${token}`);
+          // Ici vous pouvez ajouter la logique pour supprimer le token de la DB Supabase
+          // await supabase.from('users').update({ fcm_token: null }).eq('fcm_token', token);
+        }
+        return res.status(500).json(result);
+      }
+
+      res.json(result);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error('API Send-Push Error:', error);
+      res.status(500).json({ error: err.message });
     }
   });
 

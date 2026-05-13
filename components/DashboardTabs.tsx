@@ -71,7 +71,7 @@ import ReactMarkdown from "react-markdown";
 import { TextFormationReader } from "./features/formation/TextFormationReader.tsx";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 
-import { BONUS_CONTENTS } from "./features/formation/bonusContentData.ts";
+import { BONUS_CONTENTS, getBonusContent } from "./features/formation/bonusContentData.ts";
 
 const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
   profile,
@@ -177,14 +177,22 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {rewards.length === 0 ? (
-                <div className="text-center py-12 text-neutral-500 font-bold tracking-widest uppercase text-xs">
-                  Tu n'as reçu aucun bonus pour l'instant
+              {(() => {
+                const validRewards = rewards.filter((r) => r.reward != null);
+                
+                return validRewards.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-20 px-6 h-full opacity-80">
+                  <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center mb-6 border border-purple-500/20">
+                    <Gift size={32} className="text-purple-400 opacity-50" />
+                  </div>
+                  <h4 className="text-white font-black text-lg uppercase tracking-widest mb-2">Aucun Bonus Actif</h4>
+                  <p className="text-neutral-400 text-sm leading-relaxed max-w-sm">
+                    Tu n'as reçu aucun bonus pour l'instant, ou tes anciens bonus ne sont plus disponibles.
+                  </p>
                 </div>
               ) : (
-                rewards.map((userReward) => {
+                validRewards.map((userReward) => {
                   const rw = userReward.reward;
-                  if (!rw) return null;
                   const isUrl =
                     rw.file_url?.startsWith("http") &&
                     !rw.file_url.includes(" ");
@@ -197,7 +205,8 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
                         e.stopPropagation();
                         
                         // If it's a URL but the user wants it to open in the reader (if text is available)
-                        const textContent = BONUS_CONTENTS[rw.id] || rw.description || (isUrl ? "" : rw.file_url) || "";
+                        const bonusFallback = getBonusContent(rw.id, rw.title);
+                        const textContent = bonusFallback || rw.description || (isUrl ? "" : rw.file_url) || "";
                         
                         if (textContent.length > 20 || !isUrl) {
                           window.dispatchEvent(new CustomEvent('mz-open-reward-content', {
@@ -252,7 +261,8 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
                     </div>
                   );
                 })
-              )}
+              );
+            })()}
             </div>
           </div>
         </div>

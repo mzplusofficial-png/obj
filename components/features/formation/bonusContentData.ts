@@ -302,3 +302,16 @@ La MZ+ vous offre les outils, mais c'est en bâtissant une équipe que vous déb
 > *"Seul on va plus vite, ensemble on devient immense."* 🏛️🌍🏆
 `,
 };
+
+export const getBonusContent = (id: string, title?: string): string | null => {
+  if (BONUS_CONTENTS[id]) return BONUS_CONTENTS[id];
+  if (!title) return null;
+  
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes('instagram')) return BONUS_CONTENTS["104a85cd-91a1-4d17-89a0-a5c0b08248a8"];
+  if (titleLower.includes('tiktok') || titleLower.includes('visage')) return BONUS_CONTENTS["0cefd505-4984-427a-84cd-e9e24a5368c6"];
+  if (titleLower.includes('ebook')) return BONUS_CONTENTS["989af6ca-09e2-42cc-9e4b-56459ca04fad"];
+  if (titleLower.includes('équipe') || titleLower.includes('equipe') || titleLower.includes('team')) return BONUS_CONTENTS["7f2e17e8-cad6-49ca-949b-5fd9d7b87bf5"];
+  
+  return null;
+};

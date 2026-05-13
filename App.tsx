@@ -50,7 +50,7 @@ import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 
 import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
-import { BONUS_CONTENTS } from './components/features/formation/bonusContentData.ts';
+import { BONUS_CONTENTS, getBonusContent } from './components/features/formation/bonusContentData.ts';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -1002,7 +1002,7 @@ const App: React.FC = () => {
     const handleOpenReward = (e: any) => {
       const { rewardId, id, text, content, title } = e.detail || {};
       const actualId = rewardId || id;
-      const actualContent = text || content || (actualId ? BONUS_CONTENTS[actualId] : null);
+      const actualContent = text || content || (actualId ? getBonusContent(actualId, title) : null);
       
       if (actualContent) {
         setBonusContent({
