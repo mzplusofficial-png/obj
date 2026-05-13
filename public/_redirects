@@ -1,1 +1,3 @@
-/*  /index.html  200
+/api/send-push  /.netlify/functions/send-push  200
+/api/*  /api/:splat  200
+/*      /index.html  200
