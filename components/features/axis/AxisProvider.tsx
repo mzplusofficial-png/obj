@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback, useRef } from 'react';
 
 export type AxisState = 'idle' | 'guiding' | 'action' | 'progression' | 'success' | 'warning' | 'inactive';
 
@@ -41,7 +42,7 @@ export function AxisProvider({ children }: { children: ReactNode }) {
   const [isChatUnlocked, setChatUnlocked] = useState(() => localStorage.getItem('mz_axis_chat_introduced') === 'true');
   const [isDisabled, setIsDisabled] = useState(() => sessionStorage.getItem('mz_axis_disabled') === 'true');
 
-  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerAxisMessage = useCallback((message: string | ReactNode, state: AxisState = 'guiding', duration = 5000, action?: AxisAction, position: AxisPosition = 'bottom-right') => {
     if (sessionStorage.getItem('mz_axis_disabled') === 'true') return;

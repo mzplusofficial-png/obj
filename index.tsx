@@ -1,5 +1,6 @@
-import React from 'react';
+import * as React from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { AxisProvider } from './components/features/axis/AxisProvider.tsx';
 import { AxisEntity } from './components/features/axis/AxisEntity.tsx';
@@ -41,24 +42,8 @@ const applyBranding = () => {
   }
 };
 
-// Enregistrement global du Service Worker pour activer la PWA (Indépendant des notifications)
-const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator) {
-    try {
-      // On utilise le même fichier que FCM pour éviter les conflits de scope
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=MZ4', {
-        scope: '/'
-      });
-      console.log('MZ+ System: Service Worker registered (PWA Active):', registration.scope);
-    } catch (error) {
-      console.warn('MZ+ System: Service Worker registration failed:', error);
-    }
-  }
-};
-
 const mountApp = () => {
   applyBranding();
-  registerServiceWorker();
   try {
     const rootElement = document.getElementById('root');
     if (!rootElement) {
@@ -69,10 +54,12 @@ const mountApp = () => {
     const root = createRoot(rootElement);
     root.render(
       <React.StrictMode>
-        <AxisProvider>
-          <App />
-          <AxisEntity />
-        </AxisProvider>
+        <BrowserRouter>
+          <AxisProvider>
+            <App />
+            <AxisEntity />
+          </AxisProvider>
+        </BrowserRouter>
       </React.StrictMode>
     );
     console.log("MZ+ System: React rendered successfully.");

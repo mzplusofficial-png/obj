@@ -80,14 +80,14 @@ service cloud.firestore {
     }
 
     match /announcements/{announcementId} {
-      allow list: if true;
-      allow get: if isValidId(announcementId);
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(announcementId);
       allow write: if isAdmin() && isValidAnnouncement(incoming());
     }
 
     // Test connection doc
     match /test/connection {
-      allow read: if true;
+      allow read: if isSignedIn();
     }
   }
 }

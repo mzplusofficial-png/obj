@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import {
   getFirestore,
   collection,
@@ -19,22 +19,8 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-
-// Messaging initialization needs to be async for isSupported check
-export let messaging: any = null;
-
-if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) {
-      messaging = getMessaging(app);
-      console.log("FCM: Messaging is supported and initialized");
-    } else {
-      console.warn("FCM: Messaging is not supported in this browser environment");
-    }
-  }).catch(err => {
-    console.error("FCM: Error checking for messaging support:", err);
-  });
-}
+export const messaging =
+  typeof window !== "undefined" ? getMessaging(app) : null;
 
 // // Test connection CRITICAL
 // async function testConnection() {
@@ -112,59 +98,65 @@ export async function addLivePulseEvent(event: {
 }
 
 export const requestNotificationPermission = async (vapidKey: string) => {
-  console.log("FCM: Starting requestNotificationPermission with vapidKey:", vapidKey);
-  
-  if (typeof window === "undefined") return { token: null, status: "unsupported" };
+  if (!messaging) {
+    console.error("FCM: Messaging not supported or initialized");
+    return { token: null, status: "unsupported" };
+  }
 
   try {
-    const supported = await isSupported();
-    if (!supported) {
-      console.error("FCM: Notifications not supported by this browser");
+    if (!("Notification" in window)) {
+      console.error("FCM: Notifications not supported by browser");
       return { token: null, status: "unsupported" };
     }
 
-    const messagingInst = getMessaging(app);
-    console.log("FCM: Current Notification.permission:", Notification.permission);
-
-    // Explicitly request permission FIRST (better for user gesture detection)
-    console.log("FCM: Triggering Notification.requestPermission()...");
-    const permission = await Notification.requestPermission();
-    console.log("FCM: Decision:", permission);
-
-    if (permission !== "granted") {
-      return { token: null, status: permission };
-    }
-
-    console.log("FCM: Permission GRANTED. Ensuring Service Worker is ready...");
-
-    // Then ensure service worker is registered properly
     let registration;
     if ("serviceWorker" in navigator) {
       try {
-        console.log("FCM: Registering service worker...");
-        registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", {
-          scope: "/",
-        });
-        await navigator.serviceWorker.ready;
-        console.log("FCM: Service Worker active");
-      } catch (swErr) {
-        console.error("FCM: SW registration error:", swErr);
+        console.log("FCM: Checking for existing service worker...");
+        // Essayer d'abord de récupérer une registration existante
+        registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+        
+        if (!registration) {
+          console.log("FCM: No existing SW found, registering new one...");
+          // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
+          registration = await navigator.serviceWorker.register(
+            "/firebase-messaging-sw.js?v=MZ5",
+            { scope: "/" },
+          );
+        } else {
+          console.log("FCM: Found existing SW registration");
+        }
+        
+        // Attendre que le SW soit actif (important pour getToken)
+        if (registration.installing) {
+            console.log("FCM: SW is installing...");
+            await new Promise<void>((resolve) => {
+                registration!.installing!.onstatechange = (e: any) => {
+                    if (e.target.state === 'activated') resolve();
+                };
+            });
+        }
+        
+        console.log("FCM: Service Worker is active:", registration.scope);
+      } catch (swError) {
+        console.error("FCM: Service Worker registration failed:", swError);
       }
     }
 
-    console.log("FCM: Getting token...");
-    const token = await getToken(messagingInst, {
-      vapidKey: vapidKey,
-      serviceWorkerRegistration: registration,
-    });
-      
-      if (token) {
-        console.log("FCM: Token acquired:", token);
-        return { token, status: "granted" };
-      } else {
-        console.warn("FCM: Token is null");
-        return { token: null, status: "no_token" };
-      }
+    console.log("FCM: Requesting permission with VAPID:", vapidKey);
+    const permission = await Notification.requestPermission();
+    // alert('Résultat permission: ' + permission);
+    console.log("FCM: Permission result:", permission);
+
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: vapidKey,
+        serviceWorkerRegistration: registration,
+      });
+      return { token, status: "granted" };
+    } else {
+      return { token: null, status: permission };
+    }
   } catch (error) {
     console.error("FCM: Error in requestNotificationPermission:", error);
     return { token: null, status: "error" };

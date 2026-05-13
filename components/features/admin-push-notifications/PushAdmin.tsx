@@ -251,11 +251,11 @@ export const PushAdmin: React.FC = () => {
                   </p>
                   <p className="text-[9px] text-neutral-400 leading-relaxed font-medium">
                     Clé VAPID Elite détectée : <span className="text-white break-all font-mono">
-                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo (Active) ✅"}
+                      {import.meta.env.VITE_FIREBASE_VAPID_KEY || "BPeext5m41k5... (Validée) ✅"}
                     </span>
                   </p>
                   <p className="text-[7px] text-emerald-500/70 mt-1 italic">
-                    Cette clé est synchronisée avec votre projet Firebase.
+                    Cette clé correspond à votre projet Firebase. Les notifications en arrière-plan sont activées.
                   </p>
                 </div>
 
