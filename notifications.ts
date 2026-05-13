@@ -98,9 +98,71 @@ export const sendPush = async (
 };
 
 /**
- * Cas d'usage spécifique : Ajout de produit
+ * Envoie une notification à plusieurs tokens
+ */
+export const sendMulticast = async (
+    tokens: string[], 
+    title: string, 
+    body: string, 
+    options: { icon?: string; url?: string; data?: any } = {}
+) => {
+    if (!tokens.length) return { success: false, error: 'no_tokens' };
+    if (!admin.apps.length) initAdmin();
+
+    const payload = {
+        notification: { title, body },
+        data: {
+            ...(options.data as Record<string, string> || {}),
+            title,
+            body,
+            url: options.url || '/',
+            icon: options.icon || '/icon.png'
+        },
+        webpush: {
+            headers: { Urgency: 'high' },
+            notification: {
+                title,
+                body,
+                icon: options.icon || '/icon.png',
+                badge: options.icon || '/icon.png',
+                click_action: options.url || '/',
+                requireInteraction: true
+            },
+            fcmOptions: { link: options.url || '/' }
+        }
+    };
+
+    try {
+        const response = await admin.messaging().sendEach(tokens.map(token => ({
+            ...payload,
+            token
+        })));
+        
+        return { 
+            success: true, 
+            successCount: response.successCount, 
+            failureCount: response.failureCount 
+        };
+    } catch (error: any) {
+        console.error('Erreur Multicast FCM:', error);
+        return { success: false, error: 'multicast_error', reason: error.message };
+    }
+};
+
+/**
+ * Cas d'usage spécifique : Ajout de produit pour tout le monde
+ */
+export const broadcastProductAdded = async (productName: string, icon?: string) => {
+    // Note: On ne peut pas facilement importer Supabase ici sans risquer des cycles ou des configs manquantes
+    // On laisse le serveur s'occuper de la liste des tokens et appeler sendMulticast
+    return { title: 'Nouveau Produit ! 🚀', body: `Le service "${productName}" est maintenant disponible. Allez voir !` };
+};
+
+/**
+ * Cas d'usage spécifique : Ajout de produit individuel
  */
 export const notifyProductAdded = async (token: string, productName: string) => {
+
     return sendPush(
         token,
         'Produit ajouté ! 🚀',

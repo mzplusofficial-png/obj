@@ -197,6 +197,21 @@ export const AffiliationSystem: React.FC<AffiliationSystemProps> = ({
       } else {
         const { error } = await supabase.from('products').insert([productFormData]);
         if (error) throw error;
+
+        // Déclencher la notification broadcast pour le nouveau produit
+        try {
+          await fetch('/api/broadcast-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              productName: productFormData.name,
+              icon: productFormData.image_url 
+            })
+          });
+          console.log('FCM: Broadcast notification triggered for new product');
+        } catch (pushErr) {
+          console.warn('FCM: Failed to trigger broadcast notification:', pushErr);
+        }
       }
       setShowProductForm(false);
       setEditingProduct(null);

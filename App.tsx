@@ -84,6 +84,8 @@ const App: React.FC = () => {
   const [xpRewardDesc, setXpRewardDesc] = useState("");
   const [xpRewardSource, setXpRewardSource] = useState("");
   const [showSharePopup, setShowSharePopup] = useState(false);
+  const [, setFcmToken] = useState<string | null>(null);
+  const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   
   // Défis "3 Jours" Trigger States
 
@@ -1508,6 +1510,50 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
       <PWAInstallBanner />
+      
+      {/* Bandeau de permission pour les notifications (particulièrement utile en Iframe/AI Studio) */}
+      <AnimatePresence>
+        {showPermissionBanner && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-4 right-4 z-[150] md:left-auto md:right-8 md:bottom-8 md:w-96"
+          >
+            <div className="bg-[#111] border border-yellow-500/30 rounded-2xl p-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col gap-4">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-xl bg-yellow-600/20 border border-yellow-500/40 flex items-center justify-center text-yellow-500 shrink-0">
+                  <Bell size={24} className="animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-sm">Activez les notifications</h4>
+                  <p className="text-white/60 text-xs mt-1 leading-relaxed">
+                    Restez informé des nouveaux services et opportunités en temps réel.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setupFCM(true)}
+                  className="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs uppercase tracking-wider rounded-lg transition-colors"
+                >
+                  Activer maintenant
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPermissionBanner(false);
+                    localStorage.setItem('fcm_permission_dismissed', 'true');
+                  }}
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white text-xs font-bold rounded-lg transition-all"
+                >
+                  Plus tard
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {bonusContent && (
         <TextFormationReader 
           title={bonusContent.title}

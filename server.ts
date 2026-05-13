@@ -3,7 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import { initAdmin, sendPush } from './notifications.js';
+import { initAdmin, sendPush, sendMulticast } from './notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +81,45 @@ async function startServer() {
       console.error('Manifest generation error:', error);
       // Fallback a un manifest statique en cas d'erreur
       res.sendFile(path.join(process.cwd(), 'public', 'manifest.json'));
+    }
+  });
+
+  // API Route to broadcast a new product to ALL users
+  app.post('/api/broadcast-product', async (req, res) => {
+    const { productName, icon } = req.body;
+
+    try {
+      if (!productName) {
+        return res.status(400).json({ error: 'Nom du produit manquant' });
+      }
+
+      // Fetch all users with a valid FCM token
+      const { data: users, error: fetchError } = await supabase
+        .from('users')
+        .select('fcm_token')
+        .not('fcm_token', 'is', null);
+
+      if (fetchError) throw fetchError;
+
+      if (!users || users.length === 0) {
+        return res.json({ success: true, message: 'Aucun token trouvé, notification ignorée' });
+      }
+
+      const tokens = users.map(u => u.fcm_token as string).filter(Boolean);
+      
+      const title = 'Nouveau Service ! 🚀';
+      const body = `Le service "${productName}" est maintenant disponible. Allez voir !`;
+      
+      const result = await sendMulticast(tokens, title, body, { 
+        icon: icon || '/icon.png',
+        url: '/catalog' 
+      });
+
+      res.json(result);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error('API Broadcast-Product Error:', error);
+      res.status(500).json({ error: err.message });
     }
   });
 
