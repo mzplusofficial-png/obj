@@ -127,21 +127,25 @@ async function startServer() {
 
   // API Route to send real FCM Push (using the new service)
   app.post('/api/send-push', async (req, res) => {
-    const { token, title, body, url, icon } = req.body;
+    const { token, tokens, title, body, url, icon } = req.body;
 
     try {
-      if (!token) {
-        return res.status(400).json({ error: 'Token manquant' });
+      if (!token && (!tokens || tokens.length === 0)) {
+        return res.status(400).json({ error: 'Token ou liste de tokens manquant' });
       }
 
-      const result = await sendPush(token, title, body, { url, icon });
+      let result;
+      if (tokens && Array.isArray(tokens) && tokens.length > 0) {
+        // Envoi groupé (Multicast)
+        result = await sendMulticast(tokens, title, body, { url, icon });
+      } else if (token) {
+        // Envoi individuel
+        result = await sendPush(token, title, body, { url, icon });
+      } else {
+        return res.status(400).json({ error: 'Format de requête invalide' });
+      }
 
       if (!result.success) {
-        if (result.error === 'invalid_token') {
-          console.log(`Cleaning up invalid token: ${token}`);
-          // Ici vous pouvez ajouter la logique pour supprimer le token de la DB Supabase
-          // await supabase.from('users').update({ fcm_token: null }).eq('fcm_token', token);
-        }
         return res.status(500).json(result);
       }
 
@@ -151,6 +155,11 @@ async function startServer() {
       console.error('API Send-Push Error:', error);
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Health Check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
   // Vite middleware for development

@@ -117,7 +117,7 @@ export const requestNotificationPermission = async (vapidKey: string) => {
       try {
         console.log("FCM: Taking token...");
         const token = await getToken(messaging, { 
-          vapidKey: "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo" 
+          vapidKey: vapidKey || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo" 
         });
         if (token) {
           console.log("FCM: Token successfully retrieved:", token);

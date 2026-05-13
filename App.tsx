@@ -792,15 +792,30 @@ const App: React.FC = () => {
         setShowPermissionBanner(false);
         
         if (session?.user?.id) {
-          const { error: updateError } = await supabase.from('users').update({ 
-            fcm_token: result.token,
-            last_fcm_sync: new Date().toISOString() 
-          }).eq('id', session.user.id);
-          
-          if (updateError) {
-            console.error('FCM: Failed to save token to database:', updateError);
-          } else {
-            console.log('FCM: Token synced with database');
+          console.log('FCM: Syncing token with database for user', session.user.id);
+          try {
+            const { error: updateError } = await supabase.from('users').update({ 
+              fcm_token: result.token,
+              last_fcm_sync: new Date().toISOString() 
+            }).eq('id', session.user.id);
+            
+            if (updateError) {
+              console.error('FCM: Failed to save token to database (Status 400 likely means missing columns):', updateError);
+              // Fallback: try without last_fcm_sync if that column is missing
+              const { error: fallbackError } = await supabase.from('users').update({ 
+                fcm_token: result.token
+              }).eq('id', session.user.id);
+              
+              if (fallbackError) {
+                console.error('FCM: Fallback save also failed:', fallbackError);
+              } else {
+                console.log('FCM: Token synced with database (fallback successful)');
+              }
+            } else {
+              console.log('FCM: Token synced with database successfully');
+            }
+          } catch (syncErr) {
+            console.error('FCM: Exception during database sync:', syncErr);
           }
         }
       } else {
