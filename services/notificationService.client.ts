@@ -32,6 +32,13 @@ export const sendPushNotification = async (
       }),
     });
 
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('L\'API n\'a pas retourné de JSON valide. Type reçu:', contentType, 'Début de réponse:', text.substring(0, 100));
+      return { success: false, error: 'invalid_response_format' };
+    }
+
     const data = await response.json();
     return data;
   } catch (error) {
