@@ -78,7 +78,6 @@ const App: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ title: string; body: string; type?: 'info' | 'error' | 'warning' } | null>(null);
-  const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [initSequence, setInitSequence] = useState(true);
   const [showXpReward, setShowXpReward] = useState(false);
   const [xpRewardAmount, setXpRewardAmount] = useState(0);
@@ -1160,45 +1159,6 @@ const App: React.FC = () => {
       <PremiumAccessGate />
       
       <PushDisplay profile={userProfile} />
-      
-      {/* Permission Banner for Mobile/Iframe */}
-      {showPermissionBanner && (
-        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-yellow-600 p-4 md:p-6 animate-slide-up">
-          <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center shrink-0">
-                <Bell className="text-white" size={24} />
-              </div>
-              <div>
-                <h4 className="text-white font-black uppercase text-sm tracking-tight">Activer les alertes MZ+</h4>
-                <p className="text-yellow-100 text-xs mt-1">Recevez vos gains et bonus en temps réel sur votre mobile.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <button 
-                onClick={() => setupFCM(true)}
-                className="flex-1 md:flex-none bg-white text-yellow-700 font-black uppercase text-[10px] px-6 py-3 rounded-xl shadow-lg hover:bg-neutral-100 transition-all"
-              >
-                Activer maintenant
-              </button>
-              <button 
-                onClick={() => {
-                  setShowPermissionBanner(false);
-                  localStorage.setItem('fcm_permission_dismissed', 'true');
-                }}
-                className="p-3 text-yellow-200 hover:text-white transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </div>
-          {window.self !== window.top && (
-            <p className="text-[8px] text-yellow-200/60 text-center mt-3 uppercase font-bold tracking-widest">
-              Note: Pour de meilleurs résultats sur mobile, ouvrez le site dans un nouvel onglet.
-            </p>
-          )}
-        </div>
-      )}
 
       {/* Foreground Notification Toast (FCM) */}
       {notification && (
