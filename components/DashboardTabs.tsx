@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
-  Users,
   UserPlus,
   Lock,
   Target,
   Crown,
   ChevronRight,
-  Zap,
-  GraduationCap,
   Video,
   BookOpen,
   ArrowLeft,
-  Shield,
   Mail,
   Facebook,
   Share2,
@@ -20,35 +16,21 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  ChevronDown,
-  ArrowDownToLine,
-  Sparkles,
   Trophy,
-  Link as LinkIcon,
-  User,
   LogOut,
-  Settings,
-  Bell,
   Rocket,
   MapPin,
   FileText,
 } from "lucide-react";
 import {
   UserProfile,
-  RPASubmission,
-  CoachingRequest,
-  WithdrawalRequest,
   TabId,
-  Wallet,
 } from "../types.ts";
 import {
   SectionTitle,
   GoldBorderCard,
-  EliteBadge,
   GoldText,
   PrimaryButton,
-  UpgradeGate,
-  PurpleText,
 } from "./UI.tsx";
 import { supabase } from "../services/supabase.ts";
 import { AcademieMain } from "./features/formation/AcademieMain.tsx";
@@ -67,16 +49,14 @@ import {
   getCurrentLevel,
 } from "./features/progression/LiquidProgressionTube.tsx";
 import { Download, Gift } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { TextFormationReader } from "./features/formation/TextFormationReader.tsx";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 
-import { BONUS_CONTENTS, getBonusContent } from "./features/formation/bonusContentData.ts";
+import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
 const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
   profile,
 }) => {
-  const [rewards, setRewards] = useState<any[]>([]);
+  const [rewards, setRewards] = useState<{reward: any, id: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -94,7 +74,7 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
       setLastViewedRewards(newRead);
       localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
     }
-  }, [isOpen, rewards]);
+  }, [isOpen, rewards, lastViewedRewards]);
 
   useEffect(() => {
     if (!profile) return;
@@ -181,15 +161,24 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
                 const validRewards = rewards.filter((r) => r.reward != null);
                 
                 return validRewards.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-20 px-6 h-full opacity-80">
-                  <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center mb-6 border border-purple-500/20">
-                    <Gift size={32} className="text-purple-400 opacity-50" />
+                  <div className="flex flex-col items-center justify-center text-center py-24 px-8 h-full">
+                    <div className="relative mb-10">
+                      <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full" />
+                      <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full flex items-center justify-center border border-purple-500/20">
+                        <Gift size={40} className="text-purple-400 opacity-60 animate-pulse" />
+                      </div>
+                    </div>
+                    <h4 className="text-white font-black text-2xl uppercase tracking-widest mb-4">Tes Bonus t'attendent</h4>
+                    <p className="text-neutral-400 text-sm leading-relaxed max-w-sm mb-8">
+                      Continue d'évoluer et de franchir les paliers pour débloquer des bonus exclusifs MZ+.
+                    </p>
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
+                    >
+                      Compris, je fonce !
+                    </button>
                   </div>
-                  <h4 className="text-white font-black text-lg uppercase tracking-widest mb-2">Aucun Bonus Actif</h4>
-                  <p className="text-neutral-400 text-sm leading-relaxed max-w-sm">
-                    Tu n'as reçu aucun bonus pour l'instant, ou tes anciens bonus ne sont plus disponibles.
-                  </p>
-                </div>
               ) : (
                 validRewards.map((userReward) => {
                   const rw = userReward.reward;
@@ -200,15 +189,18 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
                   return (
                     <div
                       key={userReward.id}
-                      className="relative group w-full p-4 rounded-[2rem] bg-[#111] border border-white/5 hover:border-purple-500/50 transition-colors cursor-pointer overflow-hidden flex items-center gap-4 shadow-xl"
+                      className="relative group w-full p-5 rounded-[2.5rem] bg-[#1a1a1a] border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer overflow-hidden flex items-center gap-5 shadow-2xl hover:bg-[#222]"
                       onClick={(e) => {
                         e.stopPropagation();
                         
-                        // If it's a URL but the user wants it to open in the reader (if text is available)
                         const bonusFallback = getBonusContent(rw.id, rw.title);
-                        const textContent = bonusFallback || rw.description || (isUrl ? "" : rw.file_url) || "";
+                        // Prioritize: 1. Hardcoded fallback, 2. Long file_url (markdown), 3. Description
+                        const textContent = bonusFallback || 
+                                           (!isUrl && rw.file_url && rw.file_url.length > 50 ? rw.file_url : null) || 
+                                           rw.description || 
+                                           (isUrl ? "" : rw.file_url) || "";
                         
-                        if (textContent.length > 20 || !isUrl) {
+                        if (textContent.length > 10 || !isUrl) {
                           window.dispatchEvent(new CustomEvent('mz-open-reward-content', {
                             detail: {
                               title: rw.title,

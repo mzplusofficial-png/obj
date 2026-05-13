@@ -60,6 +60,63 @@ Vous avez les outils. Vous avez l'ambition.
 > **Bienvenue dans votre nouvelle vie de liberté financière avec MZ+ !** 🌍💪❤️‍🔥
 `,
 
+  "0cefd505-1234-5678-90ab-cdef12345678": `# 🎬 TikTok Sans Visage : Multipliez Vos Ventes avec l'IA
+
+### 🌟 Bienvenue, futur maître de TikTok !
+Ce guide est votre étincelle pour conquérir le monde digital. Chez **MZ+**, nous ne nous contentons pas de rêver ; nous agissons.
+
+Oubliez les idées reçues ! Vous n'avez pas besoin de montrer votre visage pour cartonner. Utilisez la puissance de l'**IA** pour créer des vidéos captivantes.
+
+---
+
+## 📈 Chapitre 1 : Le Phénomène "Sans Visage"
+
+TikTok offre une **portée organique massive**. Cette plateforme permet de percer quel que soit votre nombre d'abonnés.
+
+### 💡 Pourquoi ça marche ?
+*   🚀 **Visibilité :** Algorithme puissant et viral.
+*   🛡️ **Liberté :** Vous vous concentrez uniquement sur la valeur du message.
+*   🤝 **Connexion :** Ce sont vos conseils qui créent le lien, pas votre look.
+
+---
+
+## 🤖 Chapitre 2 : Votre Studio Invisible grâce à l'IA
+
+L'Intelligence Artificielle est votre super-pouvoir. Elle transforme votre smartphone en studio pro.
+
+### 🛠️ Les Outils Indispensables :
+*   🎬 **CapCut :** Pour un montage dynamique et des sous-titres stylés.
+*   🎙️ **Voix IA :** Des voix ultra-réalistes qui parlent pour vous.
+*   🧠 **ChatGPT :** Pour rédiger des scripts qui captivent.
+*   🖼️ **Banques d'images :** Pour des visuels de haute qualité.
+
+---
+
+## 💰 Chapitre 3 : Transformer les Vues en Commissions
+
+Le but ultime est la vente. Suivez ce tunnel simple :
+1.  **Hook :** Stopper le scroll immédiatement.
+2.  **Valeur :** Donner des conseils utiles et concrets.
+3.  **CTA :** Diriger vers votre boutique ou vos messages privés.
+
+---
+
+## 💎 Chapitre 4 : L'Accélérateur MZ+ Premium
+
+Pour ceux qui veulent passer de 35 000 à **350 000 FCFA**, le niveau Premium vous offre un pass VIP pour l'élite :
+*   🎓 **Formations de haut niveau**
+*   👥 **Cercle d'Elite MZ+**
+*   🚀 **Accompagnement VIP**
+
+---
+
+## 🦁 Conclusion : Soyez le Lion de votre destin
+
+Chez **MZ+**, nous sommes une famille. Nous avançons ensemble vers la liberté.
+
+**Passez à l'action dès aujourd'hui. L'aventure ne fait que commencer !** 🚀🌍✨
+`,
+
   "0cefd505-4984-427a-84cd-e9e24a5368c6": `# 🎬 TikTok Sans Visage : Multipliez Vos Ventes avec l'IA
 
 ### 🌟 Bienvenue, futur maître de TikTok !
@@ -176,7 +233,7 @@ Les objections ne sont pas des refus, mais des **opportunités de clarification*
 Pour rester un membre respecté de l'élite MZ+, fuyez ces comportements :
 
 *   🚫 **Le Spam :** Ne harcelez jamais.
-*   🚫 **La Vente Agressive :** Aidez, ne forcez pas.
+*   🚫 **Le Vente Agressive :** Aidez, ne forcez pas.
 *   🚫 **Le Mensonge :** L'honnêteté est primordiale.
 *   🚫 **L'Indifférence :** Écoutez vraiment votre prospect.
 *   🚫 **L'Abandon :** Un suivi respectueux peut tout changer.
@@ -304,14 +361,14 @@ La MZ+ vous offre les outils, mais c'est en bâtissant une équipe que vous déb
 };
 
 export const getBonusContent = (id: string, title?: string): string | null => {
-  if (BONUS_CONTENTS[id]) return BONUS_CONTENTS[id];
+  if (id && BONUS_CONTENTS[id]) return BONUS_CONTENTS[id];
   if (!title) return null;
   
   const titleLower = title.toLowerCase();
-  if (titleLower.includes('instagram')) return BONUS_CONTENTS["104a85cd-91a1-4d17-89a0-a5c0b08248a8"];
-  if (titleLower.includes('tiktok') || titleLower.includes('visage')) return BONUS_CONTENTS["0cefd505-4984-427a-84cd-e9e24a5368c6"];
-  if (titleLower.includes('ebook')) return BONUS_CONTENTS["989af6ca-09e2-42cc-9e4b-56459ca04fad"];
-  if (titleLower.includes('équipe') || titleLower.includes('equipe') || titleLower.includes('team')) return BONUS_CONTENTS["7f2e17e8-cad6-49ca-949b-5fd9d7b87bf5"];
+  if (titleLower.includes('instagram') || titleLower.includes('réseaux') || titleLower.includes('reseau')) return BONUS_CONTENTS["104a85cd-91a1-4d17-89a0-a5c0b08248a8"];
+  if (titleLower.includes('tiktok') || titleLower.includes('visage') || titleLower.includes('ia')) return BONUS_CONTENTS["0cefd505-1234-5678-90ab-cdef12345678"];
+  if (titleLower.includes('ebook') || titleLower.includes('livre') || titleLower.includes('vente directe')) return BONUS_CONTENTS["989af6ca-09e2-42cc-9e4b-56459ca04fad"];
+  if (titleLower.includes('équipe') || titleLower.includes('equipe') || titleLower.includes('team') || titleLower.includes('parrainage')) return BONUS_CONTENTS["7f2e17e8-cad6-49ca-949b-5fd9d7b87bf5"];
   
   return null;
 };

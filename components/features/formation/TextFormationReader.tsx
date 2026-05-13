@@ -287,7 +287,16 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
               prose-img:rounded-[2.5rem] prose-img:border prose-img:border-emerald-500/20 prose-img:my-20 prose-img:shadow-[0_0_50px_rgba(16,185,129,0.1)]
               selection:bg-emerald-500/30 selection:text-white
             ">
-              <ReactMarkdown>{content || ""}</ReactMarkdown>
+              {content ? (
+                <ReactMarkdown>{content}</ReactMarkdown>
+              ) : (
+                <div className="py-20 text-center space-y-4">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+                    <BookOpen size={30} className="text-white/20" />
+                  </div>
+                  <p className="text-neutral-500 italic">Contenu en cours de préparation ou non disponible.</p>
+                </div>
+              )}
             </div>
           </div>
 

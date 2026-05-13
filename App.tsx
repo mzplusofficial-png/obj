@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, X, AlertTriangle, Bell, Crown, Rocket } from 'lucide-react';
+import { Sparkles, X, AlertTriangle, Crown, Rocket } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
 import { LandingPage } from './components/LandingPage.tsx';
@@ -50,7 +50,7 @@ import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 
 import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
-import { BONUS_CONTENTS, getBonusContent } from './components/features/formation/bonusContentData.ts';
+import { getBonusContent } from './components/features/formation/bonusContentData.ts';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -59,7 +59,7 @@ const ADMIN_EMAILS = [
 ];
 
 const App: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<unknown>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [teamCount, setTeamCount] = useState(0);
@@ -76,7 +76,6 @@ const App: React.FC = () => {
   const [isRPAGuideActive, setIsRPAGuideActive] = useState(false);
   const [isTeamGuideActive, setIsTeamGuideActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ title: string; body: string; type?: 'info' | 'error' | 'warning' } | null>(null);
   const [initSequence, setInitSequence] = useState(true);
   const [showXpReward, setShowXpReward] = useState(false);
@@ -103,6 +102,151 @@ const App: React.FC = () => {
   const [bonusContent, setBonusContent] = useState<{ id: string; title: string; content: string } | null>(null);
   
   const { triggerAxisMessage, hideAxis, setIsChatOpen, setChatUnlocked } = useAxis();
+
+  const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
+    try {
+      const userEmail = email?.toLowerCase().trim() || "";
+      const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail);
+      
+      let { data: profile } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      
+      let challengeState = null;
+      if (profile) {
+          const { data: cState } = await supabase.from('mz_challenge_3j_state').select('*').eq('user_id', userId).maybeSingle();
+          if (cState) {
+              challengeState = {
+                presented: cState.presented,
+                startedAt: cState.started_at,
+                j1Completed: cState.j1_completed,
+                j2Presented: cState.j2_presented,
+                j2StartedAt: cState.j2_started_at,
+                j2Completed: cState.j2_completed,
+                j2CompletedAtStr: cState.j2_completed_at,
+                j3Presented: cState.j3_presented,
+                j3StartedAt: cState.j3_started_at,
+                j3Completed: cState.j3_completed,
+                cancelled: cState.cancelled
+              };
+          }
+      }
+
+      if (!profile) {
+        const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const newProfileData = { 
+          id: userId, 
+          full_name: fullName || 'Ambassadeur', 
+          email: userEmail, 
+          referral_code: newRefCode, 
+          rank_id: 1, 
+          is_admin: isHardcodedAdmin, 
+          user_level: 'standard'
+        };
+        const { data: upsertedProfile } = await supabase.from('users').upsert(newProfileData, { onConflict: 'id' }).select('*').single();
+        profile = upsertedProfile || (newProfileData as any);
+      }
+
+      const isAdminValue = isHardcodedAdmin || profile?.is_admin === true || !!profile?.admin_role;
+      const enrichedProfile: UserProfile = { 
+        id: profile?.id || userId, 
+        full_name: profile?.full_name || fullName || 'Ambassadeur', 
+        referral_code: profile?.referral_code || '---', 
+        rank_id: profile?.rank_id || 1, 
+        email: profile?.email || userEmail, 
+        is_admin: isAdminValue, 
+        admin_role: profile?.admin_role || (isHardcodedAdmin ? 'super_admin' : null),
+        rpa_balance: Number(profile?.rpa_balance || 0), 
+        rpa_points: Number(profile?.rpa_points || 0), 
+        xp: Number(profile?.xp || 0),
+        user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
+        created_at: profile?.created_at,
+        store_preferences: { ...(profile?.store_preferences || {}) },
+        country_code: profile?.country_code || profile?.country
+      };
+
+      // Calculate the correct rank_id from xp immediately.
+      let currentLevelIdx = 0;
+      for (let i = 0; i < PROGRESSION_LEVELS.length; i++) {
+        if (enrichedProfile.xp >= PROGRESSION_LEVELS[i].xp) {
+          currentLevelIdx = i;
+        }
+      }
+      const computedRankId = currentLevelIdx + 1;
+      enrichedProfile.rank_name = PROGRESSION_LEVELS[currentLevelIdx].name;
+
+      if (computedRankId !== enrichedProfile.rank_id) {
+        enrichedProfile.rank_id = computedRankId;
+        try {
+          // Fire and forget update
+          supabase.from('users').update({ rank_id: computedRankId }).eq('id', enrichedProfile.id).then();
+        } catch (e) {
+          console.error("Error updating rank_id", e);
+        }
+      }
+
+      if (challengeState) {
+          enrichedProfile.store_preferences.challenge_3j = challengeState;
+      }
+
+      
+      // Handle challenge commands from Admin
+      if (enrichedProfile.store_preferences?.challenge_command) {
+        const command = enrichedProfile.store_preferences.challenge_command;
+        const newPrefs = { ...enrichedProfile.store_preferences };
+        const challenge = newPrefs.challenge_3j || {};
+        
+        if (command === 'reset') {
+            newPrefs.challenge_3j = {};
+        } else if (command === 'complete') {
+            newPrefs.challenge_3j = {
+               ...challenge,
+               presented: true,
+               j1Completed: true,
+               startedAt: challenge.startedAt || new Date().toISOString()
+            };
+        }
+        
+        delete newPrefs.challenge_command;
+        
+        try {
+          await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', enrichedProfile.id);
+          enrichedProfile.store_preferences = newPrefs;
+        } catch (e) {
+          console.error("Error clearing challenge command", e);
+        }
+      }
+
+      setUserProfile(enrichedProfile);
+
+      const [walletRes, teamRes] = await Promise.all([
+        supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('referral_code_used', enrichedProfile.referral_code)
+      ]);
+
+      setWallet(walletRes.data || { id: 'initial', user_id: userId, balance: 0 });
+      setTeamCount(teamRes?.count || 0);
+    } catch (error: any) {
+      if (error?.code === 'PGRST303' || error?.message?.includes('JWT expired')) {
+        console.warn('JWT expired during fetchUserData, signing out...');
+        supabase.auth.signOut();
+        return;
+      }
+      console.error("Fetch data error:", error);
+      if (retryCount < 2 && (error.message?.includes('fetch') || error.name === 'TypeError')) {
+        console.log(`Retrying fetchUserData (${retryCount + 1})...`);
+        setTimeout(() => fetchUserData(userId, email, fullName, retryCount + 1), 1500);
+        return;
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const triggerRefresh = useCallback(() => { 
+    setLastUpdateSignal(Date.now());
+    if (session?.user?.id) {
+      fetchUserData(session.user.id, session.user.email, session.user.user_metadata?.full_name); 
+    }
+  }, [session, fetchUserData]);
 
   useEffect(() => {
     if (!userProfile || loading) return;
@@ -206,14 +350,14 @@ const App: React.FC = () => {
   }, [activeTab, pendingDay3TriggerAfterPremium]);
 
   // DB-Backed Challenge Update Helper
-  const updateChallengeDB = async (updates: any) => {
+  const updateChallengeDB = useCallback(async (updates: Partial<NonNullable<UserProfile['store_preferences']>['challenge_3j']>) => {
     if (!userProfile) return;
     const currentState = userProfile.store_preferences?.challenge_3j || {};
     const newState = { ...currentState, ...updates };
     const newPrefs = { ...(userProfile.store_preferences || {}), challenge_3j: newState };
     
     // Optimistic UI Update
-    setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+    setUserProfile((prev) => prev ? { ...prev, store_preferences: newPrefs } : prev);
     // Push DB
     try {
       await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', userProfile.id);
@@ -234,10 +378,10 @@ const App: React.FC = () => {
         updated_at: new Date().toISOString()
       };
       await supabase.from('mz_challenge_3j_state').upsert(dbPayload, { onConflict: 'user_id' });
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
+      console.error(_err);
     }
-  };
+  }, [userProfile]);
 
   // Handle Challenge Progression / Completion (J1 & J2)
   useEffect(() => {
@@ -293,7 +437,7 @@ const App: React.FC = () => {
     checkDailyChallenge();
     const interval = setInterval(checkDailyChallenge, 60000);
     return () => clearInterval(interval);
-  }, [userProfile]); // Runs when userProfile (and nested challengeState) changes
+  }, [userProfile, updateChallengeDB]); // Runs when userProfile (and nested challengeState) changes
 
   useEffect(() => {
     const handleProductAdded = () => {
@@ -382,7 +526,7 @@ const App: React.FC = () => {
        window.removeEventListener('mz-reset-challenge', handleResetChallenge);
        window.removeEventListener('mz-test-day2-fail', handleTestDay2Fail);
     };
-  }, [userProfile]); // Add dependency on userProfile so the DB helpers get latest state!
+  }, [userProfile, updateChallengeDB]); // Add dependency on userProfile so the DB helpers get latest state!
 
   useEffect(() => {
     const handleXpReward = async (e: Event) => {
@@ -402,7 +546,7 @@ const App: React.FC = () => {
     
     window.addEventListener('mz-xp-reward', handleXpReward);
     return () => window.removeEventListener('mz-xp-reward', handleXpReward);
-  }, [session?.user?.id]);
+  }, [session, triggerRefresh]);
 
   useEffect(() => {
     if (!loading) {
@@ -755,144 +899,6 @@ const App: React.FC = () => {
     syncBranding();
   }, []);
 
-  const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
-    try {
-      const userEmail = email?.toLowerCase().trim() || "";
-      const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail);
-      
-      let { data: profile } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
-      
-      let challengeState = null;
-      if (profile) {
-          const { data: cState } = await supabase.from('mz_challenge_3j_state').select('*').eq('user_id', userId).maybeSingle();
-          if (cState) {
-              challengeState = {
-                presented: cState.presented,
-                startedAt: cState.started_at,
-                j1Completed: cState.j1_completed,
-                j2Presented: cState.j2_presented,
-                j2StartedAt: cState.j2_started_at,
-                j2Completed: cState.j2_completed,
-                j2CompletedAtStr: cState.j2_completed_at,
-                j3Presented: cState.j3_presented,
-                j3StartedAt: cState.j3_started_at,
-                j3Completed: cState.j3_completed,
-                cancelled: cState.cancelled
-              };
-          }
-      }
-
-      if (!profile) {
-        const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const newProfileData = { 
-          id: userId, 
-          full_name: fullName || 'Ambassadeur', 
-          email: userEmail, 
-          referral_code: newRefCode, 
-          rank_id: 1, 
-          is_admin: isHardcodedAdmin, 
-          user_level: 'standard'
-        };
-        const { data: upsertedProfile } = await supabase.from('users').upsert(newProfileData, { onConflict: 'id' }).select('*').single();
-        profile = upsertedProfile || (newProfileData as any);
-      }
-
-      const isAdminValue = isHardcodedAdmin || profile?.is_admin === true || !!profile?.admin_role;
-      const enrichedProfile: UserProfile = { 
-        id: profile?.id || userId, 
-        full_name: profile?.full_name || fullName || 'Ambassadeur', 
-        referral_code: profile?.referral_code || '---', 
-        rank_id: profile?.rank_id || 1, 
-        email: profile?.email || userEmail, 
-        is_admin: isAdminValue, 
-        admin_role: profile?.admin_role || (isHardcodedAdmin ? 'super_admin' : null),
-        rpa_balance: Number(profile?.rpa_balance || 0), 
-        rpa_points: Number(profile?.rpa_points || 0), 
-        xp: Number(profile?.xp || 0),
-        user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
-        created_at: profile?.created_at,
-        store_preferences: { ...(profile?.store_preferences || {}) },
-        country_code: profile?.country_code || profile?.country
-      };
-
-      // Calculate the correct rank_id from xp immediately.
-      let currentLevelIdx = 0;
-      for (let i = 0; i < PROGRESSION_LEVELS.length; i++) {
-        if (enrichedProfile.xp >= PROGRESSION_LEVELS[i].xp) {
-          currentLevelIdx = i;
-        }
-      }
-      const computedRankId = currentLevelIdx + 1;
-      enrichedProfile.rank_name = PROGRESSION_LEVELS[currentLevelIdx].name;
-
-      if (computedRankId !== enrichedProfile.rank_id) {
-        enrichedProfile.rank_id = computedRankId;
-        try {
-          // Fire and forget update
-          supabase.from('users').update({ rank_id: computedRankId }).eq('id', enrichedProfile.id).then();
-        } catch (e) {
-          console.error("Error updating rank_id", e);
-        }
-      }
-
-      if (challengeState) {
-          enrichedProfile.store_preferences.challenge_3j = challengeState;
-      }
-
-      
-      // Handle challenge commands from Admin
-      if (enrichedProfile.store_preferences?.challenge_command) {
-        const command = enrichedProfile.store_preferences.challenge_command;
-        const newPrefs = { ...enrichedProfile.store_preferences };
-        const challenge = newPrefs.challenge_3j || {};
-        
-        if (command === 'reset') {
-            newPrefs.challenge_3j = {};
-        } else if (command === 'complete') {
-            newPrefs.challenge_3j = {
-               ...challenge,
-               presented: true,
-               j1Completed: true,
-               startedAt: challenge.startedAt || new Date().toISOString()
-            };
-        }
-        
-        delete newPrefs.challenge_command;
-        
-        try {
-          await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', enrichedProfile.id);
-          enrichedProfile.store_preferences = newPrefs;
-        } catch (e) {
-          console.error("Error clearing challenge command", e);
-        }
-      }
-
-      setUserProfile(enrichedProfile);
-
-      const [walletRes, teamRes] = await Promise.all([
-        supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('referral_code_used', enrichedProfile.referral_code)
-      ]);
-
-      setWallet(walletRes.data || { id: 'initial', user_id: userId, balance: 0 });
-      setTeamCount(teamRes?.count || 0);
-    } catch (error: any) {
-      if (error?.code === 'PGRST303' || error?.message?.includes('JWT expired')) {
-        console.warn('JWT expired during fetchUserData, signing out...');
-        supabase.auth.signOut();
-        return;
-      }
-      console.error("Fetch data error:", error);
-      if (retryCount < 2 && (error.message?.includes('fetch') || error.name === 'TypeError')) {
-        console.log(`Retrying fetchUserData (${retryCount + 1})...`);
-        setTimeout(() => fetchUserData(userId, email, fullName, retryCount + 1), 1500);
-        return;
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     const getInitialSession = async (retryCount = 0) => {
       try {
@@ -1042,12 +1048,6 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  const triggerRefresh = () => { 
-    if (session?.user?.id) {
-      fetchUserData(session.user.id, session.user.email, session.user.user_metadata?.full_name); 
-    }
-  };
-
   // GLOBAL HEARTBEAT : Suivi du temps pour le programme de récompense
   useEffect(() => {
     if (!userProfile?.id) return;
@@ -1056,7 +1056,7 @@ const App: React.FC = () => {
       try {
         const { error } = await supabase.rpc('mz_rewards_heartbeat', { p_user_id: userProfile.id });
         if (error) console.warn("Global heartbeat error:", error.message);
-      } catch (e) {
+      } catch {
         console.warn("Global heartbeat RPC not available");
       }
     };
