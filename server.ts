@@ -13,10 +13,8 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://ydkicdhcylpdffuzg
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_E_rpgEr5_Vf1_1wkLBGKNQ_hxvfdeED';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function startServer() {
+async function createServer() {
   const app = express();
-  const PORT = 3000;
-
   app.use(express.json());
 
   // LOGS DE DÉBOGAGE API
@@ -53,7 +51,6 @@ async function startServer() {
       const { data } = await supabase.from('mz_app_config').select('*').eq('id', 'main-config').maybeSingle();
       
       const customName = data?.app_name || 'MZ+ Elite';
-      // Use the stable route for icons instead of raw base64 for better compatibility
       const iconUrl = '/icon.png?v=' + (data?.updated_at ? new Date(data.updated_at).getTime() : Date.now());
 
       const manifest = {
@@ -87,7 +84,6 @@ async function startServer() {
       res.send(JSON.stringify(manifest));
     } catch (error) {
       console.error('Manifest generation error:', error);
-      // Fallback a un manifest statique en cas d'erreur
       res.sendFile(path.join(process.cwd(), 'public', 'manifest.json'));
     }
   });
@@ -101,7 +97,6 @@ async function startServer() {
         return res.status(400).json({ error: 'Nom du produit manquant' });
       }
 
-      // Fetch all users with a valid FCM token
       const { data: users, error: fetchError } = await supabase
         .from('users')
         .select('fcm_token')
@@ -124,30 +119,28 @@ async function startServer() {
       });
 
       res.json(result);
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+    } catch (error: any) {
       console.error('API Broadcast-Product Error:', error);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
-  initAdmin();
-
-  // API Route to send real FCM Push (using the new service)
+  // API Route to send real FCM Push
   app.post('/api/send-push', async (req, res) => {
+    console.log('[FIREBASE] Requête reçue sur /api/send-push');
     const { token, tokens, title, body, url, icon } = req.body;
 
     try {
+      initAdmin();
+
       if (!token && (!tokens || tokens.length === 0)) {
         return res.status(400).json({ error: 'Token ou liste de tokens manquant' });
       }
 
       let result;
       if (tokens && Array.isArray(tokens) && tokens.length > 0) {
-        // Envoi groupé (Multicast)
         result = await sendMulticast(tokens, title, body, { url, icon });
       } else if (token) {
-        // Envoi individuel
         result = await sendPush(token, title, body, { url, icon });
       } else {
         return res.status(400).json({ error: 'Format de requête invalide' });
@@ -158,17 +151,25 @@ async function startServer() {
       }
 
       res.json(result);
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+    } catch (error: any) {
       console.error('API Send-Push Error:', error);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
   // Health Check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    res.json({ status: 'ok', time: new Date().toISOString(), env: process.env.NODE_ENV });
   });
+
+  return app;
+}
+
+export { createServer };
+
+async function startServer() {
+  const app = await createServer();
+  const PORT = 3000;
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
