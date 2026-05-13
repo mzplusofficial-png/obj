@@ -19,6 +19,14 @@ async function startServer() {
 
   app.use(express.json());
 
+  // LOGS DE DÉBOGAGE API
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api/')) {
+      console.log(`[FIREBASE API] ${req.method} ${req.url}`);
+    }
+    next();
+  });
+
   // Dynamic Icon Route
   app.get('/icon.png', async (req, res) => {
     try {
