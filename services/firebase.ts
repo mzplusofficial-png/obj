@@ -109,52 +109,29 @@ export const requestNotificationPermission = async (vapidKey: string) => {
       return { token: null, status: "unsupported" };
     }
 
-    let registration;
-    if ("serviceWorker" in navigator) {
-      try {
-        console.log("FCM: Checking for existing service worker...");
-        // Essayer d'abord de récupérer une registration existante
-        registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
-        
-        if (!registration) {
-          console.log("FCM: No existing SW found, registering new one...");
-          // Ajout d'un paramètre de version pour forcer la mise à jour sur mobile
-          registration = await navigator.serviceWorker.register(
-            "/firebase-messaging-sw.js?v=MZ5",
-            { scope: "/" },
-          );
-        } else {
-          console.log("FCM: Found existing SW registration");
-        }
-        
-        // Attendre que le SW soit actif (important pour getToken)
-        if (registration.installing) {
-            console.log("FCM: SW is installing...");
-            await new Promise<void>((resolve) => {
-                registration!.installing!.onstatechange = (e: any) => {
-                    if (e.target.state === 'activated') resolve();
-                };
-            });
-        }
-        
-        console.log("FCM: Service Worker is active:", registration.scope);
-      } catch (swError) {
-        console.error("FCM: Service Worker registration failed:", swError);
-      }
-    }
-
     console.log("FCM: Requesting permission with VAPID:", vapidKey);
     const permission = await Notification.requestPermission();
-    // alert('Résultat permission: ' + permission);
     console.log("FCM: Permission result:", permission);
 
-    if (permission === "granted") {
-      const token = await getToken(messaging, {
-        vapidKey: vapidKey,
-        serviceWorkerRegistration: registration,
-      });
-      return { token, status: "granted" };
+    if (permission === 'granted') {
+      try {
+        console.log("FCM: Taking token...");
+        const token = await getToken(messaging, { 
+          vapidKey: "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo" 
+        });
+        if (token) {
+          console.log("FCM: Token successfully retrieved:", token);
+          return { token, status: "granted" };
+        } else {
+          console.log("FCM: No registration token available. Request permission to generate one.");
+          return { token: null, status: "no_token" };
+        }
+      } catch (err) {
+        console.error("FCM: An error occurred while retrieving token. ", err);
+        return { token: null, status: "error" };
+      }
     } else {
+      console.log("FCM: Permission not granted. Status:", permission);
       return { token: null, status: permission };
     }
   } catch (error) {

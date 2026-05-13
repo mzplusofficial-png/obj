@@ -12,7 +12,8 @@ import {
   HelpCircle,
   User,
   Coins,
-  ArrowDown
+  ArrowDown,
+  Menu
 } from 'lucide-react';
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
@@ -130,8 +131,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* HEADER FIXE PRESTIGE */}
       <header className="sticky top-0 z-[100] h-14 bg-[var(--color-main-bg)]/80 backdrop-blur-md border-b border-[var(--color-border-gold)] px-5 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-          <span className="text-xl font-black italic tracking-tighter text-[var(--color-gold-main)] drop-shadow-[0_0_10px_rgba(201,168,76,0.2)]">MZ+</span>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-2 text-[var(--color-gold-main)] hover:bg-[var(--color-gold-main)]/10 rounded-lg transition-colors">
+            <Menu size={24} />
+          </button>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+            <span className="text-xl font-black italic tracking-tighter text-[var(--color-gold-main)] drop-shadow-[0_0_10px_rgba(201,168,76,0.2)]">MZ+</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

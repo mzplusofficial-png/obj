@@ -341,7 +341,16 @@ export const PushAdmin: React.FC = () => {
                     alert("Tentative de demande de permission...");
                     const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo";
                     const result = await requestNotificationPermission(VAPID_KEY);
-                    alert("Résultat: " + result.status + (result.token ? " (Token généré !)" : " (Pas de token)"));
+                    if (result.token) {
+                      alert("Résultat: " + result.status + " (Token généré avec succès !)");
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session?.user?.id) {
+                         await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
+                      }
+                      localStorage.setItem('fcm_token', result.token);
+                    } else {
+                      alert("Résultat: " + result.status + " (Pas de token. Assurez-vous d'ouvrir l'application dans UN NOUVEL ONGLET, pas dans l'Iframe, et regardez la console pour plus d'infos)");
+                    }
                     window.location.reload();
                   }}
                   className="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-black rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg"
