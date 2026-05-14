@@ -35,18 +35,18 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
 
   const fetchQuestionsAndAnswers = async () => {
     try {
-      let qData;
-      let aData;
+      let qData: any[] = [];
+      let aData: any[] = [];
       
       // Essayer d'abord avec la jointure 'users'
       const res = await supabase
         .from('mz_formation_questions')
-        .select('*, users!inner(full_name)')
+        .select('*, sender:users(full_name)')
         .eq('formation_id', formationId)
         .order('created_at', { ascending: false });
         
       if (res.error) {
-        // Fallback sans jointure si l'erreur vient de la relation ou cache schema
+        console.warn("Questions fetch join failed, using fallback:", res.error);
         const fallbackRes = await supabase
           .from('mz_formation_questions')
           .select('*')
@@ -54,8 +54,21 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
           .order('created_at', { ascending: false });
         
         qData = fallbackRes.data || [];
+        
+        // Enricher manuellement avec les noms si possible
+        if (qData.length > 0) {
+          const userIds = Array.from(new Set(qData.map(q => q.user_id)));
+          const { data: userData } = await supabase.from('users').select('id, full_name').in('id', userIds);
+          if (userData) {
+            qData = qData.map(q => ({
+              ...q,
+              users: userData.find(u => u.id === q.user_id)
+            }));
+          }
+        }
       } else {
-        qData = res.data;
+        // Mapper 'sender' vers 'users' pour compatibilité avec l'interface Question
+        qData = res.data.map(q => ({ ...q, users: q.sender }));
       }
       
       if (qData) {
@@ -63,11 +76,11 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
       }
 
       if (qData && qData.length > 0) {
-        const questionIds = qData.map(q => (q as any).id);
+        const questionIds = qData.map(q => q.id);
         
         const resAns = await supabase
           .from('mz_formation_answers')
-          .select('*, users!inner(full_name)')
+          .select('*, sender:users(full_name)')
           .in('question_id', questionIds)
           .order('created_at', { ascending: true });
            
@@ -77,15 +90,27 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
             .select('*')
             .in('question_id', questionIds)
             .order('created_at', { ascending: true });
-           aData = fallbackAns.data || [];
+           
+           let answersRaw = fallbackAns.data || [];
+           const aUserIds = Array.from(new Set(answersRaw.map(a => a.user_id)));
+           const { data: aUserData } = await supabase.from('users').select('id, full_name').in('id', aUserIds);
+           
+           if (aUserData) {
+             aData = answersRaw.map(a => ({
+               ...a,
+               users: aUserData.find(u => u.id === a.user_id)
+             }));
+           } else {
+             aData = answersRaw;
+           }
         } else {
-           aData = resAns.data;
+           aData = resAns.data.map(a => ({ ...a, users: a.sender }));
         }
         
         const answersMap: Record<string, Answer[]> = {};
         if (aData) {
           aData.forEach(ans => {
-            const questionId = (ans as any).question_id;
+            const questionId = ans.question_id;
             if (!answersMap[questionId]) answersMap[questionId] = [];
             answersMap[questionId].push(ans as Answer);
           });

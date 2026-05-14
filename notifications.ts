@@ -19,13 +19,16 @@ export const initAdmin = () => {
 
     try {
         const cleanedJson = saJson.trim();
+        // Log basic info about the string (size, start) without leaking sensitive parts
+        console.log(`FCM: Parsing service account JSON (${cleanedJson.length} chars, starts with "${cleanedJson.substring(0, 5)}...")`);
         const serviceAccount = JSON.parse(cleanedJson);
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
         console.log('FCM: Firebase Admin initialisé via variable d\'environnement');
     } catch (e: any) {
-        console.error('FCM: Erreur lors du parsing de FIREBASE_SERVICE_ACCOUNT:', e.message);
+        console.error('FCM: Erreur lors du parsing ou de l\'initialisation de FIREBASE_SERVICE_ACCOUNT:', e.message);
+        console.error('FCM: Contenu brut (tronqué):', saJson.substring(0, 50) + '...');
     }
     return admin;
 };

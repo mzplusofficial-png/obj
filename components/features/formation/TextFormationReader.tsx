@@ -104,6 +104,18 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
       const storageKey = `mz_formation_xp_${currentUserId}_${formationId}`;
       const hasGottenXP = localStorage.getItem(storageKey);
 
+      // TOUJOURS envoyer l'événement de complétion pour les systèmes qui écoutent (Défis, logs, etc.)
+      // mais on ne donne l'XP qu'une seule fois.
+      window.dispatchEvent(
+        new CustomEvent("mz-formation-completed", {
+          detail: { 
+            formationId, 
+            type,
+            newlyCompleted: !hasGottenXP
+          }
+        })
+      );
+
       if (!hasGottenXP || isAdmin) {
         localStorage.setItem(storageKey, "true");
         window.dispatchEvent(

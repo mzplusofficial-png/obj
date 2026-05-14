@@ -76,12 +76,22 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
       .update({ ...updateData, rank_name: newRankName })
       .eq('id', userId);
 
-    if (updateError && (updateError.code === '42703' || updateError.code === 'PGRST204')) {
-       console.warn("Retrying update without rank_name due to schema cache error", updateError.code);
+    // Handle common errors: missing column (42703), schema cache (PGRST204), or foreign key (23503)
+    if (updateError && (updateError.code === '42703' || updateError.code === 'PGRST204' || updateError.code === '23503')) {
+       console.warn(`Retrying update due to error ${updateError.code}. Possible cause: schema cache or missing rank in DB.`);
+       
+       const safeUpdateData = { ...updateData };
+       
+       // If it's a foreign key error, we MUST remove rank_id
+       if (updateError.code === '23503') {
+         delete (safeUpdateData as any).rank_id;
+       }
+
        const { error: fallbackError } = await supabase
          .from('users')
-         .update(updateData)
+         .update(safeUpdateData)
          .eq('id', userId);
+         
        updateError = fallbackError;
     }
 

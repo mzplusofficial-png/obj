@@ -10,7 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Supabase for manifest route
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://ydkicdhcylpdffuzgdvm.supabase.co';
+const RAW_URL = process.env.VITE_SUPABASE_URL || 'https://ydkicdhcylpdffuzgdvm.supabase.co';
+const SUPABASE_URL = RAW_URL.replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_E_rpgEr5_Vf1_1wkLBGKNQ_hxvfdeED';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -135,8 +136,12 @@ async function startServer() {
   initAdmin();
 
   // Background Dispatcher for Priority Notifications (Run every 30 seconds)
+  console.log('[Server] Dispatcher interval set (30s)');
   setInterval(() => {
-    runPriorityDispatcher().catch(err => console.error('[Dispatcher Error]', err));
+    console.log('[Server] Starting runPriorityDispatcher...');
+    runPriorityDispatcher().catch(err => {
+      console.error('[Dispatcher Error]', err);
+    });
   }, 30000);
 
   // API Route to send real FCM Push (using the new service)

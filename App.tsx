@@ -529,6 +529,30 @@ const App: React.FC = () => {
   }, [userProfile, updateChallengeDB]); // Add dependency on userProfile so the DB helpers get latest state!
 
   useEffect(() => {
+    const handleFormationCompleted = (e: Event) => {
+      const customEvent = e as CustomEvent<{formationId: string, type: string, newlyCompleted: boolean}>;
+      const { formationId } = customEvent.detail;
+      
+      if (formationId === 'default-free-text') {
+        const challengeState = userProfile?.store_preferences?.challenge_3j || {};
+        const isAlreadyDone = challengeState.j1_completed || challengeState.j1Completed;
+        
+        if (challengeState.presented && !challengeState.cancelled && !isAlreadyDone) {
+          console.log("[Challenge] J1 completed via formation event");
+          updateChallengeDB({ j1Completed: true });
+          setChallengeCelebratedStep(1);
+          setTimeout(() => {
+            setShowChallengeCelebration(true);
+          }, 1500); 
+        }
+      }
+    };
+    
+    window.addEventListener('mz-formation-completed', handleFormationCompleted);
+    return () => window.removeEventListener('mz-formation-completed', handleFormationCompleted);
+  }, [userProfile, updateChallengeDB]);
+
+  useEffect(() => {
     const handleXpReward = async (e: Event) => {
       const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string, source?: string}>;
       const { amount, title, description, source } = customEvent.detail;
@@ -539,25 +563,19 @@ const App: React.FC = () => {
       if (source) setXpRewardSource(source);
       else setXpRewardSource("");
       setShowXpReward(true);
-
-      // Si c'est la formation du jour 1 qui est terminée, on valide aussi le défi J1
-      if (source === 'formation_complete') {
-        const challengeState = userProfile?.store_preferences?.challenge_3j || {};
-        const isAlreadyDone = challengeState.j1_completed || challengeState.j1Completed;
-        
-        if (challengeState.presented && !challengeState.cancelled && !isAlreadyDone) {
-          updateChallengeDB({ j1Completed: true });
-          setChallengeCelebratedStep(1);
-          setTimeout(() => {
-            setShowChallengeCelebration(true);
-          }, 1500); 
-        }
-      }
       
       if (session?.user?.id) {
-        console.log(`[XP] Rewarding ${amount} XP to ${session.user.id} from source: ${source}`);
-        await rewardUserXP(session.user.id, amount);
-        triggerRefresh();
+        try {
+          console.log(`[XP] Rewarding ${amount} XP to ${session.user.id} from source: ${source}`);
+          const success = await rewardUserXP(session.user.id, amount);
+          if (success) {
+            triggerRefresh();
+          } else {
+            console.error(`[XP] Failed to reward XP from source: ${source}`);
+          }
+        } catch (xpErr) {
+          console.error(`[XP] Exception in handleXpReward:`, xpErr);
+        }
       }
     };
     
@@ -940,6 +958,20 @@ const App: React.FC = () => {
     };
     syncBranding();
   }, []);
+
+  useEffect(() => {
+    // Safety fallback: if we are still loading after 15s, something is stuck.
+    // Force dismiss the loading screen.
+    const loadingGlobalFallback = setTimeout(() => {
+      if (loading) {
+        console.warn("[App] Loading safety fallback triggered after 15s");
+        setLoading(false);
+        setInitSequence(false);
+      }
+    }, 15000);
+    
+    return () => clearTimeout(loadingGlobalFallback);
+  }, [loading]);
 
   useEffect(() => {
     const getInitialSession = async (retryCount = 0) => {
