@@ -321,7 +321,25 @@ export const EspacePrive: React.FC<{ profile: UserProfile | null; onContactAmbas
 
       if (error) throw error;
 
-      // 3. Reset UI
+      // 3. Envoi d'une notification push broadcast
+      try {
+        await fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tokens: [], // Le backend récupérera tout si on passe tokens=[] ou un flag
+            target: 'all',
+            title: 'Nouveau Conseil Élite ! 💎',
+            body: tipInput.trim().substring(0, 100) + (tipInput.length > 100 ? '...' : ''),
+            url: '/espace-prive',
+            icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135679.png'
+          })
+        });
+      } catch (pushErr) {
+        console.warn("FCM Broadcast Tip failed:", pushErr);
+      }
+
+      // 4. Reset UI
       setTipInput('');
       setSelectedFile(null);
       setPreviewUrl(null);

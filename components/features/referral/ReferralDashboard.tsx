@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../../services/supabase.ts';
 import { UserProfile } from '../../../types.ts';
-import { Users, TrendingUp, Star, Award, Copy, Share2, Crown, Zap, Activity, CheckCircle2, ChevronRight, Rocket, Gift } from 'lucide-react';
+import { Users, Copy, Share2, Crown, Activity, CheckCircle2, Rocket, Gift } from 'lucide-react';
 import { useCurrency } from '../../../hooks/useCurrency.ts';
+import { useAxis } from '../../features/axis/AxisProvider.tsx';
 
 interface Props {
   profile: UserProfile | null;
@@ -27,19 +28,68 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [showOverlayGuide, setShowOverlayGuide] = useState(false);
+  const { triggerAxisMessage } = useAxis();
+
+  const startTeamAxisGuide = useCallback(() => {
+    triggerAxisMessage(
+      "Bienvenue dans ton Espace Parrainage ! C'est ici que tu vas parrainer de nouveaux membres pour rejoindre Millionnaire Zone Plus.",
+      "guiding",
+      0,
+      {
+        label: "Découvrir 🚀",
+        action: () => {
+          const el = document.getElementById('referral-link-card');
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          triggerAxisMessage(
+            "Voici ton Lien de Parrainage unique. Copie-le et partage-le. Chaque personne qui s'inscrit via ce lien devient ton filleul.",
+            "guiding",
+            0,
+            {
+               label: "Voir Stats 📊",
+               action: () => {
+                  const elStats = document.getElementById('referral-stats-card');
+                  elStats?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  triggerAxisMessage(
+                    "Ici, tu peux suivre tes statistiques. Le nombre de partenaires affiche toutes les personnes que tu as parrainées.",
+                    "guiding",
+                    0,
+                    {
+                      label: "Le Journal 📝",
+                      action: () => {
+                        const elList = document.getElementById('referral-list-container');
+                        elList?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        triggerAxisMessage(
+                          "Le Journal du Parrainage te permet de voir tes filleuls. Lorsqu'un de tes filleuls devient PREMIUM, tu reçois 700 POINTS RPA !",
+                          "action",
+                          0,
+                          {
+                            label: "C'est compris ! 👁️",
+                            action: () => {
+                               localStorage.setItem('mz_referral_guide_seen', 'true');
+                               triggerAxisMessage("Félicitations ! Tu as toutes les clés. À toi de bâtir ton empire !", "success", 7000);
+                            }
+                          }
+                        );
+                      }
+                    }
+                  );
+               }
+            }
+          );
+        }
+      }
+    );
+  }, [triggerAxisMessage]);
 
   useEffect(() => {
     const seen = localStorage.getItem('mz_referral_guide_seen');
     if (!seen) {
-      setShowOverlayGuide(true);
+      const timer = setTimeout(() => {
+        startTeamAxisGuide();
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, []);
-
-  const handleFinishOverlayGuide = () => {
-    localStorage.setItem('mz_referral_guide_seen', 'true');
-    setShowOverlayGuide(false);
-  };
+  }, [startTeamAxisGuide]);
 
   const fetchTeam = useCallback(async (retryCount = 0) => {
     if (!profile?.referral_code) return;
@@ -76,7 +126,6 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
   const premiumMembers = team.filter(m => m.user_level === 'niveau_mz_plus').length;
   const revenusGeneres = premiumMembers * 2500;
   const displayTeamCount = Math.max(team.length, teamCount);
-  const xpGeneres = displayTeamCount * 10;
 
   const referralLink = `${window.location.origin}/?ref=${profile?.referral_code}`;
 
@@ -109,14 +158,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
   return (
     <div className="pb-32 animate-in fade-in duration-700 bg-black min-h-[100dvh]">
       
-      {showOverlayGuide && (
-        <AxisFirstTimeGuide 
-          onClose={handleFinishOverlayGuide} 
-          convertAndFormat={convertAndFormat} 
-        />
-      )}
-
-      {/* 1. HERO SECTION & STATS OVERLAY (Immersive App Feel) */}
+      {/* Hero Section */}
       <div className="relative pt-12 pb-28 md:pt-16 md:pb-32 px-6 rounded-b-[2.5rem] md:rounded-b-[4rem] bg-gradient-to-b from-[#111009] via-[#0a0a0a] to-[#010101] border-b border-white/[0.02]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
         
@@ -134,7 +176,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
       <div className="max-w-4xl mx-auto px-4 md:px-8 -mt-20 relative z-20">
         <div className="bg-[#050505] backdrop-blur-xl border border-white/5 rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.5)] p-6 md:p-10">
            
-           <div className="grid grid-cols-2 gap-8 divide-x divide-white/5 mb-8 md:mb-10">
+           <div id="referral-stats-card" className="grid grid-cols-2 gap-8 divide-x divide-white/5 mb-8 md:mb-10">
               <div className="flex flex-col items-center justify-center">
                  <p className="text-sm font-semibold text-neutral-500 uppercase tracking-[0.2em] mb-2 md:mb-3">Membres</p>
                  <div className="flex items-center gap-3">
@@ -153,7 +195,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
               </div>
            </div>
 
-           <div className="flex flex-col sm:flex-row gap-4 w-full">
+           <div id="referral-link-card" className="flex flex-col sm:flex-row gap-4 w-full">
               <button 
                 onClick={handleShare}
                 className="flex-1 flex items-center justify-center gap-3 px-8 py-4 md:py-5 bg-white text-black rounded-[1.25rem] font-black text-lg hover:bg-white/90 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
@@ -185,15 +227,15 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
         <div className="pt-4">
           <div className="flex items-center justify-between mb-8 px-2">
              <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
-               <Activity className="text-white/40" size={20} />
-               Ton Équipe
+                <Activity className="text-white/40" size={20} />
+                Ton Équipe
              </h2>
              <span className="text-sm font-bold text-neutral-500 bg-white/5 px-4 py-1.5 rounded-full">
-               {displayTeamCount} membre{displayTeamCount > 1 ? 's' : ''}
+                {displayTeamCount} membre{displayTeamCount > 1 ? 's' : ''}
              </span>
           </div>
 
-          <div className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-4 md:p-6 shadow-xl">
+          <div id="referral-list-container" className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-4 md:p-6 shadow-xl">
             {loading ? (
               <div className="py-20 flex flex-col items-center justify-center space-y-4">
                 <div className="w-12 h-12 border-4 border-white/5 border-t-white/30 rounded-full animate-spin" />
@@ -231,7 +273,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
                         </div>
                         <div>
                           <p className="font-bold text-white text-base md:text-lg">{member.full_name || 'Membre Anonyme'}</p>
-                          <p className="text-xs md:text-sm text-neutral-500 mt-1">
+                          <p className="text-xs md:text-sm text-neutral-400 mt-1">
                             {new Date(member.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric'})}
                           </p>
                         </div>
@@ -265,7 +307,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
   );
 };
 
-const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: any }) => {
+const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: (val: number) => { formatted: string, value: number, symbol: string } }) => {
   const [step, setStep] = useState(0);
 
   const steps = [
@@ -324,84 +366,6 @@ const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: any }) => {
              </motion.div>
           </AnimatePresence>
        </div>
-    </div>
-  );
-};
-
-const AxisFirstTimeGuide = ({ onClose, convertAndFormat }: { onClose: () => void, convertAndFormat: any }) => {
-  const [step, setStep] = useState(0);
-
-  const steps = [
-    {
-       text: "Ton réseau est un actif générateur de revenus. Il est temps d'activer ta machine à revenus MZ+.",
-       button: "Suivant"
-    },
-    {
-       text: "À chaque fois qu'une personne s'inscrit gratuitement via ton lien privé, ton niveau d'expérience augmente (+10 XP).",
-       button: "Et ensuite ?"
-    },
-    {
-       text: `Dès qu'un de tes filleuls accède au statut Premium, tu reçois instantanément ${convertAndFormat(2500).formatted} sur ton solde, retirable immédiatement.`,
-       button: "Accéder à mon lien"
-    }
-  ];
-
-  const handleNext = () => {
-    if (step >= steps.length - 1) {
-      onClose();
-    } else {
-      setStep(s => s + 1);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-sm bg-[#0a0a09] border border-[var(--color-border-gold)] rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden"
-      >
-         {/* Subtle gold glow */}
-         <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-gold-main)]/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none" />
-         
-         <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-[#111] to-[#050505] flex items-center justify-center mb-8 border border-[var(--color-gold-main)]/20 shadow-inner">
-            <Crown className="text-[var(--color-gold-main)] opacity-90" size={26} />
-         </div>
-         
-         <div className="relative z-10 min-h-[140px]">
-            <AnimatePresence mode="wait">
-               <motion.div
-                  key={step}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col"
-               >
-                  <h3 className="text-white/90 text-lg md:text-xl font-medium tracking-tight leading-relaxed mb-8">
-                     {steps[step].text}
-                  </h3>
-               </motion.div>
-            </AnimatePresence>
-         </div>
-
-         <div className="mt-4">
-             <button 
-               onClick={handleNext} 
-               className="w-full py-4 bg-[var(--color-gold-main)] hover:bg-[var(--color-gold-light)] text-black rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-2"
-             >
-                {steps[step].button}
-                {step === steps.length - 1 ? <Rocket size={14} /> : <ChevronRight size={14} />}
-             </button>
-         </div>
-         
-         {/* Dots indicator */}
-         <div className="flex justify-center gap-2 mt-6">
-           {steps.map((_, i) => (
-             <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === step ? 'w-6 bg-[var(--color-gold-main)]' : 'w-1.5 bg-white/10'}`} />
-           ))}
-         </div>
-      </motion.div>
     </div>
   );
 };

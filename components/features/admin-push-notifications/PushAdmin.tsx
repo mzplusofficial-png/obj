@@ -20,6 +20,7 @@ export const PushAdmin: React.FC = () => {
     title: '',
     body: '',
     icon_type: 'info',
+    url: '/',
     target_type: 'all',
     target_value: ''
   });
@@ -93,7 +94,10 @@ export const PushAdmin: React.FC = () => {
               body: JSON.stringify({
                 token: userData.fcm_token,
                 title: formData.title,
-                body: formData.body
+                body: formData.body,
+                url: formData.url,
+                icon: formData.icon_type === 'money' ? 'https://cdn-icons-png.flaticon.com/512/2454/2454282.png' : 
+                      formData.icon_type === 'gift' ? 'https://cdn-icons-png.flaticon.com/512/3135/3135679.png' : '/icon.png'
               })
             });
           } catch (fcmErr) {
@@ -114,7 +118,10 @@ export const PushAdmin: React.FC = () => {
                 tokens,
                 target: 'all',
                 title: formData.title,
-                body: formData.body
+                body: formData.body,
+                url: formData.url,
+                icon: formData.icon_type === 'money' ? 'https://cdn-icons-png.flaticon.com/512/2454/2454282.png' : 
+                      formData.icon_type === 'gift' ? 'https://cdn-icons-png.flaticon.com/512/3135/3135679.png' : '/icon.png'
               })
             });
             const resData = await res.json();
@@ -128,7 +135,7 @@ export const PushAdmin: React.FC = () => {
       }
 
       alert("Notification envoyée ! (In-App + Tentative de Push Réel)");
-      setFormData({ title: '', body: '', icon_type: 'info', target_type: 'all', target_value: '' });
+      setFormData({ title: '', body: '', icon_type: 'info', url: '/', target_type: 'all', target_value: '' });
       setSelectedUser(null);
       fetchHistory();
     } catch (err: any) {
@@ -163,6 +170,12 @@ export const PushAdmin: React.FC = () => {
                     <option value="alert">Urgent / Alerte (Rouge)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-neutral-500 tracking-widest">URL de redirection (Optionnel)</label>
+                <input className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white outline-none focus:border-yellow-600 transition-all" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} placeholder="Ex: /boutique ou https://..." />
+                <p className="text-[8px] text-neutral-500 italic">Laisser "/" pour la page d'accueil. L'utilisateur sera redirigé ici au clic.</p>
               </div>
 
               <div className="space-y-2">

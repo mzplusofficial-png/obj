@@ -36,7 +36,6 @@ import { PushDisplay } from './components/features/admin-push-notifications/Push
 import { AnnouncementOverlay } from './components/features/marketing-announcements/AnnouncementOverlay.tsx';
 import { AffiliationGuide } from './components/guides/AffiliationGuide.tsx';
 import { RPAGuide } from './components/guides/RPAGuide.tsx';
-import { TeamGuide } from './components/guides/TeamGuide.tsx';
 import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate.tsx';
 import { requestNotificationPermission, onMessageListener } from './services/firebase.ts';
 import { useAxis } from './components/features/axis/AxisProvider.tsx';
@@ -74,7 +73,6 @@ const App: React.FC = () => {
   const [purchaseStep, setPurchaseStep] = useState<'view' | 'processing' | 'success'>('view');
   const [isGuideActive, setIsGuideActive] = useState(false);
   const [isRPAGuideActive, setIsRPAGuideActive] = useState(false);
-  const [isTeamGuideActive, setIsTeamGuideActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notification, setNotification] = useState<{ title: string; body: string; type?: 'info' | 'error' | 'warning' } | null>(null);
   const [initSequence, setInitSequence] = useState(true);
@@ -1052,12 +1050,6 @@ const App: React.FC = () => {
       }, 800);
       return () => clearTimeout(timer);
     }
-    if (activeTab === 'team' && !localStorage.getItem('mz_team_guide_completed')) {
-      const timer = setTimeout(() => {
-        setIsTeamGuideActive(true);
-      }, 800);
-      return () => clearTimeout(timer);
-    }
   }, [activeTab]);
 
   const handleLogout = async () => {
@@ -1233,10 +1225,6 @@ const App: React.FC = () => {
         isActive={isRPAGuideActive} 
         onComplete={() => setIsRPAGuideActive(false)} 
       />
-      <TeamGuide 
-        isActive={isTeamGuideActive} 
-        onComplete={() => setIsTeamGuideActive(false)} 
-      />
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
       {activeTab === 'live_withdrawals' && <LiveWithdrawalsView onBack={() => setActiveTab('dashboard')} />}
       {activeTab === 'axis' && <AxisChat profile={userProfile} onSwitchTab={setActiveTab} />}
@@ -1276,9 +1264,9 @@ const App: React.FC = () => {
             setIsRPAGuideActive(true);
           }}
           onStartTeamGuide={() => {
-            localStorage.removeItem('mz_team_guide_completed');
+            localStorage.removeItem('mz_referral_guide_seen');
             setActiveTab('team');
-            setIsTeamGuideActive(true);
+            // La redirection déclenchera le guide Axis dans ReferralDashboard
           }}
         />
       )}

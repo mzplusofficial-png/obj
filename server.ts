@@ -135,9 +135,17 @@ async function startServer() {
 
   // API Route to send real FCM Push (using the new service)
   app.post('/api/send-push', async (req, res) => {
-    const { token, tokens, title, body, url, icon } = req.body;
+    const { token, tokens: initialTokens, title, body, url, icon, target } = req.body;
+    let tokens = initialTokens || [];
 
     try {
+      if (target === 'all' && tokens.length === 0) {
+        const { data: users } = await supabase.from('users').select('fcm_token').not('fcm_token', 'is', null);
+        if (users) {
+          tokens = users.map(u => u.fcm_token as string).filter(Boolean);
+        }
+      }
+
       if (!token && (!tokens || tokens.length === 0)) {
         return res.status(400).json({ error: 'Token ou liste de tokens manquant' });
       }
