@@ -25,9 +25,9 @@ export async function runPriorityDispatcher() {
     }
 
     try {
-        const oneMinuteAgo = new Date(Date.now() - 60000).toISOString(); // Exactly 1 minute (60s)
+        const inactivityThreshold = new Date(Date.now() - 70000).toISOString(); // 70s threshold for 30s heartbeat
         
-        // 1. Fetch users from time tracking (active today but inactive for > 1min)
+        // 1. Fetch users from time tracking (active today but inactive for > 70s)
         const today = new Date().toISOString().split('T')[0];
         
         // Use a wrapper to handle potential "table not found" errors
@@ -37,7 +37,7 @@ export async function runPriorityDispatcher() {
                     .from('mz_rewards_time_tracking')
                     .select('user_id, last_ping')
                     .eq('tracking_date', today)
-                    .lt('last_ping', oneMinuteAgo);
+                    .lt('last_ping', inactivityThreshold);
                 
                 if (error) {
                     if (error.code === '42P01') {
@@ -125,7 +125,7 @@ export async function runPriorityDispatcher() {
                 
                 // If we have a ping, ensure they ARE inactive
                 const pingEntry = trackingEntries?.find(t => t.user_id === userId);
-                if (pingEntry && pingEntry.last_ping >= oneMinuteAgo) {
+                if (pingEntry && pingEntry.last_ping >= inactivityThreshold) {
                     console.log(`[Dispatcher] User ${userId} is still active (${pingEntry.last_ping}). Skipping.`);
                     continue; // Still active
                 }

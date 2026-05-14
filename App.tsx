@@ -1132,8 +1132,8 @@ const App: React.FC = () => {
     // Premier appel immédiat
     sendHeartbeat();
     
-    // Puis toutes les 60 secondes (1 minute = 1 point)
-    const interval = setInterval(sendHeartbeat, 60000);
+    // Puis toutes les 30 secondes (pour une détection d'inactivité plus précise)
+    const interval = setInterval(sendHeartbeat, 30000);
     return () => clearInterval(interval);
   }, [userProfile?.id]);
 
