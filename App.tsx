@@ -543,16 +543,19 @@ const App: React.FC = () => {
       // Si c'est la formation du jour 1 qui est terminée, on valide aussi le défi J1
       if (source === 'formation_complete') {
         const challengeState = userProfile?.store_preferences?.challenge_3j || {};
-        if (challengeState.presented && !challengeState.cancelled && !challengeState.j1Completed) {
+        const isAlreadyDone = challengeState.j1_completed || challengeState.j1Completed;
+        
+        if (challengeState.presented && !challengeState.cancelled && !isAlreadyDone) {
           updateChallengeDB({ j1Completed: true });
           setChallengeCelebratedStep(1);
           setTimeout(() => {
             setShowChallengeCelebration(true);
-          }, 2000); // Délai pour laisser voir la récompense XP
+          }, 1500); 
         }
       }
       
       if (session?.user?.id) {
+        console.log(`[XP] Rewarding ${amount} XP to ${session.user.id} from source: ${source}`);
         await rewardUserXP(session.user.id, amount);
         triggerRefresh();
       }
@@ -566,8 +569,14 @@ const App: React.FC = () => {
     if (!loading) {
       const timer = setTimeout(() => {
         setInitSequence(false);
-      }, 1500); // Shortened from 3500
+      }, 1500); 
       return () => clearTimeout(timer);
+    } else {
+      // Sécurité: si le chargement dure trop longtemps (ex: bug réseau), on débloque après 5s
+      const fallback = setTimeout(() => {
+        setInitSequence(false);
+      }, 5000);
+      return () => clearTimeout(fallback);
     }
   }, [loading]);
 

@@ -70,26 +70,22 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
       rank_id: newRankId
     };
 
-    // Only add rank_name if we are reasonably sure it exists or handle failure gracefully
-    updateData.rank_name = newRankName;
-
-    const { error: updateError } = await supabase
+    // Try update with rank_name first, but be ready for PGRST204 or 42703 (missing column)
+    let { error: updateError } = await supabase
       .from('users')
-      .update(updateData)
+      .update({ ...updateData, rank_name: newRankName })
       .eq('id', userId);
 
-    if (updateError && updateError.code === '42703') {
-       // Fallback without rank_name
-       console.warn("Fallback: trying update without rank_name");
-       delete updateData.rank_name;
+    if (updateError && (updateError.code === '42703' || updateError.code === 'PGRST204')) {
+       console.warn("Retrying update without rank_name due to schema cache error", updateError.code);
        const { error: fallbackError } = await supabase
          .from('users')
          .update(updateData)
          .eq('id', userId);
-       if (fallbackError) throw fallbackError;
-    } else if (updateError) {
-      throw updateError;
+       updateError = fallbackError;
     }
+
+    if (updateError) throw updateError;
 
     if (!updateError && newRankId > currentRankId) {
       window.dispatchEvent(new CustomEvent('mz-rank-up-detected', { 

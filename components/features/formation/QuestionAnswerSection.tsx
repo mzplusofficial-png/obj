@@ -41,12 +41,12 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
       // Essayer d'abord avec la jointure 'users'
       const res = await supabase
         .from('mz_formation_questions')
-        .select('*, users(full_name)')
+        .select('*, users!inner(full_name)')
         .eq('formation_id', formationId)
         .order('created_at', { ascending: false });
         
       if (res.error) {
-        // Fallback sans jointure si l'erreur vient de la relation ou autre (sauf table manquante)
+        // Fallback sans jointure si l'erreur vient de la relation ou cache schema
         const fallbackRes = await supabase
           .from('mz_formation_questions')
           .select('*')
@@ -67,7 +67,7 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
         
         const resAns = await supabase
           .from('mz_formation_answers')
-          .select('*, users(full_name)')
+          .select('*, users!inner(full_name)')
           .in('question_id', questionIds)
           .order('created_at', { ascending: true });
            

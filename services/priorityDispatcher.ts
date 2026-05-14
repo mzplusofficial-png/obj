@@ -87,7 +87,8 @@ export async function runPriorityDispatcher() {
                         .maybeSingle();
 
                     if (!log) {
-                        console.log(`[Dispatcher] Attempting to send ${notifType} to user ${userId}`);
+                        const tokenStart = userData.fcm_token.substring(0, 10);
+                        console.log(`[Dispatcher] Attempting to send ${notifType} to user ${userId} (Token start: ${tokenStart}...)`);
                         try {
                             const sendResult = await sendPush(userData.fcm_token, title, body, { url });
                             console.log(`[Dispatcher] sendPush result for ${userId}:`, sendResult);
