@@ -25,7 +25,7 @@ export async function runPriorityDispatcher() {
     }
 
     try {
-        const oneMinuteAgo = new Date(Date.now() - 60100).toISOString(); // 60s + a bit of buffer
+        const oneMinuteAgo = new Date(Date.now() - 60000).toISOString(); // Exactly 1 minute (60s)
         
         // 1. Fetch users from time tracking (active today but inactive for > 1min)
         const today = new Date().toISOString().split('T')[0];
