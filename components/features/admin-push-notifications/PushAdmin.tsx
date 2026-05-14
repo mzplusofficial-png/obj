@@ -1,19 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { Send, Target, User, Users, Bell, Zap, Info, Gift, AlertTriangle, Search, Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Target, User, Users, Bell, Zap, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
 import { requestNotificationPermission } from '../../../services/firebase.ts';
 import { GoldBorderCard, PrimaryButton, GoldText } from '../../UI.tsx';
 
 export const PushAdmin: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [fcmUsersCount, setFcmUsersCount] = useState(0);
   
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userResults, setUserResults] = useState<any[]>([]);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -52,14 +50,12 @@ export const PushAdmin: React.FC = () => {
         setUserResults([]);
         return;
       }
-      setIsSearchingUsers(true);
       const { data } = await supabase
         .from('users')
         .select('id, full_name, email')
         .or(`full_name.ilike.%${userSearchTerm}%,email.ilike.%${userSearchTerm}%`)
         .limit(5);
       setUserResults(data || []);
-      setIsSearchingUsers(false);
     };
     const timer = setTimeout(search, 300);
     return () => clearTimeout(timer);
@@ -79,8 +75,10 @@ export const PushAdmin: React.FC = () => {
         target_value: formData.target_type === 'user' ? selectedUser.id : formData.target_value
       };
 
-      // 1. Enregistrement dans la DB (In-App)
-      const { error } = await supabase.from('admin_push_notifications').insert([finalData]);
+      // 1. Enregistrement dans la DB (In-App) - On retire 'url' car la colonne n'existe pas en DB
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { url: _, ...dbData } = finalData;
+      const { error } = await supabase.from('admin_push_notifications').insert([dbData]);
       if (error) throw error;
 
       // 2. Tentative d'envoi de Push Réel (FCM) via le serveur
