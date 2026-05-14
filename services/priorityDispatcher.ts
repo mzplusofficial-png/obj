@@ -25,9 +25,9 @@ export async function runPriorityDispatcher() {
     }
 
     try {
-        const inactivityThreshold = new Date(Date.now() - 70000).toISOString(); // 70s threshold for 30s heartbeat
+        const inactivityThreshold = new Date(Date.now() - 60000).toISOString(); // Exactly 60s threshold
         
-        // 1. Fetch users from time tracking (active today but inactive for > 70s)
+        // 1. Fetch users from time tracking (active today but inactive for > 60s)
         const today = new Date().toISOString().split('T')[0];
         
         // Use a wrapper to handle potential "table not found" errors

@@ -50,7 +50,7 @@ const MISSIONS = [
     tab: "affiliation" as TabId,
     icon: ShoppingBag,
     color: "from-emerald-500 to-teal-600",
-    reward: 10,
+    reward: 100,
     verify: async (profile: UserProfile) => {
       const today = new Date().toISOString().split('T')[0];
       const { count } = await supabase

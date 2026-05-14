@@ -118,13 +118,18 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
 
       if (!hasGottenXP || isAdmin) {
         localStorage.setItem(storageKey, "true");
+        // Reward 100 XP for the first core training (default-free-text), otherwise 10 XP
+        const isFirstCoreTraining = formationId === 'default-free-text';
+        const xpAmount = isFirstCoreTraining ? 100 : 10;
+        
         window.dispatchEvent(
           new CustomEvent("mz-xp-reward", {
             detail: {
-              amount: 10,
-              title: "🎉 Bien joué.",
-              description:
-                type === "bonus"
+              amount: xpAmount,
+              title: isFirstCoreTraining ? "🎓 Formation Initiale" : "🎉 Bien joué.",
+              description: isFirstCoreTraining 
+                ? "Tu as reçu 100 points pour avoir terminé ta première formation !"
+                : type === "bonus"
                   ? "Tu as reçu 10 points pour avoir consulté ce bonus."
                   : "Tu as reçu 10 points pour avoir terminé la formation MZ+.",
               source:

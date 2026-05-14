@@ -389,8 +389,26 @@ const App: React.FC = () => {
 
     const challengeState = userProfile.store_preferences?.challenge_3j || {};
     
-    const checkDailyChallenge = () => {
+    const checkDailyChallenge = async () => {
       if (!challengeState.presented || challengeState.cancelled) return;
+
+      // Day 1 Logic: Completed if product added. 
+      // Auto-pass if 24h passed and has product (from axis guide or previous action)
+      if (challengeState.startedAt && !challengeState.j1Completed) {
+        const startedAtDate = new Date(challengeState.startedAt);
+        const currentDate = new Date();
+        const diffMs = currentDate.getTime() - startedAtDate.getTime();
+        const diffHrs = diffMs / (1000 * 60 * 60);
+
+        if (diffHrs >= 24) {
+          // If time is up, check if they have a product. 
+          // If yes, it's considered ACCOMPLISHED (not failed) because of the guide.
+          const { count } = await supabase.from('mz_user_store').select('*', { count: 'exact', head: true }).eq('user_id', userProfile.id);
+          if ((count || 0) >= 1) {
+            updateChallengeDB({ j1Completed: true });
+          }
+        }
+      }
 
       // Check for Day 2 eligibility
       if (challengeState.startedAt && challengeState.j1Completed) {
@@ -455,6 +473,17 @@ const App: React.FC = () => {
       if (!challengeState.j1Completed) {
         updates.j1Completed = true;
         setChallengeCelebratedStep(1);
+        
+        // Reward XP for completing Day 1
+        window.dispatchEvent(new CustomEvent('mz-xp-reward', {
+          detail: { 
+            amount: 30, 
+            title: 'Jour 1 Validé !', 
+            description: 'Félicitations pour le choix de ton premier produit ! 🔥',
+            source: 'challenge_j1'
+          }
+        }));
+
         setTimeout(() => {
           setShowChallengeCelebration(true);
         }, 800);
@@ -474,12 +503,34 @@ const App: React.FC = () => {
           updates.j2Completed = true;
           updates.j2CompletedAtStr = new Date().toISOString();
           setChallengeCelebratedStep(2);
+
+          // Reward XP for completing Day 2
+          window.dispatchEvent(new CustomEvent('mz-xp-reward', {
+            detail: { 
+              amount: 50, 
+              title: 'Jour 2 Validé !', 
+              description: 'Incroyable ! Tu as réalisé ta première vente ! 💰',
+              source: 'challenge_j2'
+            }
+          }));
+
           setTimeout(() => {
             setShowChallengeCelebration(true);
           }, 800);
        } else if (challengeState.j3Presented && !challengeState.j3Completed) {
           updates.j3Completed = true;
           setChallengeCelebratedStep(3);
+
+          // Reward XP for completing Day 3
+          window.dispatchEvent(new CustomEvent('mz-xp-reward', {
+            detail: { 
+              amount: 100, 
+              title: 'Défi 3 Jours Réussi ! 👑', 
+              description: 'Tu es officiellement un entrepreneur aguerri de la MZ+ !',
+              source: 'challenge_j3'
+            }
+          }));
+
           setTimeout(() => {
             setShowChallengeCelebration(true);
           }, 800);
@@ -533,17 +584,20 @@ const App: React.FC = () => {
       const customEvent = e as CustomEvent<{formationId: string, type: string, newlyCompleted: boolean}>;
       const { formationId } = customEvent.detail;
       
+      // We no longer auto-complete Day 1 just by reading the formation.
+      // Day 1 requires choosing a product (handleProductAdded).
       if (formationId === 'default-free-text') {
-        const challengeState = userProfile?.store_preferences?.challenge_3j || {};
-        const isAlreadyDone = challengeState.j1_completed || challengeState.j1Completed;
-        
-        if (challengeState.presented && !challengeState.cancelled && !isAlreadyDone) {
-          console.log("[Challenge] J1 completed via formation event");
-          updateChallengeDB({ j1Completed: true });
-          setChallengeCelebratedStep(1);
-          setTimeout(() => {
-            setShowChallengeCelebration(true);
-          }, 1500); 
+        console.log("[Academy] Core formation read completed.");
+        if (customEvent.detail.newlyCompleted) {
+           setTimeout(() => {
+             window.dispatchEvent(new CustomEvent('mz-axis-message', { 
+               detail: { 
+                 text: "Bien joué pour cette formation ! 🔥\nMaintenant, pour valider ton Jour 1, tu dois choisir ton premier produit dans le catalogue et l'ajouter à ta boutique.",
+                 type: "guiding",
+                 duration: 15000
+               } 
+             }));
+           }, 2000);
         }
       }
     };
@@ -773,38 +827,40 @@ const App: React.FC = () => {
        return;
     }
 
-    // Vérifier si nous sommes dans une iframe (AI Studio preview)
-    const isInIframe = window.self !== window.top;
-    
     // Si la permission est déjà refusée, on n'insiste pas sauf si c'est manuel
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied' && !isManual) {
       console.log('FCM: Notification permission is denied. Skipping.');
       return;
     }
 
-    // Si on est dans une iframe et que la permission n'est pas encore accordée
-    if (isInIframe && !isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      console.log('FCM: Running in iframe with default permission, showing banner.');
+    // Si la permission est déjà accordée, on peut récupérer le token silencieusement
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const result = await requestNotificationPermission(VAPID_KEY);
+        console.log('FCM Silent Retrieval:', result);
+        return;
+      } catch (err) {
+        console.error('FCM: Silent retrieval failed', err);
+      }
+    }
+
+    // Si la permission est "default", on propose le bandeau d'abord, on ne force PAS le popup natif qui fait freezer l'iframe
+    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      console.log('FCM: Permission is default, showing banner instead of forcing prompt.');
       if (!localStorage.getItem('fcm_permission_dismissed')) {
         setShowPermissionBanner(true);
       }
       return;
     }
 
-    // Si ce n'est pas une demande manuelle et que la permission est "default", on tente de déclencher la demande
-    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      console.log('FCM: Initializing automatic permission request');
-      // On affiche quand même le bandeau en arrière-plan au cas où le popup est bloqué
-      setShowPermissionBanner(true);
-    }
-
-    try {
-      const result = await requestNotificationPermission(VAPID_KEY);
-      console.log('FCM Registration Result:', result);
-      
-      if (result.status === 'unsupported') {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        if (isManual) {
+    // On n'appelle requestPermission QUE si c'est une action manuelle (clic sur le bandeau)
+    if (isManual) {
+      try {
+        const result = await requestNotificationPermission(VAPID_KEY);
+        console.log('FCM Manual Registration Result:', result);
+        
+        if (result.status === 'unsupported') {
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
           setNotification({
             title: 'Appareil Non Compatible',
             body: isIOS 
@@ -812,56 +868,25 @@ const App: React.FC = () => {
               : 'Votre navigateur actuel ne supporte pas les notifications Push.',
             type: 'warning'
           });
-        }
-        setShowPermissionBanner(false);
-      } else if (result.status === 'denied') {
-        console.warn('FCM: Permission denied by user');
-        if (isManual) {
+          setShowPermissionBanner(false);
+        } else if (result.status === 'denied') {
           setNotification({
             title: 'Notifications Bloquées',
             body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
             type: 'error'
           });
+          setShowPermissionBanner(false);
+        } else if (result.status === 'granted') {
+          setNotification({
+            title: 'Notifications Activées !',
+            body: 'Vous recevrez désormais les alertes de ventes et opportunités.',
+            type: 'info'
+          });
+          setShowPermissionBanner(false);
         }
-        setShowPermissionBanner(false);
-      } else if (result.token) {
-        console.log('FCM: Token successfully generated');
-        setFcmToken(result.token);
-        localStorage.setItem('fcm_token', result.token);
-        setShowPermissionBanner(false);
-        
-        if (session?.user?.id) {
-          console.log('FCM: Syncing token with database for user', session.user.id);
-          try {
-            const { error: updateError } = await supabase.from('users').update({ 
-              fcm_token: result.token,
-              last_fcm_sync: new Date().toISOString() 
-            }).eq('id', session.user.id);
-            
-            if (updateError) {
-              console.error('FCM: Failed to save token to database (Status 400 likely means missing columns):', updateError);
-              // Fallback: try without last_fcm_sync if that column is missing
-              const { error: fallbackError } = await supabase.from('users').update({ 
-                fcm_token: result.token
-              }).eq('id', session.user.id);
-              
-              if (fallbackError) {
-                console.error('FCM: Fallback save also failed:', fallbackError);
-              } else {
-                console.log('FCM: Token synced with database (fallback successful)');
-              }
-            } else {
-              console.log('FCM: Token synced with database successfully');
-            }
-          } catch (syncErr) {
-            console.error('FCM: Exception during database sync:', syncErr);
-          }
-        }
-      } else {
-        console.warn('FCM: Process finished without token (status:', result.status, ')');
+      } catch (error) {
+        console.error("FCM: Error in manual requestPermission:", error);
       }
-    } catch (err) {
-      console.error('FCM: Fatal error in setupFCM:', err);
     }
   };
 
