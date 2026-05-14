@@ -51,21 +51,21 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
       { id: 'elite', name: 'Élite', xp: 1500 },
     ];
 
-    let newRankId = 0;
+    let newRankId = 1; // Default to 1 (Débutant)
     let newRankName = PROGRESSION_LEVELS[0].name;
     for (let i = 0; i < PROGRESSION_LEVELS.length; i++) {
       if (newXp >= PROGRESSION_LEVELS[i].xp) {
-        newRankId = i;
+        newRankId = i + 1; // Rank 1-indexed to match App.tsx
         newRankName = PROGRESSION_LEVELS[i].name;
       }
     }
 
-    const currentRankId = user?.rank_id || 0;
+    const currentRankId = user?.rank_id || 1;
 
     const updateData: Record<string, any> = { 
       xp: newXp,
-      weekly_xp: currentWeeklyXp + xpAmount,
-      monthly_xp: currentMonthlyXp + xpAmount,
+      weekly_xp: (currentWeeklyXp || 0) + xpAmount,
+      monthly_xp: (currentMonthlyXp || 0) + xpAmount,
       last_xp_update: new Date().toISOString(),
       rank_id: newRankId
     };
@@ -78,14 +78,12 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
 
     // Handle common errors: missing column (42703), schema cache (PGRST204), or foreign key (23503)
     if (updateError && (updateError.code === '42703' || updateError.code === 'PGRST204' || updateError.code === '23503')) {
-       console.warn(`Retrying update due to error ${updateError.code}. Possible cause: schema cache or missing rank in DB.`);
+       console.warn(`[XP] Retrying update due to error ${updateError.code}. Removing rank fields.`);
        
        const safeUpdateData = { ...updateData };
-       
-       // If it's a foreign key error, we MUST remove rank_id
-       if (updateError.code === '23503') {
-         delete (safeUpdateData as any).rank_id;
-       }
+       // If it fails, remove the rank-specific columns to ensure XP is saved at least
+       delete (safeUpdateData as any).rank_id;
+       delete (safeUpdateData as any).rank_name;
 
        const { error: fallbackError } = await supabase
          .from('users')
@@ -95,7 +93,10 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
        updateError = fallbackError;
     }
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error("[XP] Error finalizing XPReward update:", JSON.stringify(updateError));
+      throw updateError;
+    }
 
     if (!updateError && newRankId > currentRankId) {
       window.dispatchEvent(new CustomEvent('mz-rank-up-detected', { 

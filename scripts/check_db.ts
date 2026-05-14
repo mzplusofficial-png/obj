@@ -14,6 +14,7 @@ async function checkTables() {
     
     const tables = [
         'users',
+        'ranks',
         'mz_rewards_time_tracking',
         'mz_challenge_3j_state',
         'mz_background_notifications_log',
@@ -26,6 +27,30 @@ async function checkTables() {
             console.error(`[FAIL] Table ${table}:`, error.message, `(Code: ${error.code})`);
         } else {
             console.log(`[OK] Table ${table}`);
+            if (table === 'users') {
+                console.log('  Checking users columns:');
+                const columnsToTest = ['xp', 'weekly_xp', 'monthly_xp', 'last_xp_update', 'rank_id', 'rank_name'];
+                for (const col of columnsToTest) {
+                   const { error: colErr } = await supabase.from('users').select(col).limit(0);
+                   if (colErr) {
+                       console.error(`    [MISSING] Column ${col}:`, colErr.message);
+                   } else {
+                       console.log(`    [OK] Column ${col}`);
+                   }
+                }
+            }
+            if (table === 'ranks') {
+                console.log('  Checking ranks columns:');
+                const columnsToTest = ['id', 'name', 'xp', 'min_xp', 'min_points'];
+                for (const col of columnsToTest) {
+                    const { error: colErr } = await supabase.from('ranks').select(col).limit(0);
+                    if (colErr) {
+                        console.error(`    [MISSING] Column ${col}:`, colErr.message);
+                    } else {
+                        console.log(`    [OK] Column ${col}`);
+                    }
+                }
+            }
         }
     }
 }
