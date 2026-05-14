@@ -35,7 +35,8 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
 
   const fetchQuestionsAndAnswers = async () => {
     try {
-      let qData, qError;
+      let qData;
+      let aData;
       
       // Essayer d'abord avec la jointure 'users'
       const res = await supabase
@@ -44,55 +45,49 @@ export const QuestionAnswerSection = ({ formationId, currentUserId }: { formatio
         .eq('formation_id', formationId)
         .order('created_at', { ascending: false });
         
-      qData = res.data;
-      qError = res.error;
-
-      // S'il y a une erreur de relation PGRST200, faire un fallback sans jointure
-      if (qError && qError.code === 'PGRST200') {
+      if (res.error) {
+        // Fallback sans jointure si l'erreur vient de la relation ou autre (sauf table manquante)
         const fallbackRes = await supabase
           .from('mz_formation_questions')
           .select('*')
           .eq('formation_id', formationId)
           .order('created_at', { ascending: false });
-        qData = fallbackRes.data;
-        qError = fallbackRes.error;
+        
+        qData = fallbackRes.data || [];
+      } else {
+        qData = res.data;
       }
-
-      if (qError && qError.code !== '42P01') {
-        throw qError;
+      
+      if (qData) {
+        setQuestions(qData as Question[]);
       }
-      if (qData) setQuestions(qData);
 
       if (qData && qData.length > 0) {
-        const questionIds = qData.map(q => q.id);
+        const questionIds = qData.map(q => (q as any).id);
         
-        let aData, aError;
         const resAns = await supabase
           .from('mz_formation_answers')
           .select('*, users(full_name)')
           .in('question_id', questionIds)
           .order('created_at', { ascending: true });
-          
-        aData = resAns.data;
-        aError = resAns.error;
-
-        if (aError && aError.code === 'PGRST200') {
+           
+        if (resAns.error) {
            const fallbackAns = await supabase
             .from('mz_formation_answers')
             .select('*')
             .in('question_id', questionIds)
             .order('created_at', { ascending: true });
-           aData = fallbackAns.data;
-           aError = fallbackAns.error;
+           aData = fallbackAns.data || [];
+        } else {
+           aData = resAns.data;
         }
-        
-        if (aError && aError.code !== '42P01') throw aError;
         
         const answersMap: Record<string, Answer[]> = {};
         if (aData) {
           aData.forEach(ans => {
-            if (!answersMap[ans.question_id]) answersMap[ans.question_id] = [];
-            answersMap[ans.question_id].push(ans);
+            const questionId = (ans as any).question_id;
+            if (!answersMap[questionId]) answersMap[questionId] = [];
+            answersMap[questionId].push(ans as Answer);
           });
         }
         setAnswers(answersMap);

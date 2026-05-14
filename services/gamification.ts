@@ -62,17 +62,34 @@ export const rewardUserXP = async (userId: string, xpAmount: number) => {
 
     const currentRankId = user?.rank_id || 0;
 
+    const updateData: Record<string, any> = { 
+      xp: newXp,
+      weekly_xp: currentWeeklyXp + xpAmount,
+      monthly_xp: currentMonthlyXp + xpAmount,
+      last_xp_update: new Date().toISOString(),
+      rank_id: newRankId
+    };
+
+    // Only add rank_name if we are reasonably sure it exists or handle failure gracefully
+    updateData.rank_name = newRankName;
+
     const { error: updateError } = await supabase
       .from('users')
-      .update({ 
-        xp: newXp,
-        weekly_xp: currentWeeklyXp + xpAmount,
-        monthly_xp: currentMonthlyXp + xpAmount,
-        last_xp_update: new Date().toISOString(),
-        rank_id: newRankId,
-        rank_name: newRankName
-      })
+      .update(updateData)
       .eq('id', userId);
+
+    if (updateError && updateError.code === '42703') {
+       // Fallback without rank_name
+       console.warn("Fallback: trying update without rank_name");
+       delete updateData.rank_name;
+       const { error: fallbackError } = await supabase
+         .from('users')
+         .update(updateData)
+         .eq('id', userId);
+       if (fallbackError) throw fallbackError;
+    } else if (updateError) {
+      throw updateError;
+    }
 
     if (!updateError && newRankId > currentRankId) {
       window.dispatchEvent(new CustomEvent('mz-rank-up-detected', { 

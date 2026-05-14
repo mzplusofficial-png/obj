@@ -531,15 +531,29 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleXpReward = async (e: Event) => {
       const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string, source?: string}>;
-      setXpRewardAmount(customEvent.detail.amount);
-      if (customEvent.detail.title) setXpRewardTitle(customEvent.detail.title);
-      if (customEvent.detail.description) setXpRewardDesc(customEvent.detail.description);
-      if (customEvent.detail.source) setXpRewardSource(customEvent.detail.source);
+      const { amount, title, description, source } = customEvent.detail;
+      
+      setXpRewardAmount(amount);
+      if (title) setXpRewardTitle(title);
+      if (description) setXpRewardDesc(description);
+      if (source) setXpRewardSource(source);
       else setXpRewardSource("");
       setShowXpReward(true);
+
+      // Si c'est la formation du jour 1 qui est terminée, on valide aussi le défi J1
+      if (source === 'formation_complete') {
+        const challengeState = userProfile?.store_preferences?.challenge_3j || {};
+        if (challengeState.presented && !challengeState.cancelled && !challengeState.j1Completed) {
+          updateChallengeDB({ j1Completed: true });
+          setChallengeCelebratedStep(1);
+          setTimeout(() => {
+            setShowChallengeCelebration(true);
+          }, 2000); // Délai pour laisser voir la récompense XP
+        }
+      }
       
       if (session?.user?.id) {
-        await rewardUserXP(session.user.id, customEvent.detail.amount);
+        await rewardUserXP(session.user.id, amount);
         triggerRefresh();
       }
     };
@@ -552,7 +566,7 @@ const App: React.FC = () => {
     if (!loading) {
       const timer = setTimeout(() => {
         setInitSequence(false);
-      }, 3500);
+      }, 1500); // Shortened from 3500
       return () => clearTimeout(timer);
     }
   }, [loading]);
@@ -826,7 +840,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (session) {
-      setupFCM();
+      // Retarder le setup FCM pour éviter de bloquer l'initialisation visuelle (noir complet)
+      const timer = setTimeout(() => {
+        if (!initSequence) setupFCM();
+      }, 1000);
       
       const handleFirstInteraction = () => {
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
@@ -840,12 +857,13 @@ const App: React.FC = () => {
       document.addEventListener('touchstart', handleFirstInteraction);
       
       return () => {
+        clearTimeout(timer);
         document.removeEventListener('click', handleFirstInteraction);
         document.removeEventListener('touchstart', handleFirstInteraction);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session, initSequence]);
 
   // Listen for foreground messages
   useEffect(() => {
@@ -1129,21 +1147,21 @@ const App: React.FC = () => {
   const handleShareClose = () => {
     setShowSharePopup(false);
     if (xpRewardSource === 'formation_complete') {
-      let remaining7s = 7;
-      const interval7s = setInterval(() => {
+      let remaining3s = 3;
+      const interval3s = setInterval(() => {
         if (document.visibilityState === 'visible') {
-          remaining7s -= 1;
-          if (remaining7s <= 0) {
-            clearInterval(interval7s);
+          remaining3s -= 1;
+          if (remaining3s <= 0) {
+            clearInterval(interval3s);
             triggerAxisMessage(
               "Allô, c'est moi, Axis 👁️\nMaintenant que tu as suivi la formation, il est temps de passer à l'action 🚀\nVa choisir ton produit 💰",
               'progression',
               15000,
               {
-                label: "OK",
+                label: "Aller à la boutique",
                 action: () => {
                   hideAxis();
-                  window.dispatchEvent(new CustomEvent('highlight-boutique'));
+                  setActiveTab('affiliation');
                 }
               },
               'smart'
@@ -1292,12 +1310,12 @@ const App: React.FC = () => {
         onComplete={() => {
           setShowXpReward(false);
           if (xpRewardSource === 'formation_complete') {
-            let remaining5s = 5;
-            const interval5s = setInterval(() => {
+            let remaining2s = 2;
+            const interval2s = setInterval(() => {
               if (document.visibilityState === 'visible') {
-                remaining5s -= 1;
-                if (remaining5s <= 0) {
-                  clearInterval(interval5s);
+                remaining2s -= 1;
+                if (remaining2s <= 0) {
+                  clearInterval(interval2s);
                   setShowSharePopup(true);
                 }
               }
@@ -1317,11 +1335,11 @@ const App: React.FC = () => {
           setActiveTab('formation');
           setTimeout(() => {
             triggerAxisMessage(
-               "👉 \"Bravo ! pour ton engagement ! 🎉🎉 Juste avant de te lancer, il est important que tu suives cette formation.\"",
+               "👉 \"Bravo pour ton engagement ! 🎉🎉 Juste avant de te lancer, il est important que tu lises ce guide. Clique ci-dessous !\"",
                'progression',
                15000,
                {
-                 label: "Voir la formation",
+                 label: "Voir la formation J1",
                  action: () => {
                    hideAxis();
                    window.dispatchEvent(new CustomEvent('open-formation', { detail: { id: 'default-free-text' } }));

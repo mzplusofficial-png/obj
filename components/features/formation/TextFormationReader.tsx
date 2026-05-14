@@ -99,8 +99,8 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
     };
   }, [content]);
 
-  const triggerXPIfNeeded = () => {
-    if (progress >= 95 && formationId) {
+  const triggerXPIfNeeded = (force = false) => {
+    if ((progress >= 95 || force) && formationId) {
       const storageKey = `mz_formation_xp_${currentUserId}_${formationId}`;
       const hasGottenXP = localStorage.getItem(storageKey);
 
@@ -130,7 +130,7 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
 
   const handleComplete = () => {
     setMarkedAsDone(true);
-    triggerXPIfNeeded();
+    triggerXPIfNeeded(true);
     setTimeout(() => {
       onComplete();
       onClose();
