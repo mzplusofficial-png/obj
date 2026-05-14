@@ -12,18 +12,20 @@ export const initAdmin = () => {
     if (admin.apps.length) return admin;
 
     const saJson = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (saJson) {
-        try {
-            const serviceAccount = JSON.parse(saJson);
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
-            });
-            console.log('Firebase Admin initialisé via variable d\'environnement');
-        } catch (e) {
-            console.error('Erreur lors du parsing de FIREBASE_SERVICE_ACCOUNT:', e);
-        }
-    } else {
-        console.warn('Attention: FIREBASE_SERVICE_ACCOUNT non configuré.');
+    if (!saJson) {
+        console.error('FCM: FIREBASE_SERVICE_ACCOUNT manquant dans les variables d\'environnement !');
+        return admin;
+    }
+
+    try {
+        const cleanedJson = saJson.trim();
+        const serviceAccount = JSON.parse(cleanedJson);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        console.log('FCM: Firebase Admin initialisé via variable d\'environnement');
+    } catch (e: any) {
+        console.error('FCM: Erreur lors du parsing de FIREBASE_SERVICE_ACCOUNT:', e.message);
     }
     return admin;
 };

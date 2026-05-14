@@ -5,15 +5,22 @@ const initAdmin = () => {
   if (admin.apps.length) return admin;
 
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (saJson) {
-    try {
-      const serviceAccount = JSON.parse(saJson);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    } catch (e) {
-      console.error('Erreur parsing FIREBASE_SERVICE_ACCOUNT:', e);
-    }
+  if (!saJson) {
+    console.error('FCM: FIREBASE_SERVICE_ACCOUNT is missing from environment variables!');
+    return admin;
+  }
+
+  try {
+    // Nettoyer les éventuels problèmes de formatage du JSON (retours à la ligne, etc.)
+    const cleanedJson = saJson.trim();
+    const serviceAccount = JSON.parse(cleanedJson);
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('FCM: Firebase Admin initialized successfully');
+  } catch (e: any) {
+    console.error('FCM: Error parsing FIREBASE_SERVICE_ACCOUNT:', e.message);
   }
   return admin;
 };
