@@ -21,6 +21,7 @@ import {
   Rocket,
   MapPin,
   FileText,
+  Bell,
 } from "lucide-react";
 import {
   UserProfile,
@@ -1356,6 +1357,57 @@ export const ProfileTab: React.FC<any> = ({
           />
           Déconnexion Sécurisée
         </button>
+
+        {/* Diagnostic Tool for Notifications */}
+        <div className="p-5 bg-blue-500/5 border border-blue-500/10 rounded-2xl space-y-3">
+          <div className="flex items-center gap-2 text-blue-400">
+            <Bell size={14} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Diagnostic Notifications</span>
+          </div>
+          <p className="text-[9px] text-neutral-500 leading-relaxed">
+            Si vous ne recevez pas les alertes du Jour 2, testez votre connexion avec le serveur FCM.
+          </p>
+          <button 
+            onClick={async () => {
+              const token = localStorage.getItem('fcm_token');
+              if (!token) {
+                alert("❌ Aucun token trouvé. Activez d'abord les notifications via le bandeau jaune (dans un nouvel onglet).");
+                return;
+              }
+              const btn = document.activeElement as HTMLButtonElement;
+              const originalText = btn.innerText;
+              btn.innerText = "ENVOI EN COURS...";
+              btn.disabled = true;
+
+              try {
+                const res = await fetch('/api/send-push', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    token,
+                    title: "Test de Connexion Élite 🚀",
+                    body: "Félicitations ! Votre appareil est correctement relié au système de notifications.",
+                    url: '/dashboard'
+                  })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  alert("✅ Test envoyé ! La notification devrait apparaître dans quelques secondes. Si rien ne vient, vérifiez que le site n'est pas ouvert dans une Iframe et que les notifications sont autorisées dans Safari/Chrome.");
+                } else {
+                  alert("❌ Erreur serveur: " + (data.error || "Inconnu"));
+                }
+              } catch (err) {
+                alert("❌ Erreur de réseau. Vérifiez votre connexion.");
+              } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+              }
+            }}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+          >
+            Envoyer un Test de Notification
+          </button>
+        </div>
         <p className="text-center text-[8px] text-neutral-600 font-bold uppercase tracking-[0.3em] mt-6 opacity-30">
           Millionaire Zone Plus v7.4.2 • Elite Secure Logout
         </p>

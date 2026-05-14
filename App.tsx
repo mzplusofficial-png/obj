@@ -856,6 +856,7 @@ const App: React.FC = () => {
     // On n'appelle requestPermission QUE si c'est une action manuelle (clic sur le bandeau)
     if (isManual) {
       try {
+        console.log('FCM: Starting manual permission request with VAPID:', VAPID_KEY);
         const result = await requestNotificationPermission(VAPID_KEY);
         console.log('FCM Manual Registration Result:', result);
         
@@ -897,8 +898,17 @@ const App: React.FC = () => {
           
           setNotification({
             title: 'Notifications Activées !',
-            body: 'Vous recevrez désormais les alertes de ventes et opportunités.',
+            body: result.token 
+              ? 'Vous recevrez désormais les alertes de ventes et opportunités.' 
+              : 'Permission accordée, mais le token n\'est pas encore prêt. Rechargez la page.',
             type: 'info'
+          });
+          setShowPermissionBanner(false);
+        } else if (result.status === 'denied') {
+          setNotification({
+            title: 'Permission Refusée',
+            body: 'Veuillez réinitialiser les permissions dans votre navigateur pour activer les alertes.',
+            type: 'error'
           });
           setShowPermissionBanner(false);
         }
@@ -1633,7 +1643,12 @@ const App: React.FC = () => {
                 <div>
                   <h4 className="text-white font-bold text-sm">Activez les notifications</h4>
                   <p className="text-white/60 text-xs mt-1 leading-relaxed">
-                    Restez informé des nouveaux services et opportunités en temps réel.
+                    Restez informé des nouveaux services et opportunités en temps réel. 
+                    {window.self !== window.top && (
+                      <span className="block mt-2 text-yellow-500 font-bold">
+                        ⚠️ Important: Ouvrez le site dans un nouvel onglet pour activer les alertes.
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

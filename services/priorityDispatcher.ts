@@ -188,6 +188,7 @@ export async function runPriorityDispatcher() {
                 }
 
                 if (notifType) {
+                    console.log(`[Dispatcher] Found matching notification type: ${notifType} for user ${userId}`);
                     // Check log
                     let hasBeenSent = false;
                     try {
