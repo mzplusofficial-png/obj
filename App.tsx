@@ -869,14 +869,32 @@ const App: React.FC = () => {
             type: 'warning'
           });
           setShowPermissionBanner(false);
-        } else if (result.status === 'denied') {
-          setNotification({
-            title: 'Notifications Bloquées',
-            body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
-            type: 'error'
-          });
-          setShowPermissionBanner(false);
-        } else if (result.status === 'granted') {
+        } else if (result.status === 'granted' || result.token) {
+          if (result.token) {
+            setFcmToken(result.token);
+            localStorage.setItem('fcm_token', result.token);
+            
+            if (session?.user?.id) {
+              console.log('FCM: Syncing token with database for user', session.user.id);
+              try {
+                const { error: updateError } = await supabase.from('users').update({ 
+                  fcm_token: result.token,
+                  last_fcm_sync: new Date().toISOString() 
+                }).eq('id', session.user.id);
+                
+                if (updateError) {
+                  console.error('FCM: Failed to save token to database:', updateError);
+                  // Fallback: try without last_fcm_sync
+                  await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
+                } else {
+                  console.log('FCM: Token synced successfully');
+                }
+              } catch (syncErr) {
+                console.error('FCM: Exception during database sync:', syncErr);
+              }
+            }
+          }
+          
           setNotification({
             title: 'Notifications Activées !',
             body: 'Vous recevrez désormais les alertes de ventes et opportunités.',

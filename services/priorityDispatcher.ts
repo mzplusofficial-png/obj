@@ -145,7 +145,7 @@ export async function runPriorityDispatcher() {
                     console.log(`[Dispatcher] User ${userId} has no challenge state.`);
                 }
 
-                const hasActiveChallenge = challenge && !challenge.j2_presented && !challenge.cancelled && (!challenge.j3_completed);
+                const hasActiveChallenge = challenge && !challenge.cancelled && !challenge.j3_completed;
                 console.log(`[Dispatcher] User ${userId} hasActiveChallenge: ${hasActiveChallenge}`);
 
                 let notifType: string | null = null;
@@ -155,6 +155,7 @@ export async function runPriorityDispatcher() {
 
                 // PRIORITÉ 1 : LE DÉFI (SI ACTIF)
                 if (hasActiveChallenge) {
+                    // --- JOUR 1 ---
                     // Case 1: Started but NOT completed Day 1
                     if (challenge.presented && challenge.started_at && !challenge.j1_completed) {
                         notifType = 'challenge_j1_reminder';
@@ -167,6 +168,21 @@ export async function runPriorityDispatcher() {
                         notifType = 'challenge_j1_success';
                         title = "🎉 Jour 1 validé.";
                         body = "👋 Bon travail. 🔥 Le plus important aujourd’hui était de commencer.";
+                        url = '/dashboard';
+                    }
+                    // --- JOUR 2 ---
+                    // Case 3: Day 2 presented but NOT completed (Nudge for first sale)
+                    else if (challenge.j2_presented && !challenge.j2_completed) {
+                        notifType = 'challenge_j2_reminder';
+                        title = "💰 Jour 2 : Ta Première Vente !";
+                        body = "🚀 Axis est prêt. Ton objectif : faire ta première vente aujourd'hui. On y va ?";
+                        url = '/dashboard';
+                    }
+                    // Case 4: Day 2 completed but not yet presented Day 3 (Congrats for the sale)
+                    else if (challenge.j2_completed && !challenge.j3_presented) {
+                        notifType = 'challenge_j2_success';
+                        title = "🔥 INCROYABLE ! Jour 2 validé.";
+                        body = "💰 Tu as fait ta première vente ! C'est le début de quelque chose de grand. Demain, étape finale.";
                         url = '/dashboard';
                     }
                 }
