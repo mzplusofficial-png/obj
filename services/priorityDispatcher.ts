@@ -154,7 +154,7 @@ export async function runPriorityDispatcher() {
                 let url = '/';
 
                 // PRIORITÉ 1 : LE DÉFI (SI ACTIF)
-                if (hasActiveChallenge) {
+                if (hasActiveChallenge || (challenge && challenge.j3_completed)) {
                     // --- JOUR 1 ---
                     // Case 1: Started but NOT completed Day 1
                     if (challenge.presented && challenge.started_at && !challenge.j1_completed) {
@@ -183,6 +183,21 @@ export async function runPriorityDispatcher() {
                         notifType = 'challenge_j2_success';
                         title = "🔥 INCROYABLE ! Jour 2 validé.";
                         body = "💰 Tu as fait ta première vente ! C'est le début de quelque chose de grand. Demain, étape finale.";
+                        url = '/dashboard';
+                    }
+                    // --- JOUR 3 ---
+                    // Case 5: Day 3 presented but NOT completed
+                    else if (challenge.j3_presented && !challenge.j3_completed) {
+                        notifType = 'challenge_j3_reminder';
+                        title = "👑 Jour 3 : L'ultime étape !";
+                        body = "🚀 Tu y es presque. Une dernière action pour finaliser ton défi de 3 jours. Prêt ?";
+                        url = '/dashboard';
+                    }
+                    // Case 6: Day 3 completed
+                    else if (challenge.j3_completed) {
+                        notifType = 'challenge_j3_success';
+                        title = "🥇 DÉFI RÉUSSI !";
+                        body = "👑 Félicitations ! Tu as terminé le défi des 3 jours. Tu es maintenant un membre Élite de la MZ+ !";
                         url = '/dashboard';
                     }
                 }
