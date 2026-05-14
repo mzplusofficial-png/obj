@@ -644,35 +644,27 @@ export const GlobalView: React.FC<any> = ({
         const j3Presented = challengeDb.j3Presented === true;
         const j3Completed = challengeDb.j3Completed === true;
 
+        // Check if Day 2 is overdue (it was started on a previous day)
+        const isJ2Overdue = challengeDb.j2StartedAt && (() => {
+          const startDate = new Date(challengeDb.j2StartedAt);
+          const now = new Date();
+          // Overdue if it's not the same day AND now is after startDate
+          return startDate.toDateString() !== now.toDateString() && now > startDate;
+        })();
+
         let mission = null;
         let isWaiting = false;
 
-        if (!j1Completed) {
+        // Priority 1: Day 3 (either naturally unlocked or J2 missed)
+        if ((j3Presented || (j2Presented && !j2Completed && isJ2Overdue)) && !j3Completed) {
           mission = {
-            day: 1,
-            title: "Choisir le bon produit",
-            desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique.",
-            action: "Ouvrir le catalogue",
-            tab: "affiliation",
-          };
-        } else if (j1Completed && !j2Presented) {
-          isWaiting = true;
-          mission = {
-            day: 1,
-            title: "Mission Accomplie !",
-            desc: "Bravo ! Reviens demain pour la prochaine mission.",
-            action: "Patienter",
-            tab: "dashboard",
-          };
-        } else if (j2Presented && !j2Completed) {
-          mission = {
-            day: 2,
-            title: "Vendre ton produit",
-            desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation.",
-            action: "Suivre la formation",
-            tab: "formation",
-            event: "open-formation",
-            detail: { id: "default-free-video" },
+            day: 3,
+            title: "Faire exploser tes ventes",
+            desc: isJ2Overdue && !j2Completed 
+              ? "Tu as manqué le défi d'hier, mais rien n'est perdu ! Termine par ta mission finale." 
+              : "Partage ta boutique pour faire une nouvelle vente et confirmer ton succès !",
+            action: "Voir ma boutique",
+            tab: "my_store",
           };
         } else if (j2Completed && !j3Presented) {
           isWaiting = true;
@@ -683,13 +675,32 @@ export const GlobalView: React.FC<any> = ({
             action: "Patienter",
             tab: "dashboard",
           };
-        } else if (j3Presented && !j3Completed) {
+        } else if (j2Presented && !j2Completed && !isJ2Overdue) {
           mission = {
-            day: 3,
-            title: "Faire exploser tes ventes",
-            desc: "Partage ta boutique pour faire une nouvelle vente et confirmer ton succès !",
-            action: "Voir ma boutique",
-            tab: "my_store",
+            day: 2,
+            title: "Vendre ton produit",
+            desc: "Maintenant que tu as ton produit, c'est l'heure de ta première vente ! Suis la formation.",
+            action: "Suivre la formation",
+            tab: "formation",
+            event: "open-formation",
+            detail: { id: "default-free-video" },
+          };
+        } else if (j1Completed && !j2Presented) {
+          isWaiting = true;
+          mission = {
+            day: 1,
+            title: "Mission Accomplie !",
+            desc: "Bravo ! Reviens demain pour la prochaine mission.",
+            action: "Patienter",
+            tab: "dashboard",
+          };
+        } else if (!j1Completed) {
+          mission = {
+            day: 1,
+            title: "Choisir le bon produit",
+            desc: "Prends le temps d'explorer le catalogue et ajoute un produit à ta boutique.",
+            action: "Ouvrir le catalogue",
+            tab: "affiliation",
           };
         }
 

@@ -75,11 +75,21 @@ export const PushAdmin: React.FC = () => {
         target_value: formData.target_type === 'user' ? selectedUser.id : formData.target_value
       };
 
-      // 1. Enregistrement dans la DB (In-App) - On retire 'url' car la colonne n'existe pas en DB
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { url: _, ...dbData } = finalData;
-      const { error } = await supabase.from('admin_push_notifications').insert([dbData]);
-      if (error) throw error;
+      // 1. Enregistrement dans la DB (In-App)
+      const { error } = await supabase.from('admin_push_notifications').insert([finalData]);
+      if (error) {
+        // Fallback si la colonne 'url' n'existe pas encore en DB (ex: migration pas encore jouée)
+        if (error.message?.includes("url") || error.code === '42703') {
+           // On retire 'url' car la colonne n'existe pas en DB
+           const { url, ...dbData } = finalData;
+           // url est déstructuré mais non utilisé pour dbData
+           void url; 
+           const { error: retryError } = await supabase.from('admin_push_notifications').insert([dbData]);
+           if (retryError) throw retryError;
+        } else {
+           throw error;
+        }
+      }
 
       // 2. Tentative d'envoi de Push Réel (FCM) via le serveur
       if (formData.target_type === 'user' && selectedUser.id) {

@@ -32,50 +32,57 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
 
   const startTeamAxisGuide = useCallback(() => {
     triggerAxisMessage(
-      "Bienvenue dans ton Espace Parrainage ! C'est ici que tu vas parrainer de nouveaux membres pour rejoindre Millionnaire Zone Plus.",
+      "Bienvenue dans ton Espace Parrainage ! C'est ici que tu vas parrainer de nouveaux membres pour rejoindre Millionnaire Zone Plus. 👁️⚡",
       "guiding",
       0,
       {
-        label: "Découvrir 🚀",
+        label: "Montre-moi ➔",
         action: () => {
-          const el = document.getElementById('referral-link-card');
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          triggerAxisMessage(
-            "Voici ton Lien de Parrainage unique. Copie-le et partage-le. Chaque personne qui s'inscrit via ce lien devient ton filleul.",
-            "guiding",
-            0,
-            {
-               label: "Voir Stats 📊",
-               action: () => {
-                  const elStats = document.getElementById('referral-stats-card');
-                  elStats?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          triggerAxisMessage("Analyse du réseau...", "progression", 1000);
+          
+          setTimeout(() => {
+            const linkCard = document.getElementById('referral-link-card');
+            if (linkCard) linkCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            triggerAxisMessage(
+              "Voici ton Lien de Parrainage unique. Partage-le ! Chaque personne qui s'inscrit via ce lien devient ton filleul et te rapporte +10 XP. 💎",
+              "action",
+              10000,
+              {
+                label: "Suivant ➔",
+                action: () => {
+                  const statsCard = document.getElementById('referral-stats-card');
+                  if (statsCard) statsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  
                   triggerAxisMessage(
-                    "Ici, tu peux suivre tes statistiques. Le nombre de partenaires affiche toutes les personnes que tu as parrainées.",
+                    "Ici, tu peux suivre tes statistiques en temps réel. La section 'Partenaires' affiche toutes les personnes qui ont rejoint ton équipe. 📊",
                     "guiding",
-                    0,
+                    10000,
                     {
-                      label: "Le Journal 📝",
+                      label: "Et les gains ? 💸",
                       action: () => {
-                        const elList = document.getElementById('referral-list-container');
-                        elList?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const listContainer = document.getElementById('referral-list-container');
+                        if (listContainer) listContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
                         triggerAxisMessage(
-                          "Le Journal du Parrainage te permet de voir tes filleuls. Lorsqu'un de tes filleuls devient PREMIUM, tu reçois 700 POINTS RPA !",
-                          "action",
-                          0,
+                          "Le Journal du Parrainage te permet de voir tes filleuls. Lorsqu'un de tes filleuls devient PREMIUM, tu reçois 2500 FCFA de commission directe ! 💰💸",
+                          "success",
+                          12000,
                           {
-                            label: "C'est compris ! 👁️",
+                            label: "C'est compris ! 🔥",
                             action: () => {
-                               localStorage.setItem('mz_referral_guide_seen', 'true');
-                               triggerAxisMessage("Félicitations ! Tu as toutes les clés. À toi de bâtir ton empire !", "success", 7000);
+                              localStorage.setItem('mz_referral_guide_seen', 'true');
+                              triggerAxisMessage("Parfait. C'est le moment de bâtir ton empire. Bonne chance ! 🚀", "success", 5000);
                             }
                           }
                         );
                       }
                     }
                   );
-               }
-            }
-          );
+                }
+              }
+            );
+          }, 1200);
         }
       }
     );
@@ -220,10 +227,8 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
         </div>
       </div>
 
-      {/* 3. AXIS EXPLAINER & TEAM LIST (Flowing naturally) */}
+      {/* 3. TEAM LIST (Flowing naturally) */}
       <div className="max-w-4xl mx-auto px-4 md:px-8 mt-12 space-y-12">
-        <AxisExplainer convertAndFormat={convertAndFormat} />
-        
         <div className="pt-4">
           <div className="flex items-center justify-between mb-8 px-2">
              <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
@@ -307,65 +312,3 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
   );
 };
 
-const AxisExplainer = ({ convertAndFormat }: { convertAndFormat: (val: number) => { formatted: string, value: number, symbol: string } }) => {
-  const [step, setStep] = useState(0);
-
-  const steps = [
-    {
-       text: "Ton lien de parrainage est l'outil principal pour construire ton empire et générer des revenus passifs.",
-       button: "Détails"
-    },
-    {
-       text: "Chaque inscription gratuite générée via ton lien privé augmente directement ton influence (+10 XP).",
-       button: "Ensuite ?"
-    },
-    {
-       text: `Dès qu'un de tes contacts accède au statut Premium, ${convertAndFormat(2500).formatted} sont crédités instantanément dans ta trésorerie.`,
-       button: "Compris"
-    }
-  ];
-
-  if (step >= steps.length) {
-    return (
-       <div className="bg-[#0a0a09] border border-[var(--color-border-gold)] hover:border-[var(--color-gold-main)]/50 rounded-[1.5rem] p-5 flex items-center justify-center cursor-pointer transition-all shadow-sm group" onClick={() => setStep(0)}>
-          <div className="flex items-center gap-3">
-             <Crown size={16} className="text-[var(--color-gold-main)] group-hover:scale-110 transition-transform" />
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-main)]">Revoir la stratégie de parrainage</p>
-          </div>
-       </div>
-    );
-  }
-
-  return (
-    <div className="bg-[#0a0a09] border border-[var(--color-border-gold)] rounded-[2rem] p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative overflow-hidden">
-       <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-gold-main)]/5 rounded-full blur-[40px] pointer-events-none" />
-       
-       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#111] to-[#050505] flex items-center justify-center shrink-0 border border-[var(--color-gold-main)]/20 shadow-inner">
-          <Crown className="text-[var(--color-gold-main)]" size={24} />
-       </div>
-       
-       <div className="flex-1 w-full text-center sm:text-left relative z-10">
-          <AnimatePresence mode="wait">
-             <motion.div
-                key={step}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col sm:items-start items-center"
-             >
-                <p className="text-white/90 text-sm md:text-base leading-relaxed font-medium mb-4">
-                   {steps[step].text}
-                </p>
-                <button 
-                  onClick={() => setStep(s => s + 1)} 
-                  className="px-6 py-2.5 bg-[var(--color-gold-main)]/10 hover:bg-[var(--color-gold-main)]/20 text-[var(--color-gold-main)] rounded-xl font-bold text-[10px] uppercase tracking-[0.2em] transition-all border border-[var(--color-gold-main)]/20 active:scale-95"
-                >
-                   {steps[step].button}
-                </button>
-             </motion.div>
-          </AnimatePresence>
-       </div>
-    </div>
-  );
-};

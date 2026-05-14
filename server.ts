@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import { initAdmin, sendPush, sendMulticast } from './notifications.js';
+import { runPriorityDispatcher } from './services/priorityDispatcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -132,6 +133,11 @@ async function startServer() {
   });
 
   initAdmin();
+
+  // Background Dispatcher for Priority Notifications (Run every 30 seconds)
+  setInterval(() => {
+    runPriorityDispatcher().catch(err => console.error('[Dispatcher Error]', err));
+  }, 30000);
 
   // API Route to send real FCM Push (using the new service)
   app.post('/api/send-push', async (req, res) => {
