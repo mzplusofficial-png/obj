@@ -1141,11 +1141,25 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  // GLOBAL HEARTBEAT : Suivi du temps pour le programme de récompense
+  // GLOBAL HEARTBEAT & INACTIVITY TRACKING
   useEffect(() => {
     if (!userProfile?.id) return;
     
+    let lastActivityTime = Date.now();
+    const handleActivity = () => {
+      lastActivityTime = Date.now();
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+    window.addEventListener('click', handleActivity);
+
     const sendHeartbeat = async () => {
+      // If idle for more than 30 seconds (one heartbeat interval), stop heartbeats to allow background notifications
+      if (Date.now() - lastActivityTime > 30000) return;
+
       try {
         const { error } = await supabase.rpc('mz_rewards_heartbeat', { p_user_id: userProfile.id });
         if (error) console.warn("Global heartbeat error:", error.message);
@@ -1159,7 +1173,15 @@ const App: React.FC = () => {
     
     // Puis toutes les 30 secondes (pour une détection d'inactivité plus précise)
     const interval = setInterval(sendHeartbeat, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('click', handleActivity);
+    };
   }, [userProfile?.id]);
 
   const handlePurchase = useCallback(async () => {

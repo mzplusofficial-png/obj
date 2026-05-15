@@ -25,37 +25,7 @@ export async function runPriorityDispatcher() {
     }
 
     try {
-        const inactivityThreshold = new Date(Date.now() - 60000).toISOString(); // Exactly 60s threshold
-        
-        // 1. Fetch users from time tracking (active today but inactive for > 60s)
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Use a wrapper to handle potential "table not found" errors
-        const fetchTracking = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('mz_rewards_time_tracking')
-                    .select('user_id, last_ping')
-                    .eq('tracking_date', today)
-                    .lt('last_ping', inactivityThreshold);
-                
-                if (error) {
-                    if (error.code === '42P01') {
-                        console.warn('[Dispatcher] Table mz_rewards_time_tracking not found. Skipping time-based notifications.');
-                        return { data: [], error: null };
-                    }
-                    return { data: null, error };
-                }
-                return { data, error: null };
-            } catch (e) {
-                console.error('[Dispatcher] Unexpected error querying mz_rewards_time_tracking:', e);
-                return { data: [], error: null };
-            }
-        };
-
-        const { data: trackingEntries, error: trackingError } = await fetchTracking();
-
-        // 2. Also fetch users with active challenges
+        // 1. Fetch users with active challenges
         const fetchChallenges = async () => {
             try {
                 const { data, error } = await supabase
@@ -80,40 +50,56 @@ export async function runPriorityDispatcher() {
         };
 
         const { data: challengeUsers, error: challengeError } = await fetchChallenges();
-
-        if (trackingError) {
-            console.error('[Dispatcher] trackingError:', JSON.stringify(trackingError));
-            // Don't throw, just log and continue if possible or stop this cycle
-            return;
-        }
         if (challengeError) {
             console.error('[Dispatcher] challengeError:', JSON.stringify(challengeError));
             return;
         }
-        
-        const trackingIds = trackingEntries?.map(u => u.user_id) || [];
+
         const challengeIds = challengeUsers?.map(c => c.user_id) || [];
-        
-        // Dedup user IDs from both sources
-        const uniqueUserIds = Array.from(new Set([...trackingIds, ...challengeIds]));
-        
-        if (uniqueUserIds.length === 0) {
-            console.log('[Dispatcher] No potentially targetable users found.');
+        if (challengeIds.length === 0) {
+            console.log('[Dispatcher] No users with active challenges found.');
             return;
         }
 
-        // Fetch user data for these IDs, including a loose "inactivity" check if we have last_ping
+        // 2. Filter these users by activity (must be inactive for > 60s)
+        const today = new Date().toISOString().split('T')[0];
+        const inactivityThreshold = new Date(Date.now() - 60000).toISOString(); 
+
+        const { data: activeTracking, error: trackingError } = await supabase
+            .from('mz_rewards_time_tracking')
+            .select('user_id, last_ping')
+            .eq('tracking_date', today)
+            .in('user_id', challengeIds);
+
+        if (trackingError && trackingError.code !== '42P01') {
+            console.error('[Dispatcher] trackingError filtering active users:', trackingError);
+            return;
+        }
+
+        // Users to target: Those who either have no ping today OR whose ping is < inactivityThreshold
+        const targetUserIds = challengeIds.filter(userId => {
+            const ping = activeTracking?.find(t => t.user_id === userId);
+            if (!ping) return true; // No activity today = inactive
+            return ping.last_ping < inactivityThreshold; // Last ping > 60s ago = inactive
+        });
+
+        if (targetUserIds.length === 0) {
+            console.log('[Dispatcher] All targetable users are currently active. Skipping.');
+            return;
+        }
+
+        // 3. Fetch user data for target IDs
         const { data: usersData, error: usersError } = await supabase
             .from('users')
             .select('id, fcm_token, full_name')
-            .in('id', uniqueUserIds);
+            .in('id', targetUserIds);
 
         if (usersError) {
             console.error('[Dispatcher] usersError:', usersError);
             throw usersError;
         }
 
-        console.log(`[Dispatcher] Found ${usersData?.length || 0} potentially inactive users. Processing...`);
+        console.log(`[Dispatcher] Found ${usersData?.length || 0} inactive users with pending challenges. Processing...`);
 
         for (const userData of (usersData || [])) {
             const userId = userData.id;
@@ -123,13 +109,6 @@ export async function runPriorityDispatcher() {
                     continue;
                 }
                 
-                // If we have a ping, ensure they ARE inactive
-                const pingEntry = trackingEntries?.find(t => t.user_id === userId);
-                if (pingEntry && pingEntry.last_ping >= inactivityThreshold) {
-                    console.log(`[Dispatcher] User ${userId} is still active (${pingEntry.last_ping}). Skipping.`);
-                    continue; // Still active
-                }
-
                 const { data: challenge, error: stateError } = await supabase
                     .from('mz_challenge_3j_state')
                     .select('*')
