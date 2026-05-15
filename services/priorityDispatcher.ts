@@ -114,72 +114,16 @@ export async function runPriorityDispatcher() {
                 let url = '/';
                 let inactivityNeeded = 60; // Default 60s
 
-                const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
-                const isNextDayPlus = startedAtDate && startedAtDate < today;
-
-                const dateObj = new Date();
-                const dayBeforeYesterday = new Date(dateObj);
-                dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
-                const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split('T')[0];
-                const isDay3Strict = startedAtDate && startedAtDate <= dayBeforeYesterdayStr;
-
-                const j2CompAt = challenge.j2_completed_at ? new Date(challenge.j2_completed_at).toISOString().split('T')[0] : null;
-                const isDay3TimeAfterJ2 = j2CompAt && j2CompAt < today;
-
-                // CAS : Jour 3 mais Jour 2 non complété (Upsell Premium après 5 min)
-                if (isDay3Strict && !challenge.j2_completed) {
-                    notifType = 'challenge_j2_late_j3_upsell';
-                    title = "👋 Hey, c’est Axis.";
-                    body = "🔥 Je vois que tu n’as pas encore généré tes premiers revenus. 👑 Beaucoup de membres Premium l’ont déjà fait. 🚀 Il est peut-être temps de passer au niveau supérieur.";
-                    url = '/dashboard?tab=flash_offer';
-                    inactivityNeeded = 300; // 5 MINUTES (300 secondes) pour ce cas précis
-                }
-                // Message du Jour 3 (Si J2 complété hier ou avant)
-                else if (isDay3TimeAfterJ2 && !challenge.j3_presented && !challenge.j3_completed) {
-                     notifType = 'challenge_j3_start';
-                     title = "👑 Le grand final, c'est aujourd'hui !";
-                     body = "C'est ton Jour 3. Tu es à deux doigts de l'apothéose. Finis ce que tu as commencé en beauté, je t'attends.";
-                     url = '/dashboard';
-                }
-                // Rappel Jour 2 (Si commencé mais pas fini)
-                else if (challenge.j2_started_at && !challenge.j2_completed) {
-                    notifType = 'challenge_j2_reminder';
-                    title = "✨ Ne t'arrête pas en si bon chemin...";
-                    body = "Tu as déjà commencé le Jour 2, c'est le plus gros du travail ! Reprends ton élan, tu vas y arriver.";
-                    url = '/dashboard';
-                }
-                // Message du Jour 2 (Automatique le lendemain, si pas encore commencé)
-                else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
-                    notifType = 'challenge_j2_start';
-                    title = "🌅 Nouvelle journée, nouvelle étape.";
-                    body = "Coucou ! Prêt pour le Jour 2 ? On monte d'un cran aujourd'hui. Connecte-toi pour découvrir ta mission.";
-                    url = '/dashboard';
-                }
-                // Rappel Jour 1 (Seulement le jour même du début)
-                else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
-                    notifType = 'challenge_j1_reminder';
-                    title = "🚀 On commence ensemble ?";
-                    body = "Ton défi est lancé et le chrono tourne. Je sais que tu as ce qu'il faut pour valider ce Jour 1. Go !";
-                    url = '/dashboard';
-                } 
-                // Succès Jour 1 (Félicitations immédiates après inactivité)
-                else if (challenge.j1_completed && !challenge.j2_presented) {
-                    notifType = 'challenge_j1_success';
-                    title = "🌟 Fier de toi !";
-                    body = "Le Jour 1 est dans la poche. Repose-toi bien, demain on attaque la suite. Tu as déjà fait le plus dur : commencer.";
-                    url = '/dashboard';
-                }
-
-                // --- NIVEAUX D'INACTIVITÉ INTELLIGENTS (SI AUCUNE NOTIF PRIORITAIRE) ---
-                if (!notifType) {
+                // --- NIVEAUX D'INACTIVITÉ INTELLIGENTS (HAS HIGHER PRIORITY IF 24H+) ---
+                if (secondsSinceLastActivity >= 86400) {
                     // Level 3 — Inactivité prolongée (72h+)
                     if (secondsSinceLastActivity >= 259200) {
                         notifType = 'inactivity_l3';
                         inactivityNeeded = 259200;
                         const msgs = [
-                            { t: "💔 C'est donc ça la fin de ton projet ?", b: "Tu disais vouloir gagner de l'argent en ligne... C'était juste des mots ? Prouve-toi que tu vaux mieux que cet abandon." },
-                            { t: "⚠️ Ton 'pourquoi' est en train de mourir", b: "Tu as commencé ce défi pour une raison précise. Aujourd'hui, tu l'oublies. Les gagnants finissent ce qu'ils commencent." },
-                            { t: "🛑 Arrête de te mentir", b: "Dire qu'on veut réussir est facile. Agir l'est moins. Tu es à un clic de reprendre le contrôle ou d'assumer l'échec." }
+                            { t: "⚠️ Ton accès au défi expire bientôt", b: "On n'aime pas voir un talent s'éteindre. Ta place dans le groupe est menacée par ton inactivité. Reviens sauver ton projet." },
+                            { t: "🤔 On a presque cru que tu avais réussi !", b: "On s'attendait à voir ta commission tomber comme les autres... mais le tableau de bord est vide. Un souci technique ?" },
+                            { t: "🛑 Dernier rappel pour ton objectif", b: "Tu avais un plan clair il y a 3 jours. Le quotidien a repris le dessus ? Ne laisse pas tes rêves de liberté s'évaporer." }
                         ];
                         const pick = msgs[Math.floor(Math.random() * msgs.length)];
                         title = pick.t;
@@ -201,7 +145,7 @@ export async function runPriorityDispatcher() {
                         url = '/dashboard';
                     }
                     // Level 1 — Première absence (24h+)
-                    else if (secondsSinceLastActivity >= 86400) {
+                    else {
                         notifType = 'inactivity_l1';
                         inactivityNeeded = 86400;
                         const msgs = [
@@ -215,6 +159,66 @@ export async function runPriorityDispatcher() {
                         url = '/dashboard';
                     }
                 }
+
+                // --- CHALLENGE SPECIFIC NOTIFICATIONS (ONLY IF < 24H INACTIVE OR NO INACTIVITY TRIGGERED) ---
+                if (!notifType) {
+                    const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
+                    const isNextDayPlus = startedAtDate && startedAtDate < today;
+
+                    const dateObj = new Date();
+                    const dayBeforeYesterday = new Date(dateObj);
+                    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+                    const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split('T')[0];
+                    const isDay3Strict = startedAtDate && startedAtDate <= dayBeforeYesterdayStr;
+
+                    const j2CompAt = challenge.j2_completed_at ? new Date(challenge.j2_completed_at).toISOString().split('T')[0] : null;
+                    const isDay3TimeAfterJ2 = j2CompAt && j2CompAt < today;
+
+                    // CAS : Jour 3 mais Jour 2 non complété (Upsell Premium après 5 min)
+                    if (isDay3Strict && !challenge.j2_completed) {
+                        notifType = 'challenge_j2_late_j3_upsell';
+                        title = "👋 Hey, c’est Axis.";
+                        body = "🔥 Je vois que tu n’as pas encore généré tes premiers revenus. 👑 Beaucoup de membres Premium l’ont déjà fait. 🚀 Il est peut-être temps de passer au niveau supérieur.";
+                        url = '/dashboard?tab=flash_offer';
+                        inactivityNeeded = 300; // 5 MINUTES (300 secondes) pour ce cas précis
+                    }
+                    // Message du Jour 3 (Si J2 complété hier ou avant)
+                    else if (isDay3TimeAfterJ2 && !challenge.j3_presented && !challenge.j3_completed) {
+                         notifType = 'challenge_j3_start';
+                         title = "👑 Le grand final, c'est aujourd'hui !";
+                         body = "C'est ton Jour 3. Tu es à deux doigts de l'apothéose. Finis ce que tu as commencé en beauté, je t'attends.";
+                         url = '/dashboard';
+                    }
+                    // Rappel Jour 2 (Si commencé mais pas fini)
+                    else if (challenge.j2_started_at && !challenge.j2_completed) {
+                        notifType = 'challenge_j2_reminder';
+                        title = "✨ Ne t'arrête pas en si bon chemin...";
+                        body = "Tu as déjà commencé le Jour 2, c'est le plus gros du travail ! Reprends ton élan, tu vas y arriver.";
+                        url = '/dashboard';
+                    }
+                    // Message du Jour 2 (Automatique le lendemain, si pas encore commencé)
+                    else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
+                        notifType = 'challenge_j2_start';
+                        title = "🌅 Nouvelle journée, nouvelle étape.";
+                        body = "Coucou ! Prêt pour le Jour 2 ? On monte d'un cran aujourd'hui. Connecte-toi pour découvrir ta mission.";
+                        url = '/dashboard';
+                    }
+                    // Rappel Jour 1 (Seulement le jour même du début)
+                    else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
+                        notifType = 'challenge_j1_reminder';
+                        title = "🚀 On commence ensemble ?";
+                        body = "Ton défi est lancé et le chrono tourne. Je sais que tu as ce qu'il faut pour valider ce Jour 1. Go !";
+                        url = '/dashboard';
+                    } 
+                    // Succès Jour 1 (Félicitations immédiates après inactivité)
+                    else if (challenge.j1_completed && !challenge.j2_presented) {
+                        notifType = 'challenge_j1_success';
+                        title = "🌟 Fier de toi !";
+                        body = "Le Jour 1 est dans la poche. Repose-toi bien, demain on attaque la suite. Tu as déjà fait le plus dur : commencer.";
+                        url = '/dashboard';
+                    }
+                }
+
 
                 // CHECK INACTIVITY DURATION
                 if (notifType && secondsSinceLastActivity < inactivityNeeded) {
