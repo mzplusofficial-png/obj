@@ -856,7 +856,6 @@ const App: React.FC = () => {
     // On n'appelle requestPermission QUE si c'est une action manuelle (clic sur le bandeau)
     if (isManual) {
       try {
-        console.log('FCM: Starting manual permission request with VAPID:', VAPID_KEY);
         const result = await requestNotificationPermission(VAPID_KEY);
         console.log('FCM Manual Registration Result:', result);
         
@@ -870,45 +869,18 @@ const App: React.FC = () => {
             type: 'warning'
           });
           setShowPermissionBanner(false);
-        } else if (result.status === 'granted' || result.token) {
-          if (result.token) {
-            setFcmToken(result.token);
-            localStorage.setItem('fcm_token', result.token);
-            
-            if (session?.user?.id) {
-              console.log('FCM: Syncing token with database for user', session.user.id);
-              try {
-                const { error: updateError } = await supabase.from('users').update({ 
-                  fcm_token: result.token,
-                  last_fcm_sync: new Date().toISOString() 
-                }).eq('id', session.user.id);
-                
-                if (updateError) {
-                  console.error('FCM: Failed to save token to database:', updateError);
-                  // Fallback: try without last_fcm_sync
-                  await supabase.from('users').update({ fcm_token: result.token }).eq('id', session.user.id);
-                } else {
-                  console.log('FCM: Token synced successfully');
-                }
-              } catch (syncErr) {
-                console.error('FCM: Exception during database sync:', syncErr);
-              }
-            }
-          }
-          
-          setNotification({
-            title: 'Notifications Activées !',
-            body: result.token 
-              ? 'Vous recevrez désormais les alertes de ventes et opportunités.' 
-              : 'Permission accordée, mais le token n\'est pas encore prêt. Rechargez la page.',
-            type: 'info'
-          });
-          setShowPermissionBanner(false);
         } else if (result.status === 'denied') {
           setNotification({
-            title: 'Permission Refusée',
-            body: 'Veuillez réinitialiser les permissions dans votre navigateur pour activer les alertes.',
+            title: 'Notifications Bloquées',
+            body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
             type: 'error'
+          });
+          setShowPermissionBanner(false);
+        } else if (result.status === 'granted') {
+          setNotification({
+            title: 'Notifications Activées !',
+            body: 'Vous recevrez désormais les alertes de ventes et opportunités.',
+            type: 'info'
           });
           setShowPermissionBanner(false);
         }
@@ -1643,12 +1615,7 @@ const App: React.FC = () => {
                 <div>
                   <h4 className="text-white font-bold text-sm">Activez les notifications</h4>
                   <p className="text-white/60 text-xs mt-1 leading-relaxed">
-                    Restez informé des nouveaux services et opportunités en temps réel. 
-                    {window.self !== window.top && (
-                      <span className="block mt-2 text-yellow-500 font-bold">
-                        ⚠️ Important: Ouvrez le site dans un nouvel onglet pour activer les alertes.
-                      </span>
-                    )}
+                    Restez informé des nouveaux services et opportunités en temps réel.
                   </p>
                 </div>
               </div>

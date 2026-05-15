@@ -1356,7 +1356,6 @@ export const ProfileTab: React.FC<any> = ({
           />
           Déconnexion Sécurisée
         </button>
-
         <p className="text-center text-[8px] text-neutral-600 font-bold uppercase tracking-[0.3em] mt-6 opacity-30">
           Millionaire Zone Plus v7.4.2 • Elite Secure Logout
         </p>
