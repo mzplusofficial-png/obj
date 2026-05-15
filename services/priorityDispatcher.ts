@@ -143,29 +143,36 @@ export async function runPriorityDispatcher() {
                     // Message du Jour 3 (Si J2 complété hier ou avant)
                     if (isDay3Time && !challenge.j3_presented && !challenge.j3_completed) {
                          notifType = 'challenge_j3_start';
-                         title = "👑 L'apothéose du Défi.";
-                         body = "💰 Aujourd'hui est le Jour 3. Es-tu prêt à clore ton premier cycle de succès ?";
+                         title = "👑 Le grand final t'attend...";
+                         body = "C'est le Jour 3. Tu es à deux doigts de transformer l'essai. Viens finir ce que tu as commencé, je t'attends.";
                          url = '/dashboard';
                     }
-                    // Message du Jour 2 (Automatique le lendemain, qu'il ait fini J1 ou non)
+                    // Rappel Jour 2 (Si commencé mais pas fini)
+                    else if (challenge.j2_started_at && !challenge.j2_completed) {
+                        notifType = 'challenge_j2_reminder';
+                        title = "✨ Ne t'arrête pas en si bon chemin...";
+                        body = "Le Jour 2 est souvent le plus dur, mais c'est là que tout se joue. Reprends où tu en étais, tu vas y arriver.";
+                        url = '/dashboard';
+                    }
+                    // Message du Jour 2 (Automatique le lendemain, si pas encore commencé)
                     else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
                         notifType = 'challenge_j2_start';
-                        title = "🌅 Le défi continue.";
-                        body = "🔥 C'est le Jour 2. Prêt à franchir une nouvelle étape ? Connecte-toi.";
+                        title = "🌅 Nouvelle journée, nouvelle étape.";
+                        body = "Prêt pour le Jour 2 ? On monte d'un cran aujourd'hui. Connecte-toi pour découvrir ta mission.";
                         url = '/dashboard';
                     }
                     // Rappel Jour 1 (Seulement le jour même du début)
                     else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
                         notifType = 'challenge_j1_reminder';
-                        title = "👋 Hey, c’est moi Axis.";
-                        body = "🔥 Ton défi est officiellement lancé. 🚀 Continue maintenant.";
+                        title = "🚀 On commence ensemble ?";
+                        body = "Ton défi est lancé et le chrono tourne. Je sais que tu as ce qu'il faut pour valider ce Jour 1. Go !";
                         url = '/dashboard';
                     } 
                     // Succès Jour 1 (Félicitations immédiates après inactivité)
                     else if (challenge.j1_completed && !challenge.j2_presented) {
                         notifType = 'challenge_j1_success';
-                        title = "🎉 Jour 1 validé.";
-                        body = "👋 Bon travail. 🔥 Le plus important aujourd’hui était de commencer.";
+                        title = "🌟 Fier de toi !";
+                        body = "Le Jour 1 est dans la poche. Repose-toi bien, demain on attaque la suite. Tu as déjà fait le plus dur : commencer.";
                         url = '/dashboard';
                     }
                 }
