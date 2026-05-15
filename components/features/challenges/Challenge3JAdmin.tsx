@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../../../services/supabase.ts';
 import { GoldBorderCard, SectionTitle } from '../../UI.tsx';
-import { RefreshCw, CheckCircle2, UserX, Search, Flame, Target, AlertTriangle, FastForward, PowerOff, ShieldAlert, Award, Clock } from 'lucide-react';
+import { RefreshCw, CheckCircle2, UserX, Search, Flame, Target, AlertTriangle, FastForward, PowerOff, ShieldAlert, Award, Clock, Zap } from 'lucide-react';
 
 interface Challenge3JAdminProps {
   users: any[];
@@ -368,6 +368,50 @@ export const Challenge3JAdmin: React.FC<Challenge3JAdminProps> = ({ users, onRef
                     >
                       <PowerOff size={14} /> Reset
                     </button>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/5 space-y-2">
+                    <div className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest flex items-center gap-2">
+                       <Zap size={10} /> Simulator: Test Inactivité
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                       <button 
+                         onClick={async () => {
+                           const pastTime = new Date(Date.now() - (24.1 * 3600 * 1000)).toISOString();
+                           const today = new Date().toISOString().split('T')[0];
+                           await supabase.from('mz_rewards_time_tracking').upsert({ user_id: u.id, last_ping: pastTime, tracking_date: today }, { onConflict: 'user_id,tracking_date' });
+                           await supabase.from('mz_background_notifications_log').delete().eq('user_id', u.id);
+                           alert("Simulé: 24h d'absence. Attendez ~30s.");
+                         }}
+                         className="py-1 text-[10px] bg-white/5 border border-white/10 rounded hover:bg-white/10"
+                       >
+                         24h
+                       </button>
+                       <button 
+                         onClick={async () => {
+                           const pastTime = new Date(Date.now() - (48.1 * 3600 * 1000)).toISOString();
+                           const today = new Date().toISOString().split('T')[0];
+                           await supabase.from('mz_rewards_time_tracking').upsert({ user_id: u.id, last_ping: pastTime, tracking_date: today }, { onConflict: 'user_id,tracking_date' });
+                           await supabase.from('mz_background_notifications_log').delete().eq('user_id', u.id);
+                           alert("Simulé: 48h (Preuve Sociale). Attendez ~30s.");
+                         }}
+                         className="py-1 text-[10px] bg-white/5 border border-white/10 rounded hover:bg-white/10"
+                       >
+                         48h
+                       </button>
+                       <button 
+                         onClick={async () => {
+                           const pastTime = new Date(Date.now() - (72.1 * 3600 * 1000)).toISOString();
+                           const today = new Date().toISOString().split('T')[0];
+                           await supabase.from('mz_rewards_time_tracking').upsert({ user_id: u.id, last_ping: pastTime, tracking_date: today }, { onConflict: 'user_id,tracking_date' });
+                           await supabase.from('mz_background_notifications_log').delete().eq('user_id', u.id);
+                           alert("Simulé: 72h (Reality Check). Attendez ~30s.");
+                         }}
+                         className="py-1 text-[10px] bg-white/5 border border-white/10 rounded hover:bg-white/10"
+                       >
+                         72h
+                       </button>
+                    </div>
                   </div>
                   
                 </div>

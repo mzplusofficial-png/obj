@@ -170,6 +170,52 @@ export async function runPriorityDispatcher() {
                     url = '/dashboard';
                 }
 
+                // --- NIVEAUX D'INACTIVITÉ INTELLIGENTS (SI AUCUNE NOTIF PRIORITAIRE) ---
+                if (!notifType) {
+                    // Level 3 — Inactivité prolongée (72h+)
+                    if (secondsSinceLastActivity >= 259200) {
+                        notifType = 'inactivity_l3';
+                        inactivityNeeded = 259200;
+                        const msgs = [
+                            { t: "💔 C'est donc ça la fin de ton projet ?", b: "Tu disais vouloir gagner de l'argent en ligne... C'était juste des mots ? Prouve-toi que tu vaux mieux que cet abandon." },
+                            { t: "⚠️ Ton 'pourquoi' est en train de mourir", b: "Tu as commencé ce défi pour une raison précise. Aujourd'hui, tu l'oublies. Les gagnants finissent ce qu'ils commencent." },
+                            { t: "🛑 Arrête de te mentir", b: "Dire qu'on veut réussir est facile. Agir l'est moins. Tu es à un clic de reprendre le contrôle ou d'assumer l'échec." }
+                        ];
+                        const pick = msgs[Math.floor(Math.random() * msgs.length)];
+                        title = pick.t;
+                        body = pick.b;
+                        url = '/dashboard';
+                    }
+                    // Level 2 — Ignore la première notification (48h+)
+                    else if (secondsSinceLastActivity >= 172800) {
+                        notifType = 'inactivity_l2';
+                        inactivityNeeded = 172800;
+                        const msgs = [
+                            { t: "🔍 Alima a commencé en même temps que toi...", b: "Elle vient de valider sa première commission. Tu as tout ce qu'il faut pour faire de même, reviens vite !" },
+                            { t: "📍 Quelqu'un près de chez toi a réussi", b: "Un membre de ta région vient de terminer le défi 3 jours. Et toi, où en es-tu dans ta progression ?" },
+                            { t: "💬 « Je n'y croyais pas, et pourtant... »", b: "C'est le message qu'on a reçu d'un membre qui était bloqué au même stade que toi. Reprends ton élan." }
+                        ];
+                        const pick = msgs[Math.floor(Math.random() * msgs.length)];
+                        title = pick.t;
+                        body = pick.b;
+                        url = '/dashboard';
+                    }
+                    // Level 1 — Première absence (24h+)
+                    else if (secondsSinceLastActivity >= 86400) {
+                        notifType = 'inactivity_l1';
+                        inactivityNeeded = 86400;
+                        const msgs = [
+                            { t: "👋 Hey, ton défi t'attend toujours 🔥", b: "Chaque jour compte dans ton évolution. Reviens continuer là où tu t'es arrêté." },
+                            { t: "🚀 Ton élan est précieux", b: "Tu étais bien parti... ne casse pas cette dynamique maintenant. Ton futur toi te remerciera." },
+                            { t: "⚡ Ne laisse pas le chrono gagner", b: "Ton Jour 2 ou 3 est prêt. Connecte-toi pour valider l'étape et passer au niveau supérieur." }
+                        ];
+                        const pick = msgs[Math.floor(Math.random() * msgs.length)];
+                        title = pick.t;
+                        body = pick.b;
+                        url = '/dashboard';
+                    }
+                }
+
                 // CHECK INACTIVITY DURATION
                 if (notifType && secondsSinceLastActivity < inactivityNeeded) {
                     console.log(`[Dispatcher] User ${userId} matches ${notifType} but only inactive for ${Math.round(secondsSinceLastActivity)}s (Needs ${inactivityNeeded}s). Skipping.`);
