@@ -21,6 +21,7 @@ import {
   Rocket,
   MapPin,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import {
   UserProfile,
@@ -799,24 +800,33 @@ export const GlobalView: React.FC<any> = ({
             {/* Status Badge (REPOSITIONED & HIGH IMPACT) */}
             <div
               onClick={() => !isMzPlus && onSwitchTab("upgrade")}
-              className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg relative overflow-hidden group/badge ${
+              className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border backdrop-blur-3xl transition-all duration-700 shadow-2xl relative overflow-hidden group/badge ${
                 !isMzPlus
                   ? "cursor-pointer hover:border-[#F9D074]/50 hover:bg-[#C9A84C]/20 hover:scale-105 active:scale-95"
-                  : "hover:scale-[1.02]"
+                  : "hover:scale-[1.05]"
               } ${
                 isMzPlus
-                  ? "bg-gradient-to-br from-[#7C3AED] via-[#4F46E5] to-[#6366F1] border-purple-400/40 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-1 ring-white/20"
+                  ? "bg-gradient-to-br from-[#2D1B69] via-[#7C3AED] to-[#4F46E5] border-purple-300/50 text-white shadow-[0_10px_40px_rgba(124,58,237,0.4),0_0_20px_rgba(168,85,247,0.2)_inset] ring-1 ring-white/30"
                   : "bg-white/5 border-white/10 text-[#6B6050]"
               }`}
             >
               {isMzPlus && (
-                <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.1),transparent)] -translate-x-full group-hover/badge:animate-[shimmer_2s_infinite] pointer-events-none" />
+                <>
+                  <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.2),transparent)] -translate-x-full group-hover/badge:animate-[shimmer_2.5s_infinite] pointer-events-none" />
+                  <div className="absolute -top-1 -right-1 opacity-40 group-hover/badge:opacity-100 transition-opacity">
+                    <Sparkles size={8} className="text-white animate-pulse" />
+                  </div>
+                </>
               )}
-              <Crown
-                size={12}
-                className={isMzPlus ? "text-yellow-400 fill-yellow-400 animate-pulse-gentle" : "opacity-40"}
-              />
-              <span className={`text-[10px] font-black uppercase tracking-[0.12em] select-none ${isMzPlus ? 'italic' : ''}`}>
+              {isMzPlus ? (
+                <Crown
+                  size={12}
+                  className="text-yellow-300 fill-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-bounce-subtle"
+                />
+              ) : (
+                <Crown size={12} className="opacity-40" />
+              )}
+              <span className={`text-[10px] font-black uppercase tracking-[0.15em] select-none ${isMzPlus ? 'italic drop-shadow-sm' : ''}`}>
                 {isMzPlus ? "Membre Premium" : "Membre Standard"}
               </span>
             </div>

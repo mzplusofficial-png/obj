@@ -93,8 +93,29 @@ export const MZPlusFlashOfferOverlay: React.FC<MZPlusFlashOfferOverlayProps> = (
   const [isDismissed, setIsDismissed] = useState(false);
   const [proofs, setProofs] = useState<any[]>([]);
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; label: string } | null>(null);
+  const [recentPremiumJoin, setRecentPremiumJoin] = useState<{ name: string; city: string } | null>(null);
   
   const heroRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const NAMES = ["Marc", "Sophie", "Thomas", "Fatou", "Lucas", "Elena", "Ibrahim", "Julie", "Kevin", "Sarah", "Yann", "Mélanie", "Oumar", "Awa", "Koffi"];
+    const CITIES = ["Paris", "Lyon", "Abidjan", "Dakar", "Bruxelles", "Genève", "Montréal", "Bordeaux", "Casablanca", "Douala", "Lomé", "Bamako"];
+
+    const showJoin = () => {
+      const name = NAMES[Math.floor(Math.random() * NAMES.length)];
+      const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+      setRecentPremiumJoin({ name, city });
+      setTimeout(() => setRecentPremiumJoin(null), 5000);
+    };
+
+    const timer = setTimeout(showJoin, 4000);
+    const interval = setInterval(showJoin, 15000); // Slower frequency as requested
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,6 +171,41 @@ export const MZPlusFlashOfferOverlay: React.FC<MZPlusFlashOfferOverlayProps> = (
       </div>
 
       <LiveActivityPulse />
+
+      {/* Floating Premium Join Notification (Bottom Left) */}
+      <AnimatePresence>
+        {recentPremiumJoin && (
+          <motion.div
+            initial={{ opacity: 0, x: -50, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.8 }}
+            className="fixed bottom-6 left-6 z-[10000] flex items-center gap-4 bg-black/90 backdrop-blur-2xl border border-purple-500/30 p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_20px_rgba(168,85,247,0.1)_inset]"
+          >
+            <div className="relative">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(147,51,234,0.5)]">
+                <Crown size={20} className="animate-pulse" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black" />
+            </div>
+            
+            <div className="flex flex-col">
+              <p className="text-[10px] font-black uppercase text-purple-400 tracking-widest leading-none mb-1">Passage à l'Élite</p>
+              <p className="text-sm font-bold text-white/90">
+                <span className="text-white">{recentPremiumJoin.name}</span>
+                <span className="text-neutral-500 text-xs font-medium ml-1">({recentPremiumJoin.city})</span>
+              </p>
+              <p className="text-[10px] text-neutral-400 font-medium italic">Vient de rejoindre MZ+ Premium</p>
+            </div>
+
+            <button 
+              onClick={() => setRecentPremiumJoin(null)}
+              className="ml-2 p-1 text-neutral-600 hover:text-white transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* TOP NAV: MINIMAL & PRO */}
       <nav className="fixed top-0 left-0 right-0 z-[100] p-6 flex justify-between items-center max-w-7xl mx-auto">

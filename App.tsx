@@ -1686,6 +1686,16 @@ const QUOTES = [
   { text: "La discipline crée des résultats que la motivation seule ne peut pas maintenir.", author: "Confucius" },
   { text: "Le succès n’est pas final, l’échec n’est pas fatal : c’est le courage de continuer qui compte.", author: "Winston Churchill" },
   { text: "Les opportunités ne se présentent pas. Vous les créez.", author: "Chris Grosser" },
+  { text: "L'innovation distingue un leader d'un suiveur.", author: "Steve Jobs" },
+  { text: "Votre temps est limité, ne le gâchez pas en menant une existence qui n'est pas la vôtre.", author: "Steve Jobs" },
+  { text: "Si vous ne trouvez pas un moyen de gagner de l’argent pendant que vous dormez, vous travaillerez jusqu’à votre mort.", author: "Warren Buffett" },
+  { text: "Le prix est ce que vous payez, la valeur est ce que vous obtenez.", author: "Warren Buffett" },
+  { text: "La persévérance est ce qui rend l'impossible possible.", author: "Robert Half" },
+  { text: "Il n'y a pas de raccourci pour arriver là où ça vaut la peine d'aller.", author: "Beverly Sills" },
+  { text: "Visez la lune. Même si vous échouez, vous atterrirez parmi les étoiles.", author: "Les Brown" },
+  { text: "Celui qui déplace une montagne commence par déplacer de petites pierres.", author: "Confucius" },
+  { text: "Le talent gagne des matchs, mais le travail d’équipe et l’intelligence gagnent des championnats.", author: "Michael Jordan" },
+  { text: "Je n'ai pas échoué. J'ai juste trouvé 10 000 moyens qui ne fonctionnent pas.", author: "Thomas Edison" },
   { text: "La régularité est la clé de la croissance exponentielle.", author: "Conseil MZ+" },
   { text: "Votre réseau est votre valeur nette. Connectez-vous avec les élites.", author: "Conseil MZ+" },
   { text: "Le défi 3J est conçu pour tester votre engagement initial.", author: "Conseil MZ+" },
@@ -1694,7 +1704,7 @@ const QUOTES = [
 
 const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
   const [progress, setProgress] = useState(0);
-  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * QUOTES.length));
 
   useEffect(() => {
     if (loading) return;
@@ -1709,7 +1719,13 @@ const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
     }, 40);
 
     const quoteInterval = setInterval(() => {
-      setQuoteIndex(prev => (prev + 1) % QUOTES.length);
+      setQuoteIndex(prev => {
+        let nextIndex;
+        do {
+          nextIndex = Math.floor(Math.random() * QUOTES.length);
+        } while (nextIndex === prev && QUOTES.length > 1);
+        return nextIndex;
+      });
     }, 4500);
 
     return () => {

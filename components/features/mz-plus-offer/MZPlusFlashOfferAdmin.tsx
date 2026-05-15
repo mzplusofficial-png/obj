@@ -23,6 +23,7 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
   const [isSavingProof, setIsSavingProof] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{before: boolean, after: boolean}>({before: false, after: false});
   
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [proofForm, setProofForm] = useState({
     name: '',
     before_amount: '',
@@ -114,10 +115,16 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
 
     setIsSavingProof(true);
     try {
-      const { error } = await supabase.from('mz_premium_proofs').insert([proofForm]);
-      if (error) throw error;
+      if (editingId) {
+        const { error } = await supabase.from('mz_premium_proofs').update(proofForm).eq('id', editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('mz_premium_proofs').insert([proofForm]);
+        if (error) throw error;
+      }
       
       setShowProofForm(false);
+      setEditingId(null);
       setProofForm({ name: '', before_amount: '', after_amount: '', time_frame: '', before_image_url: '', after_image_url: '' });
       fetchProofs();
     } catch (err: any) {
@@ -125,6 +132,19 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
     } finally {
       setIsSavingProof(false);
     }
+  };
+
+  const startEdit = (proof: any) => {
+    setEditingId(proof.id);
+    setProofForm({
+      name: proof.name,
+      before_amount: proof.before_amount,
+      after_amount: proof.after_amount,
+      time_frame: proof.time_frame,
+      before_image_url: proof.before_image_url,
+      after_image_url: proof.after_image_url
+    });
+    setShowProofForm(true);
   };
 
   const deleteProof = async (id: string) => {
@@ -264,13 +284,22 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
       <div className="space-y-6 px-2 md:px-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-xl font-black uppercase"><ImageIcon className="inline mr-2 text-purple-500"/> Bibliothèque de <GoldText>Preuves Sociales</GoldText></h3>
-          <button onClick={() => setShowProofForm(!showProofForm)} className="w-full sm:w-auto px-5 py-3 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[10px] hover:bg-white/10 transition-all">
+          <button onClick={() => {
+            if (showProofForm) {
+              setEditingId(null);
+              setProofForm({ name: '', before_amount: '', after_amount: '', time_frame: '', before_image_url: '', after_image_url: '' });
+            }
+            setShowProofForm(!showProofForm);
+          }} className="w-full sm:w-auto px-5 py-3 bg-white/5 border border-white/10 rounded-xl font-black uppercase text-[10px] hover:bg-white/10 transition-all">
             {showProofForm ? 'Fermer' : 'Nouvelle Preuve'}
           </button>
         </div>
 
         {showProofForm && (
           <GoldBorderCard className="p-6 md:p-8 bg-[#080808] border-purple-500/20 animate-slide-down">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-purple-400">
+               {editingId ? "ÉDITER LA PREUVE PREMIUM" : "AJOUTER UNE NOUVELLE PREUVE"}
+            </h4>
             <form onSubmit={handleSaveProof} className="space-y-8">
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -302,7 +331,9 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
                      <input type="file" ref={fileInputAfterRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'after')} />
                   </div>
                </div>
-               <PrimaryButton type="submit" fullWidth isLoading={isSavingProof}>Publier cette transformation</PrimaryButton>
+               <PrimaryButton type="submit" fullWidth isLoading={isSavingProof}>
+                 {editingId ? "Mettre à jour la transformation" : "Publier cette transformation"}
+               </PrimaryButton>
             </form>
           </GoldBorderCard>
         )}
@@ -319,7 +350,10 @@ export const MZPlusFlashOfferAdmin: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button onClick={() => deleteProof(p.id)} className="p-2 text-neutral-700 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => startEdit(p)} className="p-2 text-neutral-700 hover:text-purple-500 transition-colors" title="Modifier"><ImageIcon size={16}/></button>
+                <button onClick={() => deleteProof(p.id)} className="p-2 text-neutral-700 hover:text-red-500 transition-colors" title="Supprimer"><Trash2 size={16}/></button>
+              </div>
             </div>
           ))}
         </div>
