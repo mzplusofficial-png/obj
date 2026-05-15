@@ -61,10 +61,8 @@ export async function runPriorityDispatcher() {
             return;
         }
 
-        // 2. Filter these users by activity (must be inactive for > 60s)
+        // 2. Fetch activity tracking for ALL candidates
         const today = new Date().toISOString().split('T')[0];
-        const inactivityThreshold = new Date(Date.now() - 60000).toISOString(); 
-
         const { data: activeTracking, error: trackingError } = await supabase
             .from('mz_rewards_time_tracking')
             .select('user_id, last_ping')
@@ -72,109 +70,110 @@ export async function runPriorityDispatcher() {
             .in('user_id', challengeIds);
 
         if (trackingError && trackingError.code !== '42P01') {
-            console.error('[Dispatcher] trackingError filtering active users:', trackingError);
+            console.error('[Dispatcher] trackingError fetching activity:', trackingError);
             return;
         }
 
-        // Users to target: Those who either have no ping today OR whose ping is < inactivityThreshold
-        const targetUserIds = challengeIds.filter(userId => {
-            const ping = activeTracking?.find(t => t.user_id === userId);
-            if (!ping) return true; // No activity today = inactive
-            return ping.last_ping < inactivityThreshold; // Last ping > 60s ago = inactive
-        });
-
-        if (targetUserIds.length === 0) {
-            console.log('[Dispatcher] All targetable users are currently active. Skipping.');
-            return;
-        }
-
-        // 3. Fetch user data for target IDs
+        // 3. Fetch user data
         const { data: usersData, error: usersError } = await supabase
             .from('users')
             .select('id, fcm_token, full_name')
-            .in('id', targetUserIds);
+            .in('id', challengeIds);
 
         if (usersError) {
             console.error('[Dispatcher] usersError:', usersError);
             throw usersError;
         }
 
-        console.log(`[Dispatcher] Found ${usersData?.length || 0} inactive users with pending challenges. Processing...`);
+        console.log(`[Dispatcher] Found ${usersData?.length || 0} candidates with active challenges. Evaluating triggers...`);
 
         for (const userData of (usersData || [])) {
             const userId = userData.id;
             try {
-                if (!userData.fcm_token) {
-                    console.log(`[Dispatcher] User ${userId} has no FCM token. Skipping.`);
-                    continue;
-                }
+                if (!userData.fcm_token) continue;
                 
+                // Get last ping for this user
+                const userPing = activeTracking?.find(t => t.user_id === userId);
+                const lastActivityDate = userPing?.last_ping ? new Date(userPing.last_ping) : new Date(0);
+                const secondsSinceLastActivity = (Date.now() - lastActivityDate.getTime()) / 1000;
+
                 const { data: challenge, error: stateError } = await supabase
                     .from('mz_challenge_3j_state')
                     .select('*')
                     .eq('user_id', userId)
                     .maybeSingle();
 
-                if (stateError) {
-                    console.error(`[Dispatcher] Error fetching challenge state for ${userId}:`, stateError);
-                    continue;
-                }
+                if (stateError || !challenge) continue;
 
-                if (!challenge) {
-                    console.log(`[Dispatcher] User ${userId} has no challenge state.`);
-                }
-
-                const hasActiveChallenge = challenge && !challenge.cancelled && !challenge.j3_completed;
-                console.log(`[Dispatcher] User ${userId} hasActiveChallenge: ${hasActiveChallenge}`);
+                const hasActiveChallenge = !challenge.cancelled && !challenge.j3_completed;
+                if (!hasActiveChallenge) continue;
 
                 let notifType: string | null = null;
                 let title = '';
                 let body = '';
                 let url = '/';
+                let inactivityNeeded = 60; // Default 60s
 
-                // PRIORITÉ 1 : LE DÉFI (SI ACTIF)
-                if (hasActiveChallenge) {
-                    const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
-                    const isNextDayPlus = startedAtDate && startedAtDate < today;
+                const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
+                const isNextDayPlus = startedAtDate && startedAtDate < today;
 
-                    const j2CompAt = challenge.j2_completed_at ? new Date(challenge.j2_completed_at).toISOString().split('T')[0] : null;
-                    const isDay3Time = j2CompAt && j2CompAt < today;
+                const dateObj = new Date();
+                const dayBeforeYesterday = new Date(dateObj);
+                dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+                const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split('T')[0];
+                const isDay3Strict = startedAtDate && startedAtDate <= dayBeforeYesterdayStr;
 
-                    // Message du Jour 3 (Si J2 complété hier ou avant)
-                    if (isDay3Time && !challenge.j3_presented && !challenge.j3_completed) {
-                         notifType = 'challenge_j3_start';
-                         title = "👑 Le grand final t'attend...";
-                         body = "C'est le Jour 3. Tu es à deux doigts de transformer l'essai. Viens finir ce que tu as commencé, je t'attends.";
-                         url = '/dashboard';
-                    }
-                    // Rappel Jour 2 (Si commencé mais pas fini)
-                    else if (challenge.j2_started_at && !challenge.j2_completed) {
-                        notifType = 'challenge_j2_reminder';
-                        title = "✨ Ne t'arrête pas en si bon chemin...";
-                        body = "Le Jour 2 est souvent le plus dur, mais c'est là que tout se joue. Reprends où tu en étais, tu vas y arriver.";
-                        url = '/dashboard';
-                    }
-                    // Message du Jour 2 (Automatique le lendemain, si pas encore commencé)
-                    else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
-                        notifType = 'challenge_j2_start';
-                        title = "🌅 Nouvelle journée, nouvelle étape.";
-                        body = "Prêt pour le Jour 2 ? On monte d'un cran aujourd'hui. Connecte-toi pour découvrir ta mission.";
-                        url = '/dashboard';
-                    }
-                    // Rappel Jour 1 (Seulement le jour même du début)
-                    else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
-                        notifType = 'challenge_j1_reminder';
-                        title = "🚀 On commence ensemble ?";
-                        body = "Ton défi est lancé et le chrono tourne. Je sais que tu as ce qu'il faut pour valider ce Jour 1. Go !";
-                        url = '/dashboard';
-                    } 
-                    // Succès Jour 1 (Félicitations immédiates après inactivité)
-                    else if (challenge.j1_completed && !challenge.j2_presented) {
-                        notifType = 'challenge_j1_success';
-                        title = "🌟 Fier de toi !";
-                        body = "Le Jour 1 est dans la poche. Repose-toi bien, demain on attaque la suite. Tu as déjà fait le plus dur : commencer.";
-                        url = '/dashboard';
-                    }
+                const j2CompAt = challenge.j2_completed_at ? new Date(challenge.j2_completed_at).toISOString().split('T')[0] : null;
+                const isDay3TimeAfterJ2 = j2CompAt && j2CompAt < today;
+
+                // CAS : Jour 3 mais Jour 2 non complété (Upsell Premium après 5 min)
+                if (isDay3Strict && !challenge.j2_completed) {
+                    notifType = 'challenge_j2_late_j3_upsell';
+                    title = "👋 Hey, c’est Axis.";
+                    body = "🔥 Je vois que tu n’as pas encore généré tes premiers revenus. 👑 Beaucoup de membres Premium l’ont déjà fait. 🚀 Il est peut-être temps de passer au niveau supérieur.";
+                    url = '/dashboard?tab=flash_offer';
+                    inactivityNeeded = 300; // 5 MINUTES (300 secondes) pour ce cas précis
+                }
+                // Message du Jour 3 (Si J2 complété hier ou avant)
+                else if (isDay3TimeAfterJ2 && !challenge.j3_presented && !challenge.j3_completed) {
+                     notifType = 'challenge_j3_start';
+                     title = "👑 Le grand final, c'est aujourd'hui !";
+                     body = "C'est ton Jour 3. Tu es à deux doigts de l'apothéose. Finis ce que tu as commencé en beauté, je t'attends.";
+                     url = '/dashboard';
+                }
+                // Rappel Jour 2 (Si commencé mais pas fini)
+                else if (challenge.j2_started_at && !challenge.j2_completed) {
+                    notifType = 'challenge_j2_reminder';
+                    title = "✨ Ne t'arrête pas en si bon chemin...";
+                    body = "Tu as déjà commencé le Jour 2, c'est le plus gros du travail ! Reprends ton élan, tu vas y arriver.";
+                    url = '/dashboard';
+                }
+                // Message du Jour 2 (Automatique le lendemain, si pas encore commencé)
+                else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
+                    notifType = 'challenge_j2_start';
+                    title = "🌅 Nouvelle journée, nouvelle étape.";
+                    body = "Coucou ! Prêt pour le Jour 2 ? On monte d'un cran aujourd'hui. Connecte-toi pour découvrir ta mission.";
+                    url = '/dashboard';
+                }
+                // Rappel Jour 1 (Seulement le jour même du début)
+                else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
+                    notifType = 'challenge_j1_reminder';
+                    title = "🚀 On commence ensemble ?";
+                    body = "Ton défi est lancé et le chrono tourne. Je sais que tu as ce qu'il faut pour valider ce Jour 1. Go !";
+                    url = '/dashboard';
+                } 
+                // Succès Jour 1 (Félicitations immédiates après inactivité)
+                else if (challenge.j1_completed && !challenge.j2_presented) {
+                    notifType = 'challenge_j1_success';
+                    title = "🌟 Fier de toi !";
+                    body = "Le Jour 1 est dans la poche. Repose-toi bien, demain on attaque la suite. Tu as déjà fait le plus dur : commencer.";
+                    url = '/dashboard';
+                }
+
+                // CHECK INACTIVITY DURATION
+                if (notifType && secondsSinceLastActivity < inactivityNeeded) {
+                    console.log(`[Dispatcher] User ${userId} matches ${notifType} but only inactive for ${Math.round(secondsSinceLastActivity)}s (Needs ${inactivityNeeded}s). Skipping.`);
+                    notifType = null;
                 }
 
                 if (notifType) {
