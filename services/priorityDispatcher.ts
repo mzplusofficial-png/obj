@@ -124,7 +124,7 @@ export async function runPriorityDispatcher() {
                     console.log(`[Dispatcher] User ${userId} has no challenge state.`);
                 }
 
-                const hasActiveChallenge = challenge && !challenge.j2_presented && !challenge.cancelled && (!challenge.j3_completed);
+                const hasActiveChallenge = challenge && !challenge.cancelled && !challenge.j3_completed;
                 console.log(`[Dispatcher] User ${userId} hasActiveChallenge: ${hasActiveChallenge}`);
 
                 let notifType: string | null = null;
@@ -137,8 +137,18 @@ export async function runPriorityDispatcher() {
                     const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
                     const isNextDayPlus = startedAtDate && startedAtDate < today;
 
+                    const j2CompAt = challenge.j2_completed_at ? new Date(challenge.j2_completed_at).toISOString().split('T')[0] : null;
+                    const isDay3Time = j2CompAt && j2CompAt < today;
+
+                    // Message du Jour 3 (Si J2 complété hier ou avant)
+                    if (isDay3Time && !challenge.j3_presented && !challenge.j3_completed) {
+                         notifType = 'challenge_j3_start';
+                         title = "👑 L'apothéose du Défi.";
+                         body = "💰 Aujourd'hui est le Jour 3. Es-tu prêt à clore ton premier cycle de succès ?";
+                         url = '/dashboard';
+                    }
                     // Message du Jour 2 (Automatique le lendemain, qu'il ait fini J1 ou non)
-                    if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed) {
+                    else if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed && !challenge.j3_presented) {
                         notifType = 'challenge_j2_start';
                         title = "🌅 Le défi continue.";
                         body = "🔥 C'est le Jour 2. Prêt à franchir une nouvelle étape ? Connecte-toi.";

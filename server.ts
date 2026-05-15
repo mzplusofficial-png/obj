@@ -149,16 +149,30 @@ async function startServer() {
     const { token, tokens: initialTokens, title, body, url, icon, target } = req.body;
     let tokens = initialTokens || [];
 
+    // Diagnostic if service account is obviously missing
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.error('[FIREBASE API] FIREBASE_SERVICE_ACCOUNT is missing in environment variables');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'missing_config', 
+        details: 'Server environment missing FIREBASE_SERVICE_ACCOUNT. Contact admin.' 
+      });
+    }
+
     try {
       if (target === 'all' && tokens.length === 0) {
-        const { data: users } = await supabase.from('users').select('fcm_token').not('fcm_token', 'is', null);
+        const { data: users, error: supabaseErr } = await supabase.from('users').select('fcm_token').not('fcm_token', 'is', null);
+        if (supabaseErr) {
+           console.error('[Supabase Error] Fetching tokens for broadcast:', supabaseErr);
+           return res.status(500).json({ success: false, error: 'database_error', details: supabaseErr.message });
+        }
         if (users) {
           tokens = users.map(u => u.fcm_token as string).filter(Boolean);
         }
       }
 
       if (!token && (!tokens || tokens.length === 0)) {
-        return res.status(400).json({ error: 'Token ou liste de tokens manquant' });
+        return res.status(400).json({ error: 'Token ou liste de tokens manquant', details: 'Aucun destinataire valide trouvé' });
       }
 
       let result;
@@ -173,14 +187,20 @@ async function startServer() {
       }
 
       if (!result.success) {
-        return res.status(500).json(result);
+        console.error('[FIREBASE API] Push failed:', result);
+        return res.status(500).json({ ...result, server_time: new Date().toISOString() });
       }
 
       res.json(result);
     } catch (error: unknown) {
-      const err = error as { message?: string };
+      const err = error as { message?: string; name?: string; code?: string };
       console.error('API Send-Push Error:', error);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ 
+        success: false, 
+        error: 'internal_exception', 
+        details: err.message || 'Unknown server error',
+        code: err.code
+      });
     }
   });
 

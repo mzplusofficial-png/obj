@@ -400,7 +400,8 @@ const App: React.FC = () => {
         const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
 
         if (currentDayLocal > startDayLocal) {
-          if (!challengeState.j2Presented && !challengeState.j2Completed) {
+          // Si J2 n'est pas encore commencé, on le propose (même si déjà "présenté" par notification background)
+          if (!challengeState.j2StartedAt && !challengeState.j2Completed) {
             setShowChallengeDay2(true);
           }
         }
@@ -427,7 +428,8 @@ const App: React.FC = () => {
         const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
         
         if (currentDayLocal > j2CompLocal) {
-          if (!challengeState.j3Presented && !challengeState.j3Completed) {
+          // Si J3 n'est pas encore complété, on le propose (même si déjà notifié en background)
+          if (!challengeState.j3Completed) {
               window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
           }
         }

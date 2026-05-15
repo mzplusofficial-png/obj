@@ -33,9 +33,20 @@ export const sendPushNotification = async (
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      console.error(`FCM Server Error (${response.status}):`, text.substring(0, 100));
-      return { success: false, error: `server_error_${response.status}`, details: text.substring(0, 100) };
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        const text = await response.text();
+        errorData = { error: 'raw_error', details: text.substring(0, 200) };
+      }
+      
+      console.error(`FCM Server Error (${response.status}):`, errorData);
+      return { 
+        success: false, 
+        error: `server_error_${response.status}`, 
+        details: errorData.details || errorData.error || 'Unknown error' 
+      };
     }
 
     const data = await response.json();
