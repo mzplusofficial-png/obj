@@ -135,19 +135,14 @@ async function startServer() {
 
   initAdmin();
 
-  // Background Dispatcher for Priority Notifications (Run every 30 seconds, non-overlapping)
-  const startDispatcher = async () => {
-    console.log('[Server] Dispatcher cycle starting...');
-    try {
-      await runPriorityDispatcher();
-    } catch (err) {
+  // Background Dispatcher for Priority Notifications (Run every 30 seconds)
+  console.log('[Server] Dispatcher interval set (30s)');
+  setInterval(() => {
+    console.log('[Server] Starting runPriorityDispatcher...');
+    runPriorityDispatcher().catch(err => {
       console.error('[Dispatcher Error]', err);
-    }
-    // Schedule next run in 30 seconds AFTER current one finishes
-    setTimeout(startDispatcher, 30000);
-  };
-  
-  startDispatcher();
+    });
+  }, 30000);
 
   // API Route to send real FCM Push (using the new service)
   app.post('/api/send-push', async (req, res) => {
