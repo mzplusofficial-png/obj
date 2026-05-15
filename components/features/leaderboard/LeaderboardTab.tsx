@@ -6,12 +6,29 @@ import { PastRewardsView } from './PastRewardsView';
 
 const DEFAULT_FLAG = '🌐';
 const getCountryFlag = (countryCode?: string) => {
-  if (!countryCode) return null;
+  if (!countryCode) return <span className="text-xl">🌐</span>;
   const code = countryCode.trim().toLowerCase();
-  if (/^[a-z]{2}$/.test(code)) {
-    return <img src={`https://flagcdn.com/w40/${code}.png`} alt={code.toUpperCase()} loading="lazy" className="w-5 sm:w-6 object-contain rounded-sm shadow-sm opacity-90 inline-block" />;
-  }
-  return null;
+  const flags: Record<string, string> = {
+    ci: "🇨🇮",
+    sn: "🇸🇳",
+    cm: "🇨🇲",
+    ml: "🇲🇱",
+    bf: "🇧🇫",
+    tg: "🇹🇬",
+    bj: "🇧🇯",
+    ne: "🇳🇪",
+    gn: "🇬🇳",
+    ga: "🇬🇦",
+    cg: "🇨🇬",
+    cd: "🇨🇩",
+    fr: "🇫🇷",
+    dz: "🇩🇿",
+    ma: "🇲🇦",
+    tn: "🇹🇳",
+    mg: "🇲🇬",
+    ca: "🇨🇦",
+  };
+  return <span className="text-xl">{flags[code] || "🌐"}</span>;
 };
 
 const getCountryName = (countryCode?: string) => {
@@ -244,7 +261,6 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
              <div className="flex flex-col gap-2">
                {leaders.map((user, index) => {
                  const isMe = profile?.id === user.id;
-                 const displayFlag = getCountryFlag(user.country_code);
 
                  return (
                    <div 
@@ -271,16 +287,21 @@ export const LeaderboardTab: React.FC<{ profile: UserProfile | null; mode?: 'glo
 
                      {/* Flag & Name */}
                      <div className="flex items-center gap-3 ml-4 flex-1 min-w-0">
-                        <div className="flex flex-col items-center justify-center w-10 sm:w-12 shrink-0">
-                           <div className="h-4 sm:h-5 flex items-center justify-center">
-                             {displayFlag}
+                        <div className="flex flex-col items-center justify-center w-12 sm:w-16 shrink-0 bg-white/5 py-2 rounded-xl border border-white/5">
+                           <div className="h-5 sm:h-6 flex items-center justify-center mb-1">
+                             {getCountryFlag(user.country_code)}
                            </div>
-                           <span className="text-[8px] sm:text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center leading-tight mt-1 max-w-full truncate">{getCountryName(user.country_code)}</span>
+                           <span className="text-[7px] sm:text-[9px] font-black text-[var(--color-gold-main)] uppercase tracking-tight text-center leading-tight max-w-full truncate px-1">
+                              {getCountryName(user.country_code)}
+                           </span>
                         </div>
-                        <span className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-2">
-                          <span className="truncate">{user.full_name || 'Utilisateur Anonyme'}</span>
-                          {isMe && <span className="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full uppercase tracking-widest border border-purple-500/30 flex-shrink-0">Moi</span>}
-                        </span>
+                        <div className="flex flex-col min-w-0">
+                           <span className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-2">
+                             <span className="truncate">{user.full_name || 'Utilisateur Anonyme'}</span>
+                             {isMe && <span className="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full uppercase tracking-widest border border-purple-500/30 flex-shrink-0">Moi</span>}
+                           </span>
+                           <span className="text-[9px] text-neutral-500 font-medium tracking-widest uppercase">Elite Business</span>
+                        </div>
                      </div>
 
                      {/* Points */}

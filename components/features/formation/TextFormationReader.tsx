@@ -154,9 +154,9 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
   };
 
   const readerContent = (
-    <div className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden animate-fade-in">
+    <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden animate-fade-in bg-black">
       {/* Top Bar */}
-      <div className="flex-shrink-0 sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/5">
+      <div className="flex-shrink-0 sticky top-0 z-50 backdrop-blur-2xl border-b border-white/5 bg-black/90">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <button
             onClick={handleClose}

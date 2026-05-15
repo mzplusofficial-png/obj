@@ -1236,6 +1236,34 @@ export const ProfileTab: React.FC<any> = ({
 
             <div className="w-full h-[1px] bg-white/5"></div>
 
+            {/* Country Display (Read-only) */}
+            <div className="w-full space-y-2">
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block text-left ml-1">
+                Localisation (Pays)
+              </label>
+              <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white flex items-center gap-3">
+                 <span className="text-xl">
+                   {(() => {
+                     const code = profile?.country_code?.toLowerCase();
+                     const flags: Record<string, string> = {
+                       ci: "🇨🇮", sn: "🇸🇳", cm: "🇨🇲", ml: "🇲🇱", bf: "🇧🇫", tg: "🇹🇬", bj: "🇧🇯", ne: "🇳🇪", gn: "🇬🇳", ga: "🇬🇦", cg: "🇨🇬", cd: "🇨🇩", fr: "🇫🇷", dz: "🇩🇿", ma: "🇲🇦", tn: "🇹🇳", mg: "🇲🇬", ca: "🇨🇦"
+                     };
+                     return flags[code || ""] || "🌐";
+                   })()}
+                 </span>
+                 <span className="font-bold uppercase tracking-widest text-[10px]">
+                   {(() => {
+                     const names: Record<string, string> = {
+                       ci: "Côte d'Ivoire", sn: "Sénégal", cm: "Cameroun", ml: "Mali", bf: "Burkina Faso", tg: "Togo", bj: "Bénin", ne: "Niger", gn: "Guinée", ga: "Gabon", cg: "Congo", cd: "RDC", fr: "France", dz: "Algérie", ma: "Maroc", tn: "Tunisie", mg: "Madagascar", ca: "Canada"
+                     };
+                     return names[profile?.country_code?.toLowerCase() || ""] || "Localisation Automatique";
+                   })()}
+                 </span>
+              </div>
+            </div>
+
+            <div className="w-full h-[1px] bg-white/5"></div>
+
             <div className="grid grid-cols-2 w-full gap-4">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
                 <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">

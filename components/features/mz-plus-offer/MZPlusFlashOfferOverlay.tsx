@@ -112,14 +112,29 @@ export const MZPlusFlashOfferOverlay: React.FC<MZPlusFlashOfferOverlayProps> = (
       "Bourema", "Clarisse", "Diarra", "Evelyne", "Fadel", "Gisèle", "Hamadou", "Inès", "Jocelyn", "Kamal", "Léonard", "Mariam", "Nafi", "Obi", "Pascaline", "Quentin",
       "Ramatou", "Salif", "Tidjani", "Ulrich", "Valentin", "Waly", "Yasmine", "Zadi", "Abel", "Bamba", "Célestine", "Drissa", "Enzo", "Félicité", "Gervais", "Honoré",
       "Ismaël", "Justin", "Kader", "Lila", "Mady", "Noémie", "Ondine", "Prudence", "Rémi", "Saliou", "Tania", "Urbain", "Viviane", "William", "Yohan", "Zénab",
-      "Cyrille", "Loïc", "Maëlys", "Nathan", "Hugo", "Inès", "Jade", "Léa", "Léo", "Manon", "Maxime", "Nina", "Pauline", "Raphaël", "Sacha", "Théo", "Tom", "Yaniss"
+      "Cyrille", "Loïc", "Maëlys", "Nathan", "Hugo", "Inès", "Jade", "Léa", "Léo", "Manon", "Maxime", "Nina", "Pauline", "Raphaël", "Sacha", "Théo", "Tom", "Yaniss",
+      "Moussa", "Tidiane", "Kadiatou", "Abdou", "Sira", "Bakary", "Assa", "Madou", "Djeneba", "Sékou", "Lamine", "Aïssata", "Souleymane", "Aminata", "Boubacar",
+      "Youssouf", "Mariame", "Adama", "Oumou", "Ibrahim", "Fanta", "Moussa", "Fatoumata", "Amadou", "Saliou", "Kadidia", "Abdoulaye", "Hawa", "Demba", "Rokia",
+      "Mohamed", "Djénéibou", "Aliou", "Nanténin", "Sidi", "Sounkalo", "Oumar", "Batoma", "Drissa", "Assétou", "Mamadou", "Haby", "Ousmane", "Penda", "Boureima",
+      "Cheick", "Awa", "Lassana", "Safiatou", "Gaston", "Bernadette", "Florentin", "Odile", "Hervé", "Chantal", "Didier", "Mireille", "Guy", "Colette", "Patrice",
+      "Solange", "Thierry", "Geneviève", "André", "Marthe", "René", "Josiane", "Marcel", "Georgette", "Émile", "Raymonde", "Roland", "Lucienne", "Georges", "Yvonne",
+      "Cyril", "Nadege", "Fabien", "Severine", "Loic", "Magali", "Samuel", "Aurore", "Xavier", "Vanessa", "Arnaud", "Estelle", "Sébastien", "Aurelie", "Guillaume",
+      "Céline", "Ludovic", "Emilie", "Nicolas", "Sandrine", "Benoit", "Elodie", "Julien", "Julie", "Mathieu", "Audrey", "Romain", "Marine", "Adrien", "Laureen",
+      "Koffi", "Ama", "Kwame", "Adjoa", "Kojo", "Akua", "Kwaku", "Yaa", "Yaw", "Afua", "Kofi", "Amma", "Kwasi", "Akosua", "Kwabena", "Abena", "Ekow", "Baaba",
+      "Baako", "Bonsu", "Mensah", "Tetteh", "Annan", "Sarpong", "Boateng", "Mensah", "Owusu", "Appiah", "Asante", "Oppong", "Gyamfi", "Adu", "Sarfo", "Agyemang",
+      "Dapaah", "Frimpong", "Osei", "Kusi", "Danso", "Acheampong", "Kyere", "Amponsah", "Badu", "Darko", "Asare", "Kyei", "Prempeh", "Fosu", "Boakye", "Kwarteng",
+      "Zadi", "Gahé", "Kouassi", "Lou", "Yao", "Aman", "Tanoh", "N'Guessan", "Koné", "Coulibaly", "Traoré", "Fofana", "Bakayoko", "Bamba", "Ouattara", "Cissé",
+      "Touré", "Keita", "Diallo", "Sow", "Bah", "Barry", "Cherif", "Camara", "Diaby", "Doumbia", "Sidibé", "Sangare", "Diakite", "Sanogo", "Diarra", "Sissoko",
+      "Kamissoko", "Kanté", "Bagayoko", "Dembélé", "Sogoba", "Togola", "Tangara", "Mallé", "Samaké", "Coulibaly", "Sanogo", "Sangaré", "Maïga", "Dicko", "Dia",
+      "Niang", "Wade", "Gueye", "Ndiaye", "Diop", "Fall", "Sarr", "Thiam", "Sall", "Ba", "Ly", "Kane", "Seck", "Mbow", "Ka", "Diaw", "Ngom", "Faye", "Diouf", "Samb",
+      "Cisse", "Daffé", "Sakho", "Sow", "Tandia", "Gakou", "Fofana", "Sissoko", "Sidibe", "Traore", "Koita", "Dra", "Camara", "Keita", "Kante", "Dukureh", "Jatta"
     ];
     const CITIES = [
       "Paris", "Lyon", "Abidjan", "Dakar", "Bruxelles", "Genève", "Montréal", "Bordeaux", "Casablanca", "Douala", "Lomé", "Bamako",
       "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg", "Montpellier", "Lille", "Rennes", "Reims", "Saint-Étienne", "Le Havre", "Toulon", "Grenoble", "Dijon", "Angers", "Nîmes", "Villeurbanne",
       "Yamoussoukro", "Bouaké", "San Pedro", "Korhogo", "Daloa", "Saint-Louis", "Thiès", "Kaolack", "Ziguinchor", "Mbour", "Rabat", "Marrakech", "Fès", "Agadir", "Tanger", "Yaoundé",
       "Libreville", "Port-Gentil", "Brazzaville", "Pointe-Noire", "Kinshasa", "Lubumbashi", "Mbuji-Mayi", "Kisangani", "Kananga", "Ouagadougou", "Bobo-Dioulasso", "Niamey", "Zinder",
-      "Nouakchott", "Conakry", "Cotonou", "Porto-Novo", "Libreville", "Antananarivo"
+      "Nouakchott", "Conakry", "Cotonou", "Porto-Novo", "Libreville", "Antananarivo", "Tunis", "Sfax", "Sousse", "Bizerte", "Gabès", "Kairouan", "Gafsa", "Monastir"
     ];
 
     let simulationTimeout: NodeJS.Timeout;

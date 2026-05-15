@@ -241,6 +241,55 @@ const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!userProfile || userProfile.country_code || loading) return;
+
+    const detectCountryCode = () => {
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tzMap: Record<string, string> = {
+          'Africa/Abidjan': 'ci',
+          'Africa/Dakar': 'sn',
+          'Africa/Douala': 'cm',
+          'Africa/Bamako': 'ml',
+          'Africa/Ouagadougou': 'bf',
+          'Africa/Lome': 'tg',
+          'Africa/Porto-Novo': 'bj',
+          'Africa/Niamey': 'ne',
+          'Africa/Conakry': 'gn',
+          'Africa/Libreville': 'ga',
+          'Africa/Brazzaville': 'cg',
+          'Africa/Kinshasa': 'cd',
+          'Africa/Lubumbashi': 'cd',
+          'Europe/Paris': 'fr',
+          'Africa/Algiers': 'dz',
+          'Africa/Casablanca': 'ma',
+          'Africa/Tunis': 'tn',
+          'Indian/Antananarivo': 'mg',
+          'America/Toronto': 'ca',
+          'America/Montreal': 'ca'
+        };
+
+        const detectedCode = tzMap[tz];
+        if (detectedCode) {
+          console.log(`[Geo] Intelligent detection: ${tz} -> ${detectedCode}`);
+          supabase.from('users')
+            .update({ country_code: detectedCode })
+            .eq('id', userProfile.id)
+            .then(({ error }) => {
+              if (!error) {
+                setUserProfile(prev => prev ? { ...prev, country_code: detectedCode } : prev);
+              }
+            });
+        }
+      } catch (e) {
+        console.error("Error detecting country", e);
+      }
+    };
+
+    detectCountryCode();
+  }, [userProfile, loading]);
+
   const triggerRefresh = useCallback(() => { 
     setLastUpdateSignal(Date.now());
     if (session?.user?.id) {
@@ -458,7 +507,8 @@ const App: React.FC = () => {
         updates.j1Completed = true;
         setChallengeCelebratedStep(1);
         
-        // Reward XP for completing Day 1
+        // Reward XP for completing Day 1 - REMOVED AT USER REQUEST
+        /*
         window.dispatchEvent(new CustomEvent('mz-xp-reward', {
           detail: { 
             amount: 30, 
@@ -467,6 +517,7 @@ const App: React.FC = () => {
             source: 'challenge_j1'
           }
         }));
+        */
 
         setTimeout(() => {
           setShowChallengeCelebration(true);
@@ -1714,7 +1765,14 @@ const SystemInitiator: React.FC<{ loading: boolean }> = ({ loading }) => {
           clearInterval(interval);
           return 100;
         }
-        return prev + 1.5;
+        
+        // Change quote every 20% progress
+        const nextVal = prev + 1.5;
+        if (Math.floor(prev / 25) !== Math.floor(nextVal / 25)) {
+           setQuoteIndex(Math.floor(Math.random() * QUOTES.length));
+        }
+        
+        return nextVal;
       });
     }, 40);
 
