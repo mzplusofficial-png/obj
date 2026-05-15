@@ -799,22 +799,25 @@ export const GlobalView: React.FC<any> = ({
             {/* Status Badge (REPOSITIONED & HIGH IMPACT) */}
             <div
               onClick={() => !isMzPlus && onSwitchTab("upgrade")}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg ${
+              className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border backdrop-blur-xl transition-all duration-500 shadow-lg relative overflow-hidden group/badge ${
                 !isMzPlus
                   ? "cursor-pointer hover:border-[#F9D074]/50 hover:bg-[#C9A84C]/20 hover:scale-105 active:scale-95"
-                  : ""
+                  : "hover:scale-[1.02]"
               } ${
                 isMzPlus
-                  ? "bg-gradient-to-r from-purple-600 to-indigo-700 border-white/20 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)] scale-100"
-                  : "bg-[var(--color-gold-main)]/10 border-[var(--color-gold-main)]/30 text-[var(--color-gold-main)] shadow-[0_0_15px_rgba(201,168,76,0.1)]"
+                  ? "bg-gradient-to-br from-[#7C3AED] via-[#4F46E5] to-[#6366F1] border-purple-400/40 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] ring-1 ring-white/20"
+                  : "bg-white/5 border-white/10 text-[#6B6050]"
               }`}
             >
+              {isMzPlus && (
+                <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.1),transparent)] -translate-x-full group-hover/badge:animate-[shimmer_2s_infinite] pointer-events-none" />
+              )}
               <Crown
                 size={12}
-                className={isMzPlus ? "animate-pulse" : "opacity-70"}
+                className={isMzPlus ? "text-yellow-400 fill-yellow-400 animate-pulse-gentle" : "opacity-40"}
               />
-              <span className="text-[10px] font-black uppercase tracking-[0.1em] italic select-none">
-                {isMzPlus ? "ACCÈS PREMIUM" : "COMPTE STANDARD"}
+              <span className={`text-[10px] font-black uppercase tracking-[0.12em] select-none ${isMzPlus ? 'italic' : ''}`}>
+                {isMzPlus ? "Membre Premium" : "Membre Standard"}
               </span>
             </div>
           </div>

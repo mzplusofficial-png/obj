@@ -117,7 +117,7 @@ const AmbassadorContactModal = ({ user, onClose, onContact }: { user: any; onClo
                </div>
                <div className="space-y-1 mb-6">
                   <h3 className="text-lg font-black uppercase text-white tracking-tighter">{user.full_name}</h3>
-                  <EliteBadge variant={user.user_level}>{user.user_level === 'niveau_mz_plus' ? 'Premium' : 'Standard'}</EliteBadge>
+                  <EliteBadge variant={user.user_level}>{user.user_level === 'niveau_mz_plus' ? 'Membre Premium' : 'Membre Standard'}</EliteBadge>
                </div>
                <div className="grid grid-cols-1 w-full gap-3">
                   <button onClick={() => onContact(user)} className="w-full py-4 bg-yellow-600 text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-yellow-500 active:scale-95 transition-all"><Mail size={16} /> Envoyer un message privé</button>
