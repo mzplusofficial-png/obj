@@ -7,8 +7,17 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '');
 
+let isDispatcherRunning = false;
+
 export async function runPriorityDispatcher() {
-    console.log('[Dispatcher] Checking for pending background notifications...');
+    if (isDispatcherRunning) {
+        console.log('[Dispatcher] An instance is already running. Skipping this cycle.');
+        return;
+    }
+    isDispatcherRunning = true;
+
+    try {
+        console.log('[Dispatcher] Checking for pending background notifications...');
     
     const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY;
@@ -244,5 +253,7 @@ export async function runPriorityDispatcher() {
             full: error
         };
         console.error('[Dispatcher] Error detail:', JSON.stringify(errorDetail, null, 2));
+    } finally {
+        isDispatcherRunning = false;
     }
 }
