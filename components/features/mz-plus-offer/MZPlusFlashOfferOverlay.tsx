@@ -98,22 +98,51 @@ export const MZPlusFlashOfferOverlay: React.FC<MZPlusFlashOfferOverlayProps> = (
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const NAMES = ["Marc", "Sophie", "Thomas", "Fatou", "Lucas", "Elena", "Ibrahim", "Julie", "Kevin", "Sarah", "Yann", "Mélanie", "Oumar", "Awa", "Koffi"];
-    const CITIES = ["Paris", "Lyon", "Abidjan", "Dakar", "Bruxelles", "Genève", "Montréal", "Bordeaux", "Casablanca", "Douala", "Lomé", "Bamako"];
+    const NAMES = [
+      "Marc", "Sophie", "Thomas", "Fatou", "Lucas", "Elena", "Ibrahim", "Julie", "Kevin", "Sarah", "Yann", "Mélanie", "Oumar", "Awa", "Koffi",
+      "Abdoulaye", "Adama", "Aïcha", "Alain", "Alexandre", "Alice", "Amadou", "Aminata", "Antoine", "Arthur", "Assane", "Audrey", "Aurélien", "Bakary", "Béatrice",
+      "Benoît", "Bertrand", "Bineta", "Boubacar", "Camille", "Cédric", "Chantal", "Charles", "Cheikh", "Christian", "Claire", "Claude", "Côme", "Corinne", "Damien",
+      "Daniel", "David", "Denis", "Désiré", "Diakalya", "Dieudonné", "Djibril", "Dominique", "Édith", "Édouard", "Élisabeth", "Élodie", "Émile", "Emmanuel", "Éric",
+      "Étienne", "Eugène", "Fabien", "Fabrice", "Fanta", "Félix", "Fernand", "Florent", "François", "Franck", "Frédéric", "Gabriel", "Gaston", "Georges", "Gérard",
+      "Gilbert", "Gilles", "Grégoire", "Guillaume", "Guy", "Habib", "Hélène", "Henri", "Hervé", "Hubert", "Hugues", "Idrissa", "Irène", "Isabelle", "Issa", "Jacques",
+      "Jean", "Jeanne", "Jérôme", "Joachim", "Joël", "Joseph", "Josiane", "Jules", "Julien", "Justine", "Karim", "Lamine", "Laurent", "Léopold", "Louis", "Luc", "Lucien",
+      "Mamadou", "Marcel", "Marie", "Martine", "Mathieu", "Maurice", "Michel", "Modibo", "Monique", "Moussa", "Nathalie", "Nicolas", "Noël", "Odette", "Olivier", "Ousmane",
+      "Pascal", "Patrice", "Patrick", "Paul", "Philippe", "Pierre", "Raymond", "René", "Richard", "Robert", "Roger", "Roland", "Samba", "Samuel", "Sébastien", "Serge",
+      "Seydou", "Simon", "Stéphane", "Sylvain", "Thérèse", "Thierry", "Tidiane", "Victor", "Vincent", "Xavier", "Yacouba", "Yves", "Zacharie", "Zoé", "Abiba", "Bakari",
+      "Bourema", "Clarisse", "Diarra", "Evelyne", "Fadel", "Gisèle", "Hamadou", "Inès", "Jocelyn", "Kamal", "Léonard", "Mariam", "Nafi", "Obi", "Pascaline", "Quentin",
+      "Ramatou", "Salif", "Tidjani", "Ulrich", "Valentin", "Waly", "Yasmine", "Zadi", "Abel", "Bamba", "Célestine", "Drissa", "Enzo", "Félicité", "Gervais", "Honoré",
+      "Ismaël", "Justin", "Kader", "Lila", "Mady", "Noémie", "Ondine", "Prudence", "Rémi", "Saliou", "Tania", "Urbain", "Viviane", "William", "Yohan", "Zénab",
+      "Cyrille", "Loïc", "Maëlys", "Nathan", "Hugo", "Inès", "Jade", "Léa", "Léo", "Manon", "Maxime", "Nina", "Pauline", "Raphaël", "Sacha", "Théo", "Tom", "Yaniss"
+    ];
+    const CITIES = [
+      "Paris", "Lyon", "Abidjan", "Dakar", "Bruxelles", "Genève", "Montréal", "Bordeaux", "Casablanca", "Douala", "Lomé", "Bamako",
+      "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg", "Montpellier", "Lille", "Rennes", "Reims", "Saint-Étienne", "Le Havre", "Toulon", "Grenoble", "Dijon", "Angers", "Nîmes", "Villeurbanne",
+      "Yamoussoukro", "Bouaké", "San Pedro", "Korhogo", "Daloa", "Saint-Louis", "Thiès", "Kaolack", "Ziguinchor", "Mbour", "Rabat", "Marrakech", "Fès", "Agadir", "Tanger", "Yaoundé",
+      "Libreville", "Port-Gentil", "Brazzaville", "Pointe-Noire", "Kinshasa", "Lubumbashi", "Mbuji-Mayi", "Kisangani", "Kananga", "Ouagadougou", "Bobo-Dioulasso", "Niamey", "Zinder",
+      "Nouakchott", "Conakry", "Cotonou", "Porto-Novo", "Libreville", "Antananarivo"
+    ];
+
+    let simulationTimeout: NodeJS.Timeout;
 
     const showJoin = () => {
       const name = NAMES[Math.floor(Math.random() * NAMES.length)];
       const city = CITIES[Math.floor(Math.random() * CITIES.length)];
       setRecentPremiumJoin({ name, city });
+      
+      // Clear after 5 seconds
       setTimeout(() => setRecentPremiumJoin(null), 5000);
+
+      // Schedule next one between 10 and 25 seconds
+      const nextDelay = Math.floor(Math.random() * (25000 - 10000 + 1)) + 10000;
+      simulationTimeout = setTimeout(showJoin, nextDelay);
     };
 
-    const timer = setTimeout(showJoin, 4000);
-    const interval = setInterval(showJoin, 15000); // Slower frequency as requested
+    // Initial delay of 15 seconds as requested
+    const initialTimeout = setTimeout(showJoin, 15000);
 
     return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
+      clearTimeout(initialTimeout);
+      clearTimeout(simulationTimeout);
     };
   }, []);
 
