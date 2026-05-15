@@ -134,14 +134,24 @@ export async function runPriorityDispatcher() {
 
                 // PRIORITÉ 1 : LE DÉFI (SI ACTIF)
                 if (hasActiveChallenge) {
-                    // Case 1: Started but NOT completed Day 1
-                    if (challenge.presented && challenge.started_at && !challenge.j1_completed) {
+                    const startedAtDate = challenge.started_at ? new Date(challenge.started_at).toISOString().split('T')[0] : null;
+                    const isNextDayPlus = startedAtDate && startedAtDate < today;
+
+                    // Message du Jour 2 (Automatique le lendemain, qu'il ait fini J1 ou non)
+                    if (isNextDayPlus && !challenge.j2_started_at && !challenge.j2_completed) {
+                        notifType = 'challenge_j2_start';
+                        title = "🌅 Le défi continue.";
+                        body = "🔥 C'est le Jour 2. Prêt à franchir une nouvelle étape ? Connecte-toi.";
+                        url = '/dashboard';
+                    }
+                    // Rappel Jour 1 (Seulement le jour même du début)
+                    else if (!isNextDayPlus && challenge.started_at && !challenge.j1_completed) {
                         notifType = 'challenge_j1_reminder';
                         title = "👋 Hey, c’est moi Axis.";
                         body = "🔥 Ton défi est officiellement lancé. 🚀 Continue maintenant.";
                         url = '/dashboard';
                     } 
-                    // Case 2: Completed Day 1 but not yet presented Day 2
+                    // Succès Jour 1 (Félicitations immédiates après inactivité)
                     else if (challenge.j1_completed && !challenge.j2_presented) {
                         notifType = 'challenge_j1_success';
                         title = "🎉 Jour 1 validé.";
@@ -151,7 +161,7 @@ export async function runPriorityDispatcher() {
                 }
 
                 if (notifType) {
-                    // Check log
+                    // Check log to avoid duplicate notifications
                     let hasBeenSent = false;
                     try {
                         const { data: log, error: logError } = await supabase
@@ -161,13 +171,9 @@ export async function runPriorityDispatcher() {
                             .eq('notif_type', notifType)
                             .maybeSingle();
 
-                        if (logError) {
-                            if (logError.code === '42P01') {
-                                console.warn('[Dispatcher] Table mz_background_notifications_log missing. Proceeding without log check.');
-                            } else {
-                                console.error(`[Dispatcher] Error checking log for ${userId}:`, logError);
-                                continue;
-                            }
+                        if (logError && logError.code !== '42P01') {
+                            console.error(`[Dispatcher] Error checking log for ${userId}:`, logError);
+                            continue;
                         }
                         if (log) hasBeenSent = true;
                     } catch (e) {
@@ -182,12 +188,21 @@ export async function runPriorityDispatcher() {
                             console.log(`[Dispatcher] sendPush result for ${userId}:`, sendResult);
                             
                             if (sendResult.success) {
+                                // Add to log
                                 const { error: insErr } = await supabase.from('mz_background_notifications_log').insert([{
                                     user_id: userId,
                                     notif_type: notifType
                                 }]);
+                                
                                 if (insErr && insErr.code !== '42P01') {
                                     console.error('[Dispatcher] Error logging notification:', insErr);
+                                }
+
+                                // Mark state as presented in challenge table to sync UI
+                                if (notifType === 'challenge_j1_success') {
+                                    await supabase.from('mz_challenge_3j_state')
+                                        .update({ j2_presented: true })
+                                        .eq('user_id', userId);
                                 }
                             }
                         } catch (pushErr) {
