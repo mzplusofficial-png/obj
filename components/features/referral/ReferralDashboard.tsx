@@ -32,7 +32,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
 
   const startTeamAxisGuide = useCallback(() => {
     triggerAxisMessage(
-      "Bienvenue dans ton Espace Parrainage ! C'est ici que tu vas parrainer de nouveaux membres pour rejoindre Millionnaire Zone Plus. 👁️⚡",
+      "Bienvenue dans ton Espace Partenaires ! C'est ici que tu vas inviter de nouvelles personnes à rejoindre Millionnaire Zone Plus. 👁️⚡",
       "guiding",
       0,
       {
@@ -45,7 +45,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
             if (linkCard) linkCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             triggerAxisMessage(
-              "Voici ton Lien de Parrainage unique. Partage-le ! Chaque personne qui s'inscrit via ce lien devient ton filleul et te rapporte +10 XP. 💎",
+              "Voici ton Lien de Partage unique. Envoie-le à tes contacts ! Chaque personne qui s'inscrit via ce lien te rapporte +10 XP. 💎",
               "action",
               10000,
               {
@@ -55,7 +55,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
                   if (statsCard) statsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   
                   triggerAxisMessage(
-                    "Ici, tu peux suivre tes statistiques en temps réel. La section 'Partenaires' affiche toutes les personnes qui ont rejoint ton équipe. 📊",
+                    "Ici, tu peux suivre tes statistiques en temps réel. La section 'Membres' affiche toutes les personnes qui ont rejoint ton réseau. 📊",
                     "guiding",
                     10000,
                     {
@@ -65,14 +65,14 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
                         if (listContainer) listContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         
                         triggerAxisMessage(
-                          "Le Journal du Parrainage te permet de voir tes filleuls. Lorsqu'un de tes filleuls devient PREMIUM, tu reçois 2500 FCFA de commission directe ! 💰💸",
+                          "La liste te permet de voir tes invités. Lorsqu'une personne devient PREMIUM, tu reçois 2500 FCFA de commission directe ! 💰💸",
                           "success",
                           12000,
                           {
                             label: "C'est compris ! 🔥",
                             action: () => {
                               localStorage.setItem('mz_referral_guide_seen', 'true');
-                              triggerAxisMessage("Parfait. C'est le moment de bâtir ton empire. Bonne chance ! 🚀", "success", 5000);
+                              triggerAxisMessage("Parfait. C'est le moment de développer ton réseau. Bonne chance ! 🚀", "success", 5000);
                             }
                           }
                         );
@@ -119,7 +119,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
         setTimeout(() => fetchTeam(retryCount + 1), delay);
         return;
       }
-      setError("Impossible de charger votre équipe pour le moment.");
+      setError("Impossible de charger vos membres pour le moment.");
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Rejoins mon équipe sur MZ+',
+          title: 'Rejoins-moi sur MZ+',
           text: 'Développe tes revenus et rejoins ma communauté !',
           url: referralLink,
         });
@@ -233,7 +233,7 @@ export const ReferralDashboard: React.FC<Props> = ({ profile, teamCount }) => {
           <div className="flex items-center justify-between mb-8 px-2">
              <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
                 <Activity className="text-white/40" size={20} />
-                Ton Équipe
+                Ton Réseau
              </h2>
              <span className="text-sm font-bold text-neutral-500 bg-white/5 px-4 py-1.5 rounded-full">
                 {displayTeamCount} membre{displayTeamCount > 1 ? 's' : ''}

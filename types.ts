@@ -167,4 +167,4 @@ export interface PremiumWelcomePopup {
   created_at: string;
 }
 
-export type TabId = 'dashboard' | 'revenus' | 'affiliation' | 'team' | 'admin' | 'rpa' | 'coaching' | 'formation' | 'upgrade' | 'suggestions' | 'private_group' | 'community' | 'private_chat' | 'recompense' | 'flash_offer' | 'admin_push' | 'private_messaging' | 'luna_chat' | 'guides' | 'sql_console' | 'profile' | 'catalog' | 'leaderboard' | 'leaderboard_local' | 'live_withdrawals' | 'axis';
+export type TabId = 'dashboard' | 'revenus' | 'affiliation' | 'team' | 'admin' | 'rpa' | 'coaching' | 'formation' | 'upgrade' | 'suggestions' | 'private_group' | 'community' | 'private_chat' | 'recompense' | 'flash_offer' | 'admin_push' | 'private_messaging' | 'luna_chat' | 'guides' | 'sql_console' | 'profile' | 'catalog' | 'leaderboard' | 'leaderboard_local' | 'live_withdrawals' | 'axis' | 'bonus';

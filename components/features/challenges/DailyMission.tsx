@@ -26,7 +26,7 @@ const MISSIONS = [
   {
     id: 'refer_2',
     title: "Le Recruteur",
-    desc: "Invite 2 nouveaux membres à rejoindre ton équipe aujourd'hui pour étendre ton empire.",
+    desc: "Invite 2 nouveaux amis aujourd'hui pour étendre ton empire.",
     action: "Partager mon lien",
     tab: "referral" as TabId,
     icon: Users,
@@ -100,8 +100,8 @@ const MISSIONS = [
   {
     id: 'upgrade_member',
     title: "Le Leader",
-    desc: "Accompagne un membre de ton équipe pour qu'il passe au plan Premium Elite.",
-    action: "Mon Équipe",
+    desc: "Accompagne une personne de ton réseau pour qu'elle passe au plan Premium Elite.",
+    action: "Mes Partenaires",
     tab: "team" as TabId,
     icon: Crown,
     color: "from-purple-600 to-indigo-700",
