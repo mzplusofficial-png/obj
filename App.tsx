@@ -485,8 +485,8 @@ const App: React.FC = () => {
         const currentDayLocal = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + String(currentDate.getDate()).padStart(2, '0');
         
         if (currentDayLocal > j2CompLocal) {
-          // Si J3 n'est pas encore complété, on le propose (même si déjà notifié en background)
-          if (!challengeState.j3Completed) {
+          // Si J3 n'est pas encore complété et pas encore présenté, on le propose (même si déjà notifié en background)
+          if (!challengeState.j3Completed && !challengeState.j3Presented) {
               window.dispatchEvent(new CustomEvent('mz-trigger-3j-day3'));
           }
         }
