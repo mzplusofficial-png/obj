@@ -35,6 +35,25 @@
         "is_active": { "type": "boolean" },
         "created_at": { "type": "string", "format": "date-time" }
       }
+    },
+    "MemberEvolution": {
+      "title": "Member Evolution",
+      "description": "A progression event shared by a member.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "user_name": { "type": "string" },
+        "user_avatar": { "type": "string" },
+        "old_level": { "type": "string" },
+        "new_level": { "type": "string" },
+        "type": { "type": "string", "enum": ["level_up", "formation_completed", "achievement_unlocked"] },
+        "achievement_title": { "type": "string" },
+        "message": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "reactions": { "type": "object" },
+        "comment_count": { "type": "number" }
+      },
+      "required": ["user_id", "user_name", "type", "created_at"]
     }
   },
   "firestore": {
@@ -49,6 +68,10 @@
     "/announcements/{announcementId}": {
       "schema": "Announcement",
       "description": "System-wide marketing messages."
+    },
+    "/evolutions/{evolutionId}": {
+      "schema": "MemberEvolution",
+      "description": "Community progression wall."
     }
   }
 }

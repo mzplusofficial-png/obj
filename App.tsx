@@ -15,7 +15,8 @@ import {
   UpgradeTab, 
   SuggestionsTab,
   GuidesTab,
-  ProfileTab
+  ProfileTab,
+  CommunityTab
 } from './components/DashboardTabs.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { RankRewardChecker } from './components/features/rank-rewards/RankRewardChecker.tsx';
@@ -47,6 +48,8 @@ import { ChallengePresentation } from './components/features/challenges/Challeng
 import { WeeklyChallenge } from './components/features/challenges/WeeklyChallenge.tsx';
 import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
+import { LevelUpCelebration } from './components/features/community/LevelUpCelebration.tsx';
+import { EvolutionShareModal } from './components/features/community/EvolutionShareModal.tsx';
 
 import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
 import { getBonusContent } from './components/features/formation/bonusContentData.ts';
@@ -81,7 +84,11 @@ const App: React.FC = () => {
   const [xpRewardTitle, setXpRewardTitle] = useState("");
   const [xpRewardDesc, setXpRewardDesc] = useState("");
   const [xpRewardSource, setXpRewardSource] = useState("");
+  const [rankUpData, setRankUpData] = useState<{ rankId: number; rankName: string; oldXp: number; newXp: number } | null>(null);
   const [showSharePopup, setShowSharePopup] = useState(false);
+  const [showEvolutionShare, setShowEvolutionShare] = useState(false);
+  const [evolutionShareType, setEvolutionShareType] = useState<'formation_completed' | 'achievement_unlocked' | 'generic'>('generic');
+  const [evolutionShareData, setEvolutionShareData] = useState<any>(null);
   const [, setFcmToken] = useState<string | null>(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   
@@ -631,6 +638,17 @@ const App: React.FC = () => {
   }, [userProfile, updateChallengeDB]);
 
   useEffect(() => {
+    const handleEvolutionShare = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type: any; data: any }>;
+      setEvolutionShareType(customEvent.detail.type);
+      setEvolutionShareData(customEvent.detail.data);
+      setShowEvolutionShare(true);
+    };
+    window.addEventListener('mz-trigger-evolution-share', handleEvolutionShare);
+    return () => window.removeEventListener('mz-trigger-evolution-share', handleEvolutionShare);
+  }, []);
+
+  useEffect(() => {
     const handleXpReward = async (e: Event) => {
       const customEvent = e as CustomEvent<{amount: number, title?: string, description?: string, source?: string}>;
       const { amount, title, description, source } = customEvent.detail;
@@ -660,6 +678,15 @@ const App: React.FC = () => {
     window.addEventListener('mz-xp-reward', handleXpReward);
     return () => window.removeEventListener('mz-xp-reward', handleXpReward);
   }, [session, triggerRefresh]);
+
+  useEffect(() => {
+    const handleRankUp = (e: Event) => {
+      const customEvent = e as CustomEvent<{ rankId: number; rankName: string; oldXp: number; newXp: number }>;
+      setRankUpData(customEvent.detail);
+    };
+    window.addEventListener('mz-rank-up-detected', handleRankUp);
+    return () => window.removeEventListener('mz-rank-up-detected', handleRankUp);
+  }, []);
 
   useEffect(() => {
     if (!loading) {
@@ -1385,6 +1412,7 @@ const App: React.FC = () => {
         onComplete={() => setIsRPAGuideActive(false)} 
       />
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
+      {activeTab === 'community' && <CommunityTab profile={userProfile} />}
       {activeTab === 'live_withdrawals' && <LiveWithdrawalsView onBack={() => setActiveTab('dashboard')} />}
       {activeTab === 'axis' && <AxisChat profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'leaderboard' && <LeaderboardTab profile={userProfile} mode="global" />}
@@ -1443,6 +1471,20 @@ const App: React.FC = () => {
           }
         }, 300);
       }} />
+      <LevelUpCelebration 
+        rankData={rankUpData}
+        userName={userProfile?.full_name || "Élite"}
+        userId={userProfile?.id || ""}
+        onClose={() => setRankUpData(null)}
+      />
+      <EvolutionShareModal 
+        isVisible={showEvolutionShare}
+        onClose={() => setShowEvolutionShare(false)}
+        userName={userProfile?.full_name || "Élite"}
+        userId={userProfile?.id || ""}
+        type={evolutionShareType}
+        data={evolutionShareData}
+      />
       <XPRewardModal 
         isVisible={showXpReward} 
         amount={xpRewardAmount} 
@@ -1457,7 +1499,10 @@ const App: React.FC = () => {
                 remaining2s -= 1;
                 if (remaining2s <= 0) {
                   clearInterval(interval2s);
-                  setShowSharePopup(true);
+                  // Use Evolution Share instead of generic Share
+                  setEvolutionShareType('formation_completed');
+                  setEvolutionShareData({ title: xpRewardTitle || 'Formation MZ+' });
+                  setShowEvolutionShare(true);
                 }
               }
             }, 1000);

@@ -33,6 +33,7 @@ import {
   GoldText,
   PrimaryButton,
 } from "./UI.tsx";
+import { useAxis } from "./features/axis/AxisProvider.tsx";
 import { supabase } from "../services/supabase.ts";
 import { AcademieMain } from "./features/formation/AcademieMain.tsx";
 import { RpaDashboard } from "./features/rpa/RpaDashboard.tsx";
@@ -41,16 +42,14 @@ import { ReferralDashboard } from "./features/referral/ReferralDashboard.tsx";
 import { GuidesTab as GuidesTabComponent } from "./GuidesTab.tsx";
 import { WithdrawalSystem } from "./features/withdrawals/WithdrawalSystem.tsx";
 import { WithdrawalForm as WithdrawalFormView } from "./features/withdrawals/WithdrawalForm.tsx";
-import { LivePulse } from "./features/LivePulse.tsx";
-import { CurrencyDisplay } from "./ui/CurrencyDisplay.tsx";
 import { useCurrency } from "../hooks/useCurrency.ts";
-import { useAxis } from "./features/axis/AxisProvider.tsx";
 import {
   LiquidProgressionTube,
   getCurrentLevel,
 } from "./features/progression/LiquidProgressionTube.tsx";
 import { Download, Gift } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
+import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
 
 import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
@@ -264,7 +263,7 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
   );
 };
 
-type HubCategory = "main" | "business" | "academy" | "community";
+type HubCategory = "main" | "business" | "referral" | "academy" | "community";
 
 export const GlobalView: React.FC<any> = ({
   profile,
@@ -1386,6 +1385,22 @@ export const ProfileTab: React.FC<any> = ({
         </div>
       )}
 
+      {/* Evolution Access Icon */}
+      <div className="pt-8 border-t border-white/5 flex justify-center">
+        <button
+          onClick={() => onSwitchTab("community")}
+          className="group relative flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 hover:bg-blue-500/10 hover:border-blue-500/20 transition-all duration-300"
+        >
+          <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+            <Rocket size={24} />
+          </div>
+          <span className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em]">Évolutions</span>
+          <div className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-md bg-blue-500 text-[8px] font-bold text-white uppercase tracking-widest animate-pulse">
+            Live
+          </div>
+        </button>
+      </div>
+
       <div className="pt-8 border-t border-white/5 space-y-4">
         <button
           onClick={onLogout}
@@ -1433,6 +1448,12 @@ export const CoachingTab: React.FC<any> = ({ profile, onSwitchTab }) => (
 
 export const FormationTab: React.FC<any> = ({ profile, onSwitchTab }) => (
   <AcademieMain profile={profile} onSwitchTab={onSwitchTab} />
+);
+
+export const CommunityTab: React.FC<{ profile: UserProfile | null }> = ({ profile }) => (
+  <div className="max-w-2xl mx-auto pb-24 pt-10 px-5">
+    <EvolutionFeed profile={profile} />
+  </div>
 );
 
 export const SuggestionsTab: React.FC<{ profile: UserProfile | null }> = ({

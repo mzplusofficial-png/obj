@@ -64,6 +64,14 @@ service cloud.firestore {
              data.created_at is timestamp;
     }
 
+    function isValidMemberEvolution(data) {
+      return data.keys().hasAll(['user_id', 'user_name', 'type', 'created_at']) &&
+             data.user_id == request.auth.uid &&
+             data.user_name is string &&
+             data.type in ['level_up', 'formation_completed', 'achievement_unlocked'] &&
+             data.created_at == request.time;
+    }
+
     // --- Collection Routes ---
 
     match /live_pulse/{eventId} {
@@ -83,6 +91,17 @@ service cloud.firestore {
       allow list: if isSignedIn();
       allow get: if isSignedIn() && isValidId(announcementId);
       allow write: if isAdmin() && isValidAnnouncement(incoming());
+    }
+
+    match /evolutions/{evolutionId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(evolutionId);
+      allow create: if isSignedIn() && isValidMemberEvolution(incoming());
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (incoming().diff(existing()).affectedKeys().hasAny(['reactions', 'comment_count']))
+      );
+      allow delete: if isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid);
     }
 
     // Test connection doc

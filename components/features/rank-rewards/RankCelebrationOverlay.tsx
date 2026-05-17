@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Gift, Sparkles, Download, CheckCircle, ChevronRight, DownloadCloud, Crown, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Gift, Sparkles, Download, CheckCircle, ChevronRight, DownloadCloud, Crown, ChevronLeft, ChevronRight as ChevronRightIcon, Share2 } from 'lucide-react';
 import { supabase } from '../../../services/supabase';
 import { RankReward, UserProfile } from '../../../types';
 import confetti from 'canvas-confetti';
+import { shareEvolution, getEvolutionMessages } from '../../../services/evolutionService';
 
 interface RankCelebrationOverlayProps {
   profile: UserProfile;
@@ -16,6 +17,8 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
   const [selectedReward, setSelectedReward] = useState<RankReward | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSharing, setIsSharing] = useState(false);
+  const [hasShared, setHasShared] = useState(false);
 
   // Sound effects
   useEffect(() => {
@@ -28,6 +31,29 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
       audio.play().catch(e => console.log('Audio play blocked:', e));
     } catch(e) {}
   }, [step]);
+  
+  const handleShare = async () => {
+    if (isSharing || hasShared) return;
+    setIsSharing(true);
+    try {
+      const messages = getEvolutionMessages(profile.full_name || profile.username, profile.rank_name || 'Élite');
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      
+      await shareEvolution({
+        user_id: profile.id,
+        user_name: profile.full_name || profile.username,
+        type: 'level_up',
+        old_level: 'Membre',
+        new_level: profile.rank_name || 'Élite',
+        message: message
+      });
+      setHasShared(true);
+    } catch (error) {
+      console.error("Error sharing evolution:", error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   // Fetch Rewards
   useEffect(() => {
@@ -329,6 +355,29 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
                 transition={{ delay: 0.5 }}
                 className="flex flex-col gap-4 w-full max-w-lg"
               >
+                {!hasShared && (
+                  <button 
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-2xl font-black text-lg transition-all shadow-[0_0_30px_rgba(59,130,246,0.3)]"
+                  >
+                    {isSharing ? (
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Share2 size={24} /> 
+                        PARTAGER MON ÉVOLUTION
+                      </>
+                    )}
+                  </button>
+                )}
+                
+                {hasShared && (
+                  <div className="w-full py-4 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-2xl font-black text-lg flex items-center justify-center gap-2">
+                    <CheckCircle size={24} /> ÉVOLUTION PARTAGÉE !
+                  </div>
+                )}
+
                 {selectedReward.file_url?.startsWith('http') ? (
                   <a 
                     href={selectedReward.file_url} 
