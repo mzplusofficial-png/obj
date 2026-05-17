@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Target, Clock, ArrowLeft, Users, CheckCircle2, ShoppingBag, BrainCircuit, Sparkles, PlayCircle, Star, Flame, Crown, X, Share2 } from 'lucide-react';
 import { UserProfile } from '../../../types';
 import { supabase } from '../../../services/supabase';
-import { shareEvolution, generateWhatsAppLink } from '../../../services/evolutionService';
+import { shareEvolution, generateWhatsAppLink, getRandomMessage } from '../../../services/evolutionService';
 import confetti from 'canvas-confetti';
 
 const playSound = (type: 'correct' | 'wrong' | 'start' | 'finish') => {
@@ -460,7 +460,7 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
     if (!profile) return;
     setSharingMission(title);
     try {
-      const message = `🔥 Mission accomplie sur MZ+ : ${title} ! J'ai remporté +${xp} XP bonus. L'ascension continue ! 🚀`;
+      const message = getRandomMessage('mission', { missionTitle: title });
       
       await shareEvolution({
         user_id: profile.id,

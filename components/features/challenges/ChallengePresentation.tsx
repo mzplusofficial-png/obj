@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Target, Zap, Rocket, X, CheckCircle2, Flame, Droplets, Crown, Share2 } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
 import { UserProfile } from '../../../types.ts';
-import { shareEvolution, generateWhatsAppLink } from '../../../services/evolutionService.ts';
+import { shareEvolution, generateWhatsAppLink, getRandomMessage } from '../../../services/evolutionService.ts';
 
 interface ChallengePresentationProps {
   isVisible: boolean;
@@ -26,7 +26,7 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
     if (!profile) return;
     setIsSharing(true);
     try {
-      const message = `🔥 Je viens de valider le Jour ${completedStep} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+      const message = getRandomMessage('challenge', { day: completedStep });
       
       await shareEvolution({
         user_id: profile.id,

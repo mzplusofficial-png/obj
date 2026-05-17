@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, TrendingUp, Share2, Sparkles } from 'lucide-react';
-import { MemberEvolution, subscribeToEvolutions, shareEvolution, getEvolutionMessages, checkIfLevelShared, generateWhatsAppLink, checkIfAchievementShared } from '../../../services/evolutionService';
+import { MemberEvolution, subscribeToEvolutions, shareEvolution, getEvolutionMessages, checkIfLevelShared, generateWhatsAppLink, checkIfAchievementShared, getRandomMessage } from '../../../services/evolutionService';
 import { EvolutionCard } from './EvolutionCard';
 import { UserProfile } from '../../../types';
 
@@ -56,8 +56,7 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
     if (!profile || isSharing || !canShareLevel) return;
     setIsSharing(true);
     try {
-      const messages = getEvolutionMessages(profile.full_name || profile.username, profile.rank_name || 'Élite');
-      const message = messages[Math.floor(Math.random() * messages.length)];
+      const message = getRandomMessage('level_up', { levelName: profile.rank_name || 'Élite' });
       
       const shareData = {
         user_id: profile.id,
@@ -87,7 +86,7 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
     if (!profile || isSharing) return;
     setIsSharing(true);
     try {
-      const message = `🔥 Je viens de valider le Jour ${day} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+      const message = getRandomMessage('challenge', { day });
       
       const shareData = {
         user_id: profile.id,

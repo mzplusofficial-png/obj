@@ -50,7 +50,7 @@ import {
 import { Download, Gift, Share2 as ShareIcon } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
-import { shareEvolution, generateWhatsAppLink } from "../services/evolutionService.ts";
+import { shareEvolution, generateWhatsAppLink, getRandomMessage } from "../services/evolutionService.ts";
 
 import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
@@ -658,7 +658,7 @@ export const GlobalView: React.FC<any> = ({
 
         const handleShare = async (day: number) => {
           if (!profile) return;
-          const message = `🔥 Je viens de valider le Jour ${day} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+          const message = getRandomMessage('challenge', { day });
           
           await shareEvolution({
             user_id: profile.id,
@@ -1156,7 +1156,7 @@ export const ProfileTab: React.FC<any> = ({
 
   const handleShare = async () => {
     if (!profile || !lastCompletedDay) return;
-    const message = `🔥 Je viens de valider le Jour ${lastCompletedDay} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+    const message = getRandomMessage('challenge', { day: lastCompletedDay });
     
     await shareEvolution({
       user_id: profile.id,

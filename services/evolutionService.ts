@@ -156,8 +156,46 @@ export const reactToEvolution = async (evolutionId: string, userId: string, reac
   }
 };
 
+export const getRandomMessage = (type: 'level_up' | 'challenge' | 'mission', data: { userName?: string; levelName?: string; day?: number; missionTitle?: string }) => {
+  const levelUpMessages = [
+    `🔥 ENFIN ! Je viens de franchir un cap énorme et je passe officiellement au niveau ${data.levelName} sur MZ+ ! L'ascension continue.`,
+    `💎 Je n'en reviens pas, niveau ${data.levelName} atteint ! Fier de ma progression et de ne rien avoir lâché sur MZ+.`,
+    `🚀 Nouvelle étape validée ! J'atteins le niveau ${data.levelName} et je sens que je passe enfin un cap supérieur.`,
+    `🌟 C'est fait ! Ma détermination paye enfin, je rejoins le rang ${data.levelName}. On ne s'arrête plus maintenant !`,
+    `💪 Tellement fier d'annoncer que je suis désormais niveau ${data.levelName} ! MZ+ change vraiment la donne pour moi.`,
+    `⚡️ Boom ! Niveau ${data.levelName} dans la poche. Je monte en puissance de jour en jour !`,
+    `🎯 Objectif atteint : je suis officiellement au niveau ${data.levelName}. La route a été intense mais ça en valait la peine !`,
+    `👑 Nouveau statut débloqué : ${data.levelName}. Fier de voir mon travail acharné porter ses fruits sur MZ+ !`
+  ];
+
+  const challengeMessages = [
+    `🔥 Jour ${data.day} du Défi 3 Jours VALIDÉ ! Je ne lâche rien, la discipline paye. 🚀`,
+    `💪 Encore une étape franchie ! Mon Défi Jour ${data.day} est dans la poche. Objectif 100% de réussite !`,
+    `🚀 Le Jour ${data.day} de mon défi MZ+ est terminé. Je sens que je progresse chaque jour un peu plus !`,
+    `⚡️ Pas d'excuses, juste des résultats. Jour ${data.day} du défi complété avec succès sur MZ+ !`,
+    `🎯 Défi Jour ${data.day} validé ! L'élan est là, je fonce vers la ligne d'arrivée. 🔥`,
+    `🌟 Quelle satisfaction ! Je viens de finir le Jour ${data.day} du défi 3 jours. On continue !`
+  ];
+
+  const missionMessages = [
+    `🔥 Mission accomplie : ${data.missionTitle} ! Je monte en puissance sur MZ+. 🚀`,
+    `💎 Une victoire de plus ! Je viens de terminer la mission "${data.missionTitle}". On ne s'arrête pas !`,
+    `⚡️ Mission "${data.missionTitle}" validée ! Le travail finit toujours par payer. 💪`,
+    `🎯 Objectif rempli pour la mission ${data.missionTitle}. Fier de mon avancée sur la plateforme !`,
+    `🚀 Boom ! Mission ${data.missionTitle} dans la poche. L'ascension MZ+ continue !`,
+    `🌟 C'est fait ! Je viens de boucler la mission "${data.missionTitle}". Fier de mon focus !`
+  ];
+
+  let pool = levelUpMessages;
+  if (type === 'challenge') pool = challengeMessages;
+  if (type === 'mission') pool = missionMessages;
+
+  return pool[Math.floor(Math.random() * pool.length)];
+};
+
 export const getEvolutionMessages = (_userName: string, levelName: string) => {
-  const messages = [
+  // Maintaining compatibility for level_up shares
+  const allPossible = [
     `🔥 ENFIN ! Je viens de franchir un cap énorme et je passe officiellement au niveau ${levelName} sur MZ+ ! L'ascension continue.`,
     `💎 Je n'en reviens pas, niveau ${levelName} atteint ! Fier de ma progression et de ne rien avoir lâché sur MZ+.`,
     `🚀 Nouvelle étape validée ! J'atteins le niveau ${levelName} et je sens que je passe enfin un cap supérieur.`,
@@ -165,7 +203,7 @@ export const getEvolutionMessages = (_userName: string, levelName: string) => {
     `💪 Tellement fier d'annoncer que je suis désormais niveau ${levelName} ! MZ+ change vraiment la donne pour moi.`,
     `⚡️ Boom ! Niveau ${levelName} dans la poche. Je monte en puissance de jour en jour !`
   ];
-  return messages;
+  return allPossible;
 };
 
 export const generateWhatsAppLink = (message: string) => {
