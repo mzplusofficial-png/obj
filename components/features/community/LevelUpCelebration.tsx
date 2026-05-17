@@ -10,7 +10,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { shareEvolution, getEvolutionMessages, generateWhatsAppLink } from '../../../services/evolutionService';
+import { shareEvolution, getEvolutionMessages, generateWhatsAppLink, checkIfLevelShared } from '../../../services/evolutionService';
 
 interface LevelUpCelebrationProps {
   rankData: {
@@ -32,6 +32,16 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
 }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+
+  useEffect(() => {
+    const checkAlreadyShared = async () => {
+      if (rankData && userId) {
+        const shared = await checkIfLevelShared(userId, rankData.rankName);
+        if (shared) setHasShared(true);
+      }
+    };
+    checkAlreadyShared();
+  }, [rankData, userId]);
 
   useEffect(() => {
     if (rankData) {
@@ -69,7 +79,8 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
       await shareEvolution({
         user_id: userId,
         user_name: userName,
-        type: 'level_up',
+        user_avatar: '', // In a real app we'd pass avatar if available
+        type: 'level_up' as const,
         old_level: getRankNameFromId(rankData.rankId - 1),
         new_level: rankData.rankName,
         message: message

@@ -47,9 +47,10 @@ import {
   LiquidProgressionTube,
   getCurrentLevel,
 } from "./features/progression/LiquidProgressionTube.tsx";
-import { Download, Gift } from "lucide-react";
+import { Download, Gift, Share2 as ShareIcon } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
+import { shareEvolution, generateWhatsAppLink } from "../services/evolutionService.ts";
 
 import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
@@ -655,6 +656,24 @@ export const GlobalView: React.FC<any> = ({
         let mission = null;
         let isWaiting = false;
 
+        const handleShare = async (day: number) => {
+          if (!profile) return;
+          const message = `🔥 Je viens de valider le Jour ${day} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+          
+          await shareEvolution({
+            user_id: profile.id,
+            user_name: profile.full_name || profile.username,
+            user_avatar: profile.avatar_url,
+            type: 'achievement_unlocked',
+            new_level: `Défi J${day}`,
+            message: message
+          });
+
+          // Auto open WhatsApp
+          const whatsappLink = generateWhatsAppLink(message);
+          window.open(whatsappLink, '_blank');
+        };
+
         // Priority 1: Day 3 (either naturally unlocked or J2 missed)
         if ((j3Presented || (j2Presented && !j2Completed && isJ2Overdue)) && !j3Completed) {
           mission = {
@@ -754,27 +773,37 @@ export const GlobalView: React.FC<any> = ({
                   {mission.action} 👉
                 </button>
               )}
-              <button
-                onClick={async () => {
-                  if (
-                    !window.confirm(
-                      "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
+              {isWaiting ? (
+                <button
+                  onClick={() => handleShare(mission.day)}
+                  className="w-full mt-2 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  <ShareIcon size={14} />
+                  Partager mon succès
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
+                      )
                     )
-                  )
-                    return;
-                  const newPrefs = { ...(profile.store_preferences || {}) };
-                  if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
-                  newPrefs.challenge_3j.cancelled = true;
-                  await supabase
-                    .from("users")
-                    .update({ store_preferences: newPrefs })
-                    .eq("id", profile?.id);
-                  window.location.reload();
-                }}
-                className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
-              >
-                Renoncer au défi
-              </button>
+                      return;
+                    const newPrefs = { ...(profile.store_preferences || {}) };
+                    if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
+                    newPrefs.challenge_3j.cancelled = true;
+                    await supabase
+                      .from("users")
+                      .update({ store_preferences: newPrefs })
+                      .eq("id", profile?.id);
+                    window.location.reload();
+                  }}
+                  className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
+                >
+                  Renoncer au défi
+                </button>
+              )}
             </div>
           </motion.div>
         );
@@ -1122,6 +1151,26 @@ export const ProfileTab: React.FC<any> = ({
     !challengeState.cancelled &&
     !challengeState.j3Completed;
 
+  const isAnyDayCompleted = challengeState.j1Completed || challengeState.j2Completed;
+  const lastCompletedDay = challengeState.j2Completed ? 2 : challengeState.j1Completed ? 1 : 0;
+
+  const handleShare = async () => {
+    if (!profile || !lastCompletedDay) return;
+    const message = `🔥 Je viens de valider le Jour ${lastCompletedDay} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+    
+    await shareEvolution({
+      user_id: profile.id,
+      user_name: profile.full_name || profile.username,
+      user_avatar: profile.avatar_url,
+      type: 'achievement_unlocked',
+      new_level: `Défi J${lastCompletedDay}`,
+      message: message
+    });
+
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, '_blank');
+  };
+
   const handleCancelChallenge = async () => {
     if (
       !window.confirm(
@@ -1376,12 +1425,22 @@ export const ProfileTab: React.FC<any> = ({
               Ta première vente en 3 Jours
             </span>
           </div>
-          <button
-            onClick={handleCancelChallenge}
-            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
-          >
-            Renoncer au défi
-          </button>
+          {isAnyDayCompleted ? (
+            <button
+              onClick={handleShare}
+              className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-emerald-500/20 whitespace-nowrap flex items-center gap-2"
+            >
+              <ShareIcon size={12} />
+              Partager mon succès
+            </button>
+          ) : (
+            <button
+              onClick={handleCancelChallenge}
+              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
+            >
+              Renoncer au défi
+            </button>
+          )}
         </div>
       )}
 

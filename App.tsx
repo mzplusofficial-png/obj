@@ -1539,6 +1539,7 @@ const App: React.FC = () => {
       <ChallengePresentation 
         isVisible={showChallengeCelebration}
         mode="celebration"
+        profile={userProfile}
         completedStep={challengeCelebratedStep}
         onAccept={() => {
           setShowChallengeCelebration(false);

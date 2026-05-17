@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, TrendingUp, Share2, Sparkles } from 'lucide-react';
-import { MemberEvolution, subscribeToEvolutions, shareEvolution, getEvolutionMessages } from '../../../services/evolutionService';
+import { MemberEvolution, subscribeToEvolutions, shareEvolution, getEvolutionMessages, checkIfLevelShared, generateWhatsAppLink, checkIfAchievementShared } from '../../../services/evolutionService';
 import { EvolutionCard } from './EvolutionCard';
 import { UserProfile } from '../../../types';
 
@@ -10,34 +10,103 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'level_up' | 'formation'>('all');
   const [isSharing, setIsSharing] = useState(false);
-  const [sharedToday, setSharedToday] = useState(false);
+  const [canShareLevel, setCanShareLevel] = useState(false);
+  const [unsharedChallengeDays, setUnsharedChallengeDays] = useState<number[]>([]);
 
   useEffect(() => {
     const unsubscribe = subscribeToEvolutions((data) => {
       setEvolutions(data);
       setLoading(false);
     });
+
+    const checkPendingShares = async () => {
+      if (profile) {
+        // Check Level
+        const levelShared = await checkIfLevelShared(profile.id, profile.rank_name || 'Élite');
+        setCanShareLevel(!levelShared);
+
+        // Check Challenge Days
+        const pendingDays: number[] = [];
+        const challenge = profile.store_preferences?.challenge_3j;
+        
+        if (challenge) {
+          if (challenge.j1Completed) {
+            const shared = await checkIfAchievementShared(profile.id, 'Défi J1');
+            if (!shared) pendingDays.push(1);
+          }
+          if (challenge.j2Completed) {
+            const shared = await checkIfAchievementShared(profile.id, 'Défi J2');
+            if (!shared) pendingDays.push(2);
+          }
+          if (challenge.j3Completed) {
+            const shared = await checkIfAchievementShared(profile.id, 'Défi J3');
+            if (!shared) pendingDays.push(3);
+          }
+        }
+        setUnsharedChallengeDays(pendingDays);
+      }
+    };
+    
+    checkPendingShares();
+
     return () => unsubscribe();
-  }, []);
+  }, [profile]);
 
   const handleShareCurrentRank = async () => {
-    if (!profile || isSharing || sharedToday) return;
+    if (!profile || isSharing || !canShareLevel) return;
     setIsSharing(true);
     try {
       const messages = getEvolutionMessages(profile.full_name || profile.username, profile.rank_name || 'Élite');
       const message = messages[Math.floor(Math.random() * messages.length)];
       
-      await shareEvolution({
+      const shareData = {
         user_id: profile.id,
         user_name: profile.full_name || profile.username,
-        type: 'level_up',
+        user_avatar: profile.avatar_url,
+        type: 'level_up' as const,
         old_level: 'Membre',
         new_level: profile.rank_name || 'Élite',
         message: message
-      });
-      setSharedToday(true);
+      };
+
+      await shareEvolution(shareData);
+      setCanShareLevel(false);
+
+      // Automatically open WhatsApp after internal share
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, '_blank');
+    } catch (err: any) {
+      console.error(err);
+      alert("Une erreur est survenue lors du partage.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleShareChallenge = async (day: number) => {
+    if (!profile || isSharing) return;
+    setIsSharing(true);
+    try {
+      const message = `🔥 Je viens de valider le Jour ${day} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+      
+      const shareData = {
+        user_id: profile.id,
+        user_name: profile.full_name || profile.username,
+        user_avatar: profile.avatar_url,
+        type: 'achievement_unlocked' as const,
+        new_level: `Défi J${day}`,
+        message: message
+      };
+
+      await shareEvolution(shareData);
+      setUnsharedChallengeDays(prev => prev.filter(d => d !== day));
+
+      // Automatically open WhatsApp after internal share
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, '_blank');
     } catch (err) {
       console.error(err);
+      alert("Une erreur est survenue lors du partage.");
     } finally {
       setIsSharing(false);
     }
@@ -63,13 +132,13 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
               Évolutions
             </h2>
             <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1 ring-1 ring-white/5 inline-block px-2 py-0.5 rounded">
-              {evolutions.length} Évolutions partagées
+              Activités de la communauté
             </p>
           </div>
         </div>
 
         {/* Share Achievement CTA */}
-        {profile && !sharedToday && (
+        {profile && (canShareLevel || unsharedChallengeDays.length > 0) && (
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -78,57 +147,37 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
               <Sparkles size={40} className="text-blue-400" />
             </div>
-            <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="relative z-10 space-y-4">
               <div className="space-y-1">
-                <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Partage ton ascension !</h3>
+                <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Partage tes victoires !</h3>
                 <p className="text-[10px] text-neutral-400 font-medium">Inspirer la communauté te permet de marquer ton territoire.</p>
               </div>
-              <button
-                onClick={handleShareCurrentRank}
-                disabled={isSharing}
-                className="shrink-0 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95"
-              >
-                {isSharing ? 'Envoi...' : <><Share2 size={12} /> Partager</>}
-              </button>
+              
+              <div className="flex flex-wrap gap-2">
+                {canShareLevel && (
+                  <button
+                    onClick={handleShareCurrentRank}
+                    disabled={isSharing}
+                    className="flex-1 min-w-[140px] px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                  >
+                    {isSharing ? 'Envoi...' : <><Share2 size={12} /> Partager mon Grade</>}
+                  </button>
+                )}
+
+                {unsharedChallengeDays.map(day => (
+                  <button
+                    key={day}
+                    onClick={() => handleShareChallenge(day)}
+                    disabled={isSharing}
+                    className="flex-1 min-w-[140px] px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                  >
+                    {isSharing ? 'Envoi...' : <><Share2 size={12} /> Défi J{day} Validé</>}
+                  </button>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
-
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-3xl bg-white/5 border border-white/5">
-            <TrendingUp size={16} className="text-emerald-400 mb-2" />
-            <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Tendance</p>
-            <p className="text-sm font-black text-white uppercase italic">+12% de progression cette semaine</p>
-          </div>
-          <div className="p-4 rounded-3xl bg-white/5 border border-white/5">
-            <Users size={16} className="text-blue-400 mb-2" />
-            <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Activité</p>
-            <p className="text-sm font-black text-white uppercase italic">Communauté ultra-active</p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-          <button 
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${filter === 'all' ? 'bg-white text-black border-white' : 'bg-white/5 text-neutral-400 border-white/10'}`}
-          >
-            Tout voir
-          </button>
-          <button 
-            onClick={() => setFilter('level_up')}
-            className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${filter === 'level_up' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-yellow-500/5 text-yellow-500/60 border-yellow-500/20'}`}
-          >
-            Niveaux
-          </button>
-          <button 
-            onClick={() => setFilter('formation')}
-            className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${filter === 'formation' ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-emerald-500/5 text-emerald-500/60 border-emerald-500/20'}`}
-          >
-            Formations
-          </button>
-        </div>
       </div>
 
       {loading ? (

@@ -72,16 +72,59 @@ export const subscribeToEvolutions = (callback: (evolutions: MemberEvolution[]) 
   };
 };
 
+export const checkIfLevelShared = async (userId: string, levelName: string) => {
+  try {
+    const { data, error } = await supabase
+      .from(EVOLUTIONS_TABLE)
+      .select('id')
+      .eq('user_id', userId)
+      .eq('new_level', levelName)
+      .eq('type', 'level_up')
+      .maybeSingle();
+    
+    if (error) return false;
+    return !!data;
+  } catch (error) {
+    console.error("Error checking shared level:", error);
+    return false;
+  }
+};
+
+export const checkIfAchievementShared = async (userId: string, achievementTitle: string) => {
+  try {
+    const { data, error } = await supabase
+      .from(EVOLUTIONS_TABLE)
+      .select('id')
+      .eq('user_id', userId)
+      .eq('new_level', achievementTitle)
+      .eq('type', 'achievement_unlocked')
+      .maybeSingle();
+    
+    if (error) return false;
+    return !!data;
+  } catch (error) {
+    console.error("Error checking shared achievement:", error);
+    return false;
+  }
+};
+
 export const reactToEvolution = async (evolutionId: string, userId: string, reactionType: string) => {
   try {
-    const { data: current } = await supabase
+    const { data: current, error: fetchError } = await supabase
       .from(EVOLUTIONS_TABLE)
       .select('reactions, user_reactions')
       .eq('id', evolutionId)
       .single();
 
-    const userReactions = { ...(current?.user_reactions || {}) };
-    const reactions = { ...(current?.reactions || {}) };
+    if (fetchError) {
+      if (fetchError.code === 'PGRST204') {
+        console.warn("Column user_reactions missing. Please run the migration script.");
+      }
+      throw fetchError;
+    }
+
+    const userReactions = current?.user_reactions ? { ...current.user_reactions } : {};
+    const reactions = current?.reactions ? { ...current.reactions } : {};
 
     if (!userReactions[userId]) {
       userReactions[userId] = {};
@@ -99,31 +142,34 @@ export const reactToEvolution = async (evolutionId: string, userId: string, reac
       reactions[reactionType] = (reactions[reactionType] || 0) + 1;
     }
 
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from(EVOLUTIONS_TABLE)
       .update({ 
-        reactions: reactions,
+        reactions,
         user_reactions: userReactions 
       })
       .eq('id', evolutionId);
 
-    if (error) throw error;
+    if (updateError) throw updateError;
   } catch (error) {
-    console.error("Error reacting to evolution:", error);
+    console.error("Error in reactToEvolution:", error);
   }
 };
 
 export const getEvolutionMessages = (_userName: string, levelName: string) => {
   const messages = [
-    `🚀 Incroyable ! Je viens de franchir une étape majeure et je passe au niveau ${levelName} sur MZ+ ! L'ascension continue. 🔥`,
-    `💎 Objectif pulvérisé ! Je suis désormais officiellement au niveau ${levelName} sur MZ+. Fier de mon parcours ! 📈`,
-    `⚡️ Nouvelle victoire ! Je viens d'atteindre le niveau ${levelName} sur MZ+. Le travail finit toujours par payer. 🎯`,
-    `🌟 C'est fait ! Je monte en puissance et je rejoins le rang ${levelName} sur MZ+. On ne s'arrête plus ! 💰`
+    `🔥 ENFIN ! Je viens de franchir un cap énorme et je passe officiellement au niveau ${levelName} sur MZ+ ! L'ascension continue.`,
+    `💎 Je n'en reviens pas, niveau ${levelName} atteint ! Fier de ma progression et de ne rien avoir lâché sur MZ+.`,
+    `🚀 Nouvelle étape validée ! J'atteins le niveau ${levelName} et je sens que je passe enfin un cap supérieur.`,
+    `🌟 C'est fait ! Ma détermination paye enfin, je rejoins le rang ${levelName}. On ne s'arrête plus maintenant !`,
+    `💪 Tellement fier d'annoncer que je suis désormais niveau ${levelName} ! MZ+ change vraiment la donne pour moi.`,
+    `⚡️ Boom ! Niveau ${levelName} dans la poche. Je monte en puissance de jour en jour !`
   ];
   return messages;
 };
 
 export const generateWhatsAppLink = (message: string) => {
-  const encodedMessage = encodeURIComponent(message + "\n\nRejoins nous ici : https://chat.whatsapp.com/KlQpX9TS1MpEjysyOSwMrd");
+  const appUrl = window.location.origin;
+  const encodedMessage = encodeURIComponent(`${message}\n\nVoir mon évolution sur MZ+ : ${appUrl}?tab=community`);
   return `https://wa.me/?text=${encodedMessage}`;
 };

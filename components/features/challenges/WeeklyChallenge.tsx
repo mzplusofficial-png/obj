@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Target, Clock, ArrowLeft, Users, CheckCircle2, ShoppingBag, BrainCircuit, Sparkles, PlayCircle, Star, Flame, Crown, X } from 'lucide-react';
+import { Trophy, Target, Clock, ArrowLeft, Users, CheckCircle2, ShoppingBag, BrainCircuit, Sparkles, PlayCircle, Star, Flame, Crown, X, Share2 } from 'lucide-react';
 import { UserProfile } from '../../../types';
 import { supabase } from '../../../services/supabase';
+import { shareEvolution, generateWhatsAppLink } from '../../../services/evolutionService';
 import confetti from 'canvas-confetti';
 
 const playSound = (type: 'correct' | 'wrong' | 'start' | 'finish') => {
@@ -351,6 +352,7 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
   const [claimingSales, setClaimingSales] = useState(false);
   const [claimingQuiz, setClaimingQuiz] = useState(false);
   const [claimingPremium, setClaimingPremium] = useState(false);
+  const [sharingMission, setSharingMission] = useState<string | null>(null);
   const [weeklySales, setWeeklySales] = useState(0);
   const [localTeamCount, setLocalTeamCount] = useState(teamCount);
   const [premiumTeamCount, setPremiumTeamCount] = useState(0);
@@ -453,6 +455,30 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
       supabase.removeChannel(teamChannel);
     };
   }, [profile.id, profile.referral_code]);
+
+  const handleShareMission = async (title: string, xp: number) => {
+    if (!profile) return;
+    setSharingMission(title);
+    try {
+      const message = `🔥 Mission accomplie sur MZ+ : ${title} ! J'ai remporté +${xp} XP bonus. L'ascension continue ! 🚀`;
+      
+      await shareEvolution({
+        user_id: profile.id,
+        user_name: profile.full_name || profile.username,
+        user_avatar: profile.avatar_url,
+        type: 'achievement_unlocked',
+        new_level: title,
+        message: message
+      });
+
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, '_blank');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSharingMission(null);
+    }
+  };
 
   const handleClaim = async () => {
     if (claiming || questClaimed || localTeamCount < targetCount) return;
@@ -749,9 +775,23 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                 )}
                 
                 {questClaimed ? (
-                   <div className="w-full py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
-                      <CheckCircle2 size={18} />
-                      Mission Accomplie
+                   <div className="flex gap-2">
+                     <div className="flex-1 py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
+                        <CheckCircle2 size={18} />
+                        Validé
+                     </div>
+                     <button
+                        onClick={() => handleShareMission('Le Recruteur', xpReward)}
+                        disabled={!!sharingMission}
+                        className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
+                     >
+                        {sharingMission === 'Le Recruteur' ? (
+                          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Share2 size={16} />
+                        )}
+                        <span className="text-[10px] font-black uppercase">Partager</span>
+                     </button>
                    </div>
                 ) : !inviteStarted ? (
                    <button
@@ -814,9 +854,23 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                 )}
                 
                 {salesQuestClaimed ? (
-                   <div className="w-full py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
-                      <CheckCircle2 size={18} />
-                      Mission Accomplie
+                   <div className="flex gap-2">
+                     <div className="flex-1 py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
+                        <CheckCircle2 size={18} />
+                        Validé
+                     </div>
+                     <button
+                        onClick={() => handleShareMission("Vendeur d'Élite", xpRewardSales)}
+                        disabled={!!sharingMission}
+                        className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
+                     >
+                        {sharingMission === "Vendeur d'Élite" ? (
+                          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Share2 size={16} />
+                        )}
+                        <span className="text-[10px] font-black uppercase">Partager</span>
+                     </button>
                    </div>
                 ) : !salesStarted ? (
                    <button
@@ -879,9 +933,23 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                 )}
                 
                 {premiumQuestClaimed ? (
-                   <div className="w-full py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
-                      <CheckCircle2 size={18} />
-                      Mission Accomplie
+                   <div className="flex gap-2">
+                     <div className="flex-1 py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
+                        <CheckCircle2 size={18} />
+                        Validé
+                     </div>
+                     <button
+                        onClick={() => handleShareMission('Manager Pro', xpRewardPremium)}
+                        disabled={!!sharingMission}
+                        className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
+                     >
+                        {sharingMission === 'Manager Pro' ? (
+                          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Share2 size={16} />
+                        )}
+                        <span className="text-[10px] font-black uppercase">Partager</span>
+                     </button>
                    </div>
                 ) : !premiumStarted ? (
                    <button
@@ -929,9 +997,23 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                 </div>
 
                 {quizQuestClaimed ? (
-                   <div className="w-full py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
-                      <CheckCircle2 size={18} />
-                      Expertise Validée
+                   <div className="flex gap-2">
+                     <div className="flex-1 py-3 rounded-xl bg-green-500/10 text-green-400 font-black uppercase tracking-wide flex items-center justify-center gap-2 border border-green-500/20">
+                        <CheckCircle2 size={18} />
+                        Validé
+                     </div>
+                     <button
+                        onClick={() => handleShareMission('Expert MZ+', quizScore)}
+                        disabled={!!sharingMission}
+                        className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
+                     >
+                        {sharingMission === 'Expert MZ+' ? (
+                          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Share2 size={16} />
+                        )}
+                        <span className="text-[10px] font-black uppercase">Partager</span>
+                     </button>
                    </div>
                 ) : quizFinished ? (
                    <div className="animate-in zoom-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center py-8 bg-black/40 rounded-2xl border border-purple-500/30 backdrop-blur-md">

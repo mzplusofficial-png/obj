@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Target, Zap, Rocket, X, CheckCircle2, Flame, Droplets, Crown } from 'lucide-react';
+import { Target, Zap, Rocket, X, CheckCircle2, Flame, Droplets, Crown, Share2 } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
+import { UserProfile } from '../../../types.ts';
+import { shareEvolution, generateWhatsAppLink } from '../../../services/evolutionService.ts';
 
 interface ChallengePresentationProps {
   isVisible: boolean;
@@ -10,13 +12,40 @@ interface ChallengePresentationProps {
   mode?: 'intro' | 'celebration' | 'day2_intro' | 'day3_intro' | 'day2_fail_intro';
   completedStep?: number;
   hasFailedDay2?: boolean;
+  profile?: UserProfile | null;
 }
 
-export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ isVisible, onAccept, onClose, mode = 'intro', completedStep = 0, hasFailedDay2 = false }) => {
+export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ isVisible, onAccept, onClose, mode = 'intro', completedStep = 0, hasFailedDay2 = false, profile }) => {
   const [typedText, setTypedText] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
   const [typedText2, setTypedText2] = useState("");
   const fullText = "Hey 🙋‍♂️..j'ai un défi pour toi ";
   const [showContent, setShowContent] = useState(false);
+  
+  const handleShareChallenge = async () => {
+    if (!profile) return;
+    setIsSharing(true);
+    try {
+      const message = `🔥 Je viens de valider le Jour ${completedStep} du Défi 3 Jours sur MZ+ ! Ce n'est que le début de l'ascension. 🚀`;
+      
+      await shareEvolution({
+        user_id: profile.id,
+        user_name: profile.full_name || profile.username,
+        user_avatar: profile.avatar_url,
+        type: 'achievement_unlocked',
+        new_level: `Défi J${completedStep}`,
+        message: message
+      });
+
+      // Auto open WhatsApp
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, '_blank');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSharing(false);
+    }
+  };
   const getInitialStep = () => {
     if (mode === 'celebration') return 'timeline';
     if (mode === 'day2_intro') return 'day2_intro_screen';
@@ -652,8 +681,9 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                       </div>
 
                       {mode === 'celebration' && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
+                        <>
+                          <motion.div
+                              initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 2.5 }}
                             className="w-full mt-4 mb-2 text-left bg-[#111] border border-[var(--color-gold-main)]/20 rounded-2xl p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative overflow-hidden"
@@ -699,6 +729,20 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                               )}
                             </div>
                           </motion.div>
+                          
+                          <button
+                            onClick={handleShareChallenge}
+                            disabled={isSharing}
+                            className="w-full mt-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-emerald-500/20 active:scale-95 disabled:opacity-50 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                          >
+                            {isSharing ? (
+                              <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Share2 size={16} />
+                            )}
+                            {isSharing ? 'PARTAGE EN COURS...' : 'PARTAGER SUR WHATSAPP'}
+                          </button>
+                        </>
                       )}
 
                       <motion.div 
