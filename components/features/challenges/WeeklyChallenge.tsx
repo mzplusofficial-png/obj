@@ -727,7 +727,7 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         <h3 className="text-white font-black text-lg leading-tight uppercase tracking-tight">Le Recruteur</h3>
                         <span className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase px-2 py-1 rounded-full border border-blue-500/20">+{xpReward} XP</span>
                       </div>
-                      <p className="text-neutral-400 text-sm mt-1">Invite {targetCount} amis à nous rejoindre grâce à ton code de partage et gagne {xpReward} points de bonus.</p>
+                      <p className="text-neutral-400 text-sm mt-1">Invite {targetCount} amis à rejoindre ton équipe grâce à ton code de parrainage et gagne {xpReward} points de bonus.</p>
                    </div>
                 </div>
                 
@@ -857,7 +857,7 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         <h3 className="text-white font-black text-lg leading-tight uppercase tracking-tight">Le Manager Pro</h3>
                         <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase px-2 py-1 rounded-full border border-emerald-500/20">+{xpRewardPremium} XP</span>
                       </div>
-                      <p className="text-neutral-400 text-sm mt-1">Fais passer {targetPremium} de tes membres au statut MZ+ Premium cette semaine et gagne {xpRewardPremium} points de bonus !</p>
+                      <p className="text-neutral-400 text-sm mt-1">Fais passer {targetPremium} membres de ton équipe au statut MZ+ Premium cette semaine et gagne {xpRewardPremium} points de bonus !</p>
                    </div>
                 </div>
                 

@@ -15,8 +15,7 @@ import {
   UpgradeTab, 
   SuggestionsTab,
   GuidesTab,
-  ProfileTab,
-  BonusTab
+  ProfileTab
 } from './components/DashboardTabs.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { RankRewardChecker } from './components/features/rank-rewards/RankRewardChecker.tsx';
@@ -50,6 +49,7 @@ import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 
 import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
+import { getBonusContent } from './components/features/formation/bonusContentData.ts';
 
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
@@ -1397,7 +1397,6 @@ const App: React.FC = () => {
       {(activeTab === 'affiliation' || activeTab === 'catalog') && <MyStore profile={userProfile} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
       {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
       {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
-      {activeTab === 'bonus' && <BonusTab profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'rpa' && (
         <RPADashboard 

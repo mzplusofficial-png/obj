@@ -35,7 +35,6 @@ import {
 } from "./UI.tsx";
 import { supabase } from "../services/supabase.ts";
 import { AcademieMain } from "./features/formation/AcademieMain.tsx";
-import { BonusMain } from "./features/bonus/BonusMain.tsx";
 import { RpaDashboard } from "./features/rpa/RpaDashboard.tsx";
 import { CoachingDashboard } from "./features/coaching/CoachingDashboard.tsx";
 import { ReferralDashboard } from "./features/referral/ReferralDashboard.tsx";
@@ -53,25 +52,30 @@ import {
 import { Download, Gift } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 
-import { getBonusContent } from "./features/bonus/bonusContentData.ts";
+import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
-const UserRewardsSection: React.FC<{ 
-  profile: UserProfile | null;
-  onSwitchTab: (id: TabId) => void 
-}> = ({
+const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
   profile,
-  onSwitchTab,
 }) => {
   const [rewards, setRewards] = useState<{reward: any, id: string}[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const [lastViewedRewards] = useState<string[]>(() => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [lastViewedRewards, setLastViewedRewards] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem("mz_read_rewards") || "[]");
     } catch { return []; }
   });
 
   const unreadCount = rewards.filter(r => !lastViewedRewards.includes(r.id)).length;
+
+  useEffect(() => {
+    if (isOpen) {
+      const newRead = Array.from(new Set([...lastViewedRewards, ...rewards.map(r => r.id)]));
+      setLastViewedRewards(newRead);
+      localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
+    }
+  }, [isOpen, rewards, lastViewedRewards]);
 
   useEffect(() => {
     if (!profile) return;
@@ -91,6 +95,17 @@ const UserRewardsSection: React.FC<{
     fetchMyRewards();
   }, [profile]);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (loading)
     return (
       <div className="flex flex-col items-center justify-center p-2 transition-all">
@@ -100,8 +115,9 @@ const UserRewardsSection: React.FC<{
 
 
   return (
-    <button
-      onClick={() => onSwitchTab('bonus')}
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
         className="flex flex-col items-center justify-center p-2 transition-all group relative"
       >
         {unreadCount > 0 && (
@@ -120,11 +136,133 @@ const UserRewardsSection: React.FC<{
           ({rewards.length}) Obtenus
         </span>
       </button>
-    );
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="relative w-full h-full md:h-[85vh] md:max-w-2xl bg-[#0a0a09] md:rounded-[2.5rem] shadow-[0_0_100px_rgba(168,85,247,0.15)] flex flex-col">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111] z-10 sticky top-0">
+              <div className="flex items-center gap-3">
+                <Gift size={24} className="text-purple-500" />
+                <h3 className="text-2xl font-black text-white">Mes Bonus</h3>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {(() => {
+                const validRewards = rewards.filter((r) => r.reward != null);
+                
+                return validRewards.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-24 px-8 h-full">
+                    <div className="relative mb-10">
+                      <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full" />
+                      <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full flex items-center justify-center border border-purple-500/20">
+                        <Gift size={40} className="text-purple-400 opacity-60 animate-pulse" />
+                      </div>
+                    </div>
+                    <h4 className="text-white font-black text-2xl uppercase tracking-widest mb-4">Tes Bonus t'attendent</h4>
+                    <p className="text-neutral-400 text-sm leading-relaxed max-w-sm mb-8">
+                      Continue d'évoluer et de franchir les paliers pour débloquer des bonus exclusifs MZ+.
+                    </p>
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
+                    >
+                      Compris, je fonce !
+                    </button>
+                  </div>
+              ) : (
+                validRewards.map((userReward) => {
+                  const rw = userReward.reward;
+                  const isUrl =
+                    rw.file_url?.startsWith("http") &&
+                    !rw.file_url.includes(" ");
+
+                  return (
+                    <div
+                      key={userReward.id}
+                      className="relative group w-full p-5 rounded-[2.5rem] bg-[#1a1a1a] border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer overflow-hidden flex items-center gap-5 shadow-2xl hover:bg-[#222]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        
+                        const bonusFallback = getBonusContent(rw.id, rw.title);
+                        // Prioritize: 1. Hardcoded fallback, 2. Long file_url (markdown), 3. Description
+                        const textContent = bonusFallback || 
+                                           (!isUrl && rw.file_url && rw.file_url.length > 50 ? rw.file_url : null) || 
+                                           rw.description || 
+                                           (isUrl ? "" : rw.file_url) || "";
+                        
+                        if (textContent.length > 10 || !isUrl) {
+                          window.dispatchEvent(new CustomEvent('mz-open-reward-content', {
+                            detail: {
+                              title: rw.title,
+                              text: textContent || rw.file_url || rw.description || "Aucun contenu disponible.",
+                              id: rw.id,
+                              imageUrl: rw.image_url
+                            }
+                          }));
+                          setIsOpen(false);
+                        } else if (isUrl) {
+                          window.open(rw.file_url, "_blank");
+                        }
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      {rw.image_url ? (
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+                          <img
+                            src={rw.image_url}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600/20 to-amber-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                          {isUrl ? (
+                            <Download size={24} />
+                          ) : (
+                            <BookOpen size={24} />
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <h4 className="font-bold text-white text-base line-clamp-1">
+                          {rw.title}
+                        </h4>
+                        <p className="text-[10px] sm:text-xs text-neutral-400 uppercase font-black tracking-widest mt-1">
+                          {isUrl ? "Kit Premium" : "Bonus Interne"}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-full text-neutral-400 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+                        {isUrl ? (
+                          <Download size={18} />
+                        ) : (
+                          <ChevronRight size={18} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              );
+            })()}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
-
-
-
 
 type HubCategory = "main" | "business" | "academy" | "community";
 
@@ -291,7 +429,7 @@ export const GlobalView: React.FC<any> = ({
       }
     } else {
       navigator.clipboard.writeText(shareText);
-      alert("Message d'invitation copié !");
+      alert("Message de parrainage copié !");
     }
   };
 
@@ -299,7 +437,7 @@ export const GlobalView: React.FC<any> = ({
     const baseUrl = window.location.origin;
     const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || "elite"}`;
     navigator.clipboard.writeText(shareUrl);
-    alert("Lien de partage copié !");
+    alert("Lien de parrainage copié !");
   };
 
   const renderCategoryDetails = () => {
@@ -1226,7 +1364,7 @@ export const ProfileTab: React.FC<any> = ({
           </span>
         </button>
 
-        <UserRewardsSection profile={profile} onSwitchTab={onSwitchTab} />
+        <UserRewardsSection profile={profile} />
       </div>
 
       {isChallengeActive && (
@@ -1291,10 +1429,6 @@ export const RPADashboard: React.FC<any> = ({
 
 export const CoachingTab: React.FC<any> = ({ profile, onSwitchTab }) => (
   <CoachingDashboard profile={profile} onSwitchTab={onSwitchTab} />
-);
-
-export const BonusTab: React.FC<any> = ({ profile, onSwitchTab }) => (
-  <BonusMain profile={profile} onSwitchTab={onSwitchTab} />
 );
 
 export const FormationTab: React.FC<any> = ({ profile, onSwitchTab }) => (

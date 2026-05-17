@@ -13,8 +13,7 @@ import {
   User,
   Coins,
   ArrowDown,
-  Menu,
-  Gift
+  Menu
 } from 'lucide-react';
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
@@ -97,7 +96,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { id: 'axis' as TabId, label: 'Axis AI', icon: Sparkles },
     { id: 'profile' as TabId, label: 'Mon Profil Élite', icon: User },
     { id: 'revenus' as TabId, label: 'Trésorerie & Gains', icon: Coins },
-    { id: 'bonus' as TabId, label: 'Mes Bonus Élite', icon: Gift },
     { id: 'recompense' as TabId, label: "L'Arène Élite", icon: Trophy },
     { id: 'guides' as TabId, label: 'Guides & Aide', icon: HelpCircle },
   ];
