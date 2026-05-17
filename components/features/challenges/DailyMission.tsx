@@ -254,7 +254,7 @@ export const DailyMission: React.FC<DailyMissionProps> = ({ onSwitchTab, profile
     checkMission(); // Initial check
 
     return () => clearInterval(timer);
-  }, [mission, profile, missionStatus.completed, isVerified]);
+  }, [mission, profile?.id, missionStatus.completed, isVerified]);
 
   const MissionIcon = mission.icon;
 

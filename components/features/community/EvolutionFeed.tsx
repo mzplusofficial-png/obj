@@ -50,7 +50,7 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
     checkPendingShares();
 
     return () => unsubscribe();
-  }, [profile]);
+  }, [profile?.id, profile?.rank_name, JSON.stringify(profile?.store_preferences?.challenge_3j)]);
 
   const handleShareCurrentRank = async () => {
     if (!profile || isSharing || !canShareLevel) return;

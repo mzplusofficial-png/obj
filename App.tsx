@@ -51,7 +51,7 @@ import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProg
 import { LevelUpCelebration } from './components/features/community/LevelUpCelebration.tsx';
 import { EvolutionShareModal } from './components/features/community/EvolutionShareModal.tsx';
 
-import { TextFormationReader } from './components/features/formation/TextFormationReader.tsx';
+import { BonusContentReader } from './components/features/bonus/BonusContentReader.tsx';
 import { getBonusContent } from './components/features/formation/bonusContentData.ts';
 
 const ADMIN_EMAILS = [
@@ -106,7 +106,7 @@ const App: React.FC = () => {
   const [challengeCelebratedStep, setChallengeCelebratedStep] = useState(1);
   const [showDay2UpsellPopup, setShowDay2UpsellPopup] = useState(false);
   const [showDay2FailedUpsellPopup, setShowDay2FailedUpsellPopup] = useState(false);
-  const [bonusContent, setBonusContent] = useState<{ id: string; title: string; content: string } | null>(null);
+  const [bonusContent, setBonusContent] = useState<{ id: string; title: string; content: string; previewUrl?: string } | null>(null);
   
   const { triggerAxisMessage, hideAxis, setIsChatOpen, setChatUnlocked } = useAxis();
 
@@ -407,7 +407,7 @@ const App: React.FC = () => {
 
   // DB-Backed Challenge Update Helper
   const updateChallengeDB = useCallback(async (updates: Partial<NonNullable<UserProfile['store_preferences']>['challenge_3j']>) => {
-    if (!userProfile) return;
+    if (!userProfile?.id) return;
     const currentState = userProfile.store_preferences?.challenge_3j || {};
     const newState = { ...currentState, ...updates };
     const newPrefs = { ...(userProfile.store_preferences || {}), challenge_3j: newState };
@@ -437,7 +437,7 @@ const App: React.FC = () => {
     } catch (_err) {
       console.error(_err);
     }
-  }, [userProfile]);
+  }, [userProfile?.id]);
 
   // Handle Challenge Progression / Completion (J1 & J2)
   useEffect(() => {
@@ -495,7 +495,7 @@ const App: React.FC = () => {
     checkDailyChallenge();
     const interval = setInterval(checkDailyChallenge, 60000);
     return () => clearInterval(interval);
-  }, [userProfile, updateChallengeDB]); // Runs when userProfile (and nested challengeState) changes
+  }, [userProfile?.id, JSON.stringify(userProfile?.store_preferences?.challenge_3j), updateChallengeDB]); // Runs when userProfile (and nested challengeState) changes
 
   useEffect(() => {
     const handleProductAdded = () => {
@@ -619,7 +619,7 @@ const App: React.FC = () => {
        window.removeEventListener('mz-reset-challenge', handleResetChallenge);
        window.removeEventListener('mz-test-day2-fail', handleTestDay2Fail);
     };
-  }, [userProfile, updateChallengeDB]); // Add dependency on userProfile so the DB helpers get latest state!
+  }, [userProfile?.id, JSON.stringify(userProfile?.store_preferences?.challenge_3j), updateChallengeDB]); // Add dependency on identifiers so hooks get latest state!
 
   useEffect(() => {
     const handleFormationCompleted = (e: Event) => {
@@ -1030,14 +1030,14 @@ const App: React.FC = () => {
   }, [session]);
 
   useEffect(() => {
-    if (session && userProfile && !localStorage.getItem('mz_guide_completed')) {
+    if (session && userProfile?.id && !localStorage.getItem('mz_guide_completed')) {
       const timer = setTimeout(() => {
         setIsGuideActive(true);
         localStorage.setItem('mz_guide_completed', 'true');
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [session, userProfile]);
+  }, [session, userProfile?.id]);
 
   // Sync PWA Branding from Database
   useEffect(() => {
@@ -1185,7 +1185,7 @@ const App: React.FC = () => {
     window.addEventListener('close-product-details', handleCloseProduct);
 
     const handleOpenReward = (e: any) => {
-      const { rewardId, id, text, content, title } = e.detail || {};
+      const { rewardId, id, text, content, title, imageUrl } = e.detail || {};
       const actualId = rewardId || id;
       const actualContent = text || content || (actualId ? getBonusContent(actualId, title) : null);
       
@@ -1193,7 +1193,8 @@ const App: React.FC = () => {
         setBonusContent({
           id: actualId || 'dynamic-reward',
           title: title || "CONTENU BONUS ÉLITE",
-          content: actualContent
+          content: actualContent,
+          previewUrl: imageUrl
         });
       }
     };
@@ -1762,16 +1763,18 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {bonusContent && (
-        <TextFormationReader 
-          title={bonusContent.title}
-          content={bonusContent.content}
-          formationId={bonusContent.id}
-          type="bonus"
-          onClose={() => setBonusContent(null)}
-          onComplete={() => {}}
-        />
-      )}
+      <AnimatePresence>
+        {bonusContent && (
+          <BonusContentReader 
+            title={bonusContent.title}
+            content={bonusContent.content}
+            bonusId={bonusContent.id}
+            previewUrl={bonusContent.previewUrl}
+            onClose={() => setBonusContent(null)}
+            onComplete={() => {}}
+          />
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };

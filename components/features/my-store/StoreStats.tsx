@@ -65,7 +65,7 @@ export const StoreStats: React.FC<StoreStatsProps> = ({ profile, initialProductI
          supabase.removeChannel(channel);
        };
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   // Stats derivations
   const filteredCommissionsByDate = useMemo(() => {

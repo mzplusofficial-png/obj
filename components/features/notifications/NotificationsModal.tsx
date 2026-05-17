@@ -17,7 +17,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
     } else {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   const fetchNotifications = async () => {
     try {

@@ -67,18 +67,27 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
     } catch { return []; }
   });
 
-  const unreadCount = rewards.filter(r => !lastViewedRewards.includes(r.id)).length;
+  const unreadCount = rewards.filter(r => r && r.id && !lastViewedRewards.includes(r.id)).length;
 
   useEffect(() => {
-    if (isOpen) {
-      const newRead = Array.from(new Set([...lastViewedRewards, ...rewards.map(r => r.id)]));
-      setLastViewedRewards(newRead);
-      localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
+    if (isOpen && rewards.length > 0) {
+      setLastViewedRewards(prev => {
+        const rewardIds = rewards.filter(r => r && r.id).map(r => r.id);
+        if (rewardIds.length === 0) return prev;
+        
+        const hasNewRead = rewardIds.some(id => !prev.includes(id));
+        
+        if (!hasNewRead) return prev;
+        
+        const newRead = Array.from(new Set([...prev, ...rewardIds]));
+        localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
+        return newRead;
+      });
     }
-  }, [isOpen, rewards, lastViewedRewards]);
+  }, [isOpen, rewards.length]); // Use length as dependency for stability
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile?.id) return;
     const fetchMyRewards = async () => {
       try {
         const { data, error } = await supabase
@@ -93,7 +102,7 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
       }
     };
     fetchMyRewards();
-  }, [profile]);
+  }, [profile?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -159,30 +168,35 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
               {(() => {
-                const validRewards = rewards.filter((r) => r.reward != null);
+                const validRewards = rewards.filter((r) => r && r.reward != null);
                 
-                return validRewards.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-24 px-8 h-full">
-                    <div className="relative mb-10">
-                      <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full" />
-                      <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full flex items-center justify-center border border-purple-500/20">
-                        <Gift size={40} className="text-purple-400 opacity-60 animate-pulse" />
+                if (!validRewards || validRewards.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center text-center py-24 px-8 h-full">
+                      <div className="relative mb-10">
+                        <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full" />
+                        <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full flex items-center justify-center border border-purple-500/20">
+                          <Gift size={40} className="text-purple-400 opacity-60 animate-pulse" />
+                        </div>
                       </div>
+                      <h4 className="text-white font-black text-2xl uppercase tracking-widest mb-4">Aucun bonus pour le moment</h4>
+                      <p className="text-neutral-400 text-sm leading-relaxed max-w-sm mb-8">
+                        Continue d'évoluer et de franchir les paliers pour débloquer des bonus exclusifs MZ+ Elite.
+                      </p>
+                      <button 
+                        onClick={() => setIsOpen(false)}
+                        className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
+                      >
+                        Compris, je fonce !
+                      </button>
                     </div>
-                    <h4 className="text-white font-black text-2xl uppercase tracking-widest mb-4">Tes Bonus t'attendent</h4>
-                    <p className="text-neutral-400 text-sm leading-relaxed max-w-sm mb-8">
-                      Continue d'évoluer et de franchir les paliers pour débloquer des bonus exclusifs MZ+.
-                    </p>
-                    <button 
-                      onClick={() => setIsOpen(false)}
-                      className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
-                    >
-                      Compris, je fonce !
-                    </button>
-                  </div>
-              ) : (
-                validRewards.map((userReward) => {
+                  );
+                }
+
+                return validRewards.map((userReward) => {
                   const rw = userReward.reward;
+                  if (!rw) return null;
+
                   const isUrl =
                     rw.file_url?.startsWith("http") &&
                     !rw.file_url.includes(" ");
@@ -254,8 +268,7 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
                     </div>
                   );
                 })
-              );
-            })()}
+              })()}
             </div>
           </div>
         </div>
@@ -1174,10 +1187,10 @@ export const ProfileTab: React.FC<any> = ({
   const [isAlreadyShared, setIsAlreadyShared] = useState(false);
 
   useEffect(() => {
-    if (!profile || !lastCompletedDay) return;
+    if (!profile?.id || !lastCompletedDay) return;
     checkIfAchievementShared(profile.id, `Défi J${lastCompletedDay}`)
       .then(shared => setIsAlreadyShared(shared));
-  }, [profile, lastCompletedDay]);
+  }, [profile?.id, lastCompletedDay]);
 
   const handleShare = async () => {
     if (!profile || !lastCompletedDay) return;

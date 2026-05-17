@@ -312,7 +312,7 @@ export const MyStore: React.FC<MyStoreProps> = ({
     if (profile?.store_preferences) {
       setStorePreferences(profile.store_preferences);
     }
-  }, [profile]);
+  }, [JSON.stringify(profile?.store_preferences)]);
 
   // Stats derivations
   const totalVisits = useMemo(() => {
@@ -472,7 +472,7 @@ export const MyStore: React.FC<MyStoreProps> = ({
         supabase.removeChannel(channel);
       };
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   const fetchData = async () => {
     try {

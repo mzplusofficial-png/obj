@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   MessageCircle,
   Check,
+  BookOpen,
 } from "lucide-react";
 import { supabase } from "../../../services/supabase.ts";
 import { QuestionAnswerSection } from "./QuestionAnswerSection.tsx";
@@ -15,7 +16,7 @@ interface TextFormationReaderProps {
   title: string;
   content: string;
   onClose: () => void;
-  onComplete: () => void;
+  onComplete?: () => void;
   formationId?: string;
   isAdmin?: boolean;
   previewUrl?: string;
@@ -144,7 +145,7 @@ export const TextFormationReader: React.FC<TextFormationReaderProps> = ({
     setMarkedAsDone(true);
     triggerXPIfNeeded(true);
     setTimeout(() => {
-      onComplete();
+      if (onComplete) onComplete();
       onClose();
     }, 1500);
   };

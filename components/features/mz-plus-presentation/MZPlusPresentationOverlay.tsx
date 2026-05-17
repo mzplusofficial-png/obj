@@ -38,7 +38,7 @@ export const MZPlusPresentationOverlay: React.FC<{ profile: any; onUpgrade: () =
       }
     };
     fetchConfig();
-  }, [profile]);
+  }, [profile?.id]);
 
   useEffect(() => {
     if (!config?.ends_at) return;
