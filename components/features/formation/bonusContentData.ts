@@ -82,7 +82,7 @@ TikTok offre une **portée organique massive**. Cette plateforme permet de perce
 
 ## 🤖 Chapitre 2 : Votre Studio Invisible grâce à l'IA
 
-L'Intelligence Artificielle est votre super-pouvoir. Elle transforme votre smartphone en studio pro.
+L'Intelligence Artificielle est votre super-pouvoir. Elle transforme votre smartphone en studio de production professionnel.
 
 ### 🛠️ Les Outils Indispensables :
 *   🎬 **CapCut :** Pour un montage dynamique et des sous-titres stylés.
@@ -117,61 +117,140 @@ Chez **MZ+**, nous sommes une famille. Nous avançons ensemble vers la liberté.
 **Passez à l'action dès aujourd'hui. L'aventure ne fait que commencer !** 🚀🌍✨
 `,
 
-  "0cefd505-4984-427a-84cd-e9e24a5368c6": `# 🎬 TikTok Sans Visage : Multipliez Vos Ventes avec l'IA
+  "0cefd505-4984-427a-84cd-e9e24a5368c6": `# TikTok Sans Visage : Multipliez Vos Ventes avec l’IA et l’Énergie MZ+
 
-### 🌟 Bienvenue, futur maître de TikTok !
-Ce guide est votre étincelle pour conquérir le monde digital. Chez **MZ+**, nous ne nous contentons pas de rêver ; nous agissons.
+### Introduction : L'Éveil du Maître de TikTok
 
-Oubliez les idées reçues ! Vous n'avez pas besoin de montrer votre visage pour cartonner. Utilisez la puissance de l'**IA** pour créer des vidéos captivantes.
-
----
-
-## 📈 Chapitre 1 : Le Phénomène "Sans Visage"
-
-TikTok offre une **portée organique massive**. Cette plateforme permet de percer quel que soit votre nombre d'abonnés.
-
-### 💡 Pourquoi ça marche ?
-*   🚀 **Visibilité :** Algorithme puissant et viral.
-*   🛡️ **Liberté :** Vous vous concentrez uniquement sur la valeur du message.
-*   🤝 **Connexion :** Ce sont vos conseils qui créent le lien, pas votre look.
+Bienvenue, futur maître de TikTok ! Si vous tenez ce guide, c’est que vous avez l’ambition de transformer votre potentiel en succès. Chez MZ+, nous construisons un avenir où la liberté financière est à portée de main pour chaque jeune Africain. Oubliez les idées reçues : vous n’avez pas besoin de montrer votre visage pour cartonner. Ce guide est votre plan d’action concret pour maîtriser l’art de la vente sur TikTok grâce à l’IA. L’aventure commence MAINTENANT.
 
 ---
 
-## 🤖 Chapitre 2 : Votre Studio Invisible grâce à l'IA
+### Chapitre 1 : Le Phénomène TikTok Sans Visage
 
-L'Intelligence Artificielle est votre super-pouvoir. Elle transforme votre smartphone en studio pro.
+TikTok est une mine d’or pour les entrepreneurs avisés. Vous pouvez y réussir brillamment sans jamais apparaître à l’écran, ce qui libère de la pression de l’apparence et permet de se concentrer uniquement sur la valeur.
 
-### 🛠️ Les Outils Indispensables :
-*   🎬 **CapCut :** Pour un montage dynamique et des sous-titres stylés.
-*   🎙️ **Voix IA :** Des voix ultra-réalistes qui parlent pour vous.
-*   🧠 **ChatGPT :** Pour rédiger des scripts qui captivent.
-*   🖼️ **Banques d'images :** Pour des visuels de haute qualité.
+#### Pourquoi TikTok est Votre Meilleur Allié
 
----
+| Avantage | Description |
+| :--- | :--- |
+| **Portée Organique** | Vos vidéos peuvent devenir virales du jour au lendemain, même avec peu d'abonnés. |
+| **Audience Engagée** | Les utilisateurs sont avides de contenu court, dynamique et informatif. |
+| **Créativité Totale** | Testez rapidement ce qui fonctionne sans limites techniques. |
+| **Anonymat & Liberté** | Votre message et votre produit deviennent les seules stars. |
 
-## 💰 Chapitre 3 : Transformer les Vues en Commissions
+#### Le Mindset du Créateur Invisible
 
-Le but ultime est la vente. Suivez ce tunnel simple :
-1.  **Hook :** Stopper le scroll immédiatement.
-2.  **Valeur :** Donner des conseils utiles et concrets.
-3.  **CTA :** Diriger vers votre boutique ou vos messages privés.
+Votre force réside dans votre capacité à résoudre les problèmes de votre audience. Focus sur la valeur : chaque vidéo doit éduquer, divertir ou inspirer. La régularité est la clé : publiez fréquemment, analysez et ajustez.
 
 ---
 
-## 💎 Chapitre 4 : L'Accélérateur MZ+ Premium
+### Chapitre 2 : Votre Studio Invisible (L’IA au Service de la Création)
 
-Pour ceux qui veulent passer de 35 000 à **350 000 FCFA**, le niveau Premium vous offre un pass VIP pour l'élite :
-*   🎓 **Formations de haut niveau**
-*   👥 **Cercle d'Elite MZ+**
-*   🚀 **Accompagnement VIP**
+L’IA est votre super-pouvoir pour transformer votre smartphone en studio de production professionnel.
+
+#### Les Outils Indispensables
+
+1.  **CapCut (Gratuit) :** L'outil de montage par excellence (sous-titres IA, effets, musique).
+2.  **ElevenLabs :** Pour des voix off humaines d'une qualité bluffante à partir de texte.
+3.  **ChatGPT / Gemini :** Vos assistants pour les scripts, les hooks et les légendes.
+4.  **Pexels / Pixabay :** Banques d'images et vidéos gratuites pour illustrer vos propos.
+5.  **Canva :** Pour créer des titres accrocheurs et des éléments graphiques.
+
+#### Processus de Création en 5 Étapes
+
+> "L'efficacité de l'IA réside dans la fluidité de la combinaison de ces outils."
+
+1.  **Script :** Demandez 5 idées percutantes à ChatGPT et rédigez un script de 30s.
+2.  **Voix Off :** Générez l'audio sur ElevenLabs avec une voix claire.
+3.  **Visuels :** Trouvez des clips dynamiques sur Pexels qui illustrent le script.
+4.  **Montage :** Assemblez le tout dans CapCut, ajoutez les sous-titres et une musique tendance.
+5.  **Finitions :** Intégrez des titres animés via Canva si nécessaire.
 
 ---
 
-## 🦁 Conclusion : Soyez le Lion de votre destin
+### Chapitre 3 : L’Art du Hook et de la Vidéo Captivante
 
-Chez **MZ+**, nous sommes une famille. Nous avançons ensemble vers la liberté.
+Sur TikTok, vous avez 3 secondes pour convaincre. L'attention est une denrée rare.
 
-**Passez à l'action dès aujourd'hui. L'aventure ne fait que commencer !** 🚀🌍✨
+#### Les Secrets d'une Vidéo Réussie
+
+*   **Rythme Dynamique :** Coupes rapides et transitions fluides. Évitez les plans fixes longs.
+*   **Texte Clair :** Des sous-titres faciles à lire qui renforcent le message.
+*   **Voix Expressive :** Même en IA, le ton doit être vivant et correspondre à l'énergie MZ+.
+*   **Appel à l’Action (CTA) :** Guidez subtilement vers le lien en bio ou les commentaires.
+
+#### Hooks Puissants (Exemples MZ+)
+
+| Type de Hook | Exemple Concret |
+| :--- | :--- |
+| **Question Provocatrice** | "Tu veux gagner de l'argent sur Insta sans montrer ton visage ?" |
+| **Révélation Choc** | "Le secret que personne ne te dit pour devenir libre financièrement." |
+| **Promesse de Résultat** | "J'ai généré 35 000 FCFA en 2 semaines. Voici comment..." |
+| **Briser un Mythe** | "Non, tu n'as pas besoin d'être influenceur pour vendre." |
+
+---
+
+### Chapitre 4 : Pièges à Éviter et Optimisation
+
+Ne tombez pas dans les erreurs classiques qui ruinent vos efforts.
+
+#### Les Erreurs Fatales
+
+1.  **Contenu Générique :** Sans visage, la valeur de votre contenu doit être irréprochable. Ne publiez pas "pour faire du bruit".
+2.  **Manque de Personnalité :** Créez un style reconnaissable (musiques, polices, ton).
+3.  **Négliger l'Algorithme :** Utilisez des hashtags pertinents (3 à 5) et publiez aux heures de pointe.
+4.  **Ignorer l'Interaction :** TikTok est social. Répondez aux commentaires et aux messages privés. C'est là que les ventes se font !
+
+---
+
+### Chapitre 5 : Maximiser Vos Ventes (Le Tunnel MZ+)
+
+Transformer des vues en commissions demande une stratégie de publication intelligente.
+
+#### La Stratégie de Publication Gagnante
+
+Utilisez toujours un son tendance (même à bas volume) et rédigez des légendes qui convertissent en posant des questions pour susciter l'intrigue.
+
+#### Le Tunnel de Conversion Simplifié
+
+1.  **Le Hook :** Stopper le scroll.
+2.  **La Valeur :** Apporter une solution ou une astuce.
+3.  **Le CTA :** Diriger vers le "Lien en Bio".
+4.  **La Page de Vente :** Une page claire qui réitère les bénéfices de l'ebook.
+5.  **Le Suivi :** Proposez un contact WhatsApp pour rassurer et conclure la vente.
+
+---
+
+### MZ+ Premium : Accélérez Votre Succès avec l'Accompagnement d'Experts
+
+Vous avez les clés, vous maîtrisez les outils, mais si vous souhaitez transformer l'essai en coup de maître, MZ+ Premium est votre accélérateur de succès. Imaginez un accompagnement sur mesure, des stratégies affûtées par des experts qui vivent et respirent TikTok, et un accès privilégié à des connaissances qui propulseront vos ventes à des sommets inégalés.
+
+#### Pourquoi MZ+ Premium est Votre Prochain Mouvement Stratégique ?
+
+*   **Accompagnement Personnalisé :** Bénéficiez de l'expertise de mentors dédiés qui vous guideront pas à pas, de la création de contenu à l'optimisation de vos tunnels de vente.
+*   **Stratégies Avancées :** Accédez à des tactiques exclusives et des insights de marché que seuls les initiés connaissent, pour toujours avoir une longueur d'avance.
+*   **Communauté d'Élite :** Intégrez un cercle fermé d'entrepreneurs ambitieux, échangez, collaborez et grandissez ensemble avec l'énergie MZ+.
+*   **Résultats Multipliés :** Ne laissez plus rien au hasard. Avec un soutien expert, chaque action est optimisée pour maximiser votre retour sur investissement et atteindre vos objectifs financiers plus rapidement.
+
+> "La différence entre un bon créateur et un maître de TikTok réside souvent dans la qualité de son accompagnement. Ne vous contentez pas d'apprendre, excellez !"
+
+Prêt à passer à la vitesse supérieure ? Rejoignez MZ+ Premium et faites de TikTok votre machine à cash personnelle, avec la certitude d'être guidé par les meilleurs.
+
+---
+
+### Chapitre 6 : L’Énergie MZ+ et la Route vers le Succès
+
+La technique est importante, mais votre détermination fera la différence. Rejoindre MZ+, c'est rejoindre un mouvement de bâtisseurs.
+
+#### Vos Prochaines Étapes
+
+*   **Passez à l'action immédiatement :** Ne cherchez pas la perfection, cherchez la progression.
+*   **Apprenez de vos données :** Regardez ce qui marche et doublez la mise.
+*   **Restez connecté à la communauté :** L'énergie du groupe vous portera plus loin.
+
+Vous avez maintenant toutes les clés. Utilisez l'IA, restez invisible si vous le souhaitez, mais soyez présent par votre valeur. Le succès n'attend pas. Allez chercher votre liberté financière !
+
+**L'Énergie MZ+ est en vous. À vous de jouer !**
 `,
 
   "989af6ca-09e2-42cc-9e4b-56459ca04fad": `# 📚 La Vente d'Ebooks en Ligne : L'Essentiel pour Vendre via Chats Privés avec MZ+
@@ -234,7 +313,7 @@ Pour rester un membre respecté de l'élite MZ+, fuyez ces comportements :
 
 *   🚫 **Le Spam :** Ne harcelez jamais.
 *   🚫 **Le Vente Agressive :** Aidez, ne forcez pas.
-*   🚫 **Le Mensonge :** L'honnêteté est primordiale.
+*   🚫 **Le Mesonge :** L'honnêteté est primordiale.
 *   🚫 **L'Indifférence :** Écoutez vraiment votre prospect.
 *   🚫 **L'Abandon :** Un suivi respectueux peut tout changer.
 
@@ -366,7 +445,7 @@ export const getBonusContent = (id: string, title?: string): string | null => {
   
   const titleLower = title.toLowerCase();
   if (titleLower.includes('instagram') || titleLower.includes('réseaux') || titleLower.includes('reseau')) return BONUS_CONTENTS["104a85cd-91a1-4d17-89a0-a5c0b08248a8"];
-  if (titleLower.includes('tiktok') || titleLower.includes('visage') || titleLower.includes('ia')) return BONUS_CONTENTS["0cefd505-1234-5678-90ab-cdef12345678"];
+  if (titleLower.includes('tiktok') || titleLower.includes('visage') || titleLower.includes('ia')) return BONUS_CONTENTS["0cefd505-4984-427a-84cd-e9e24a5368c6"];
   if (titleLower.includes('ebook') || titleLower.includes('livre') || titleLower.includes('vente directe')) return BONUS_CONTENTS["989af6ca-09e2-42cc-9e4b-56459ca04fad"];
   if (titleLower.includes('équipe') || titleLower.includes('equipe') || titleLower.includes('team') || titleLower.includes('parrainage')) return BONUS_CONTENTS["7f2e17e8-cad6-49ca-949b-5fd9d7b87bf5"];
   

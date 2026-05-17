@@ -47,56 +47,44 @@ import {
   LiquidProgressionTube,
   getCurrentLevel,
 } from "./features/progression/LiquidProgressionTube.tsx";
-import { Download, Gift, Share2 as ShareIcon } from "lucide-react";
+import { Gift, Share2 as ShareIcon } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
 import { shareEvolution, generateWhatsAppLink, getRandomMessage, checkIfAchievementShared } from "../services/evolutionService.ts";
 
-import { getBonusContent } from "./features/formation/bonusContentData.ts";
+
 
 const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
   profile,
 }) => {
   const [rewards, setRewards] = useState<{reward: any, id: string}[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
 
-  const [lastViewedRewards, setLastViewedRewards] = useState<string[]>(() => {
+  const lastViewedRewards: string[] = (() => {
     try {
       return JSON.parse(localStorage.getItem("mz_read_rewards") || "[]");
     } catch { return []; }
-  });
+  })();
 
-  const unreadCount = rewards.filter(r => r && r.id && !lastViewedRewards.includes(r.id)).length;
-
-  useEffect(() => {
-    if (isOpen && rewards.length > 0) {
-      setLastViewedRewards(prev => {
-        const rewardIds = rewards.filter(r => r && r.id).map(r => r.id);
-        if (rewardIds.length === 0) return prev;
-        
-        const hasNewRead = rewardIds.some(id => !prev.includes(id));
-        
-        if (!hasNewRead) return prev;
-        
-        const newRead = Array.from(new Set([...prev, ...rewardIds]));
-        localStorage.setItem("mz_read_rewards", JSON.stringify(newRead));
-        return newRead;
-      });
-    }
-  }, [isOpen, rewards.length]); // Use length as dependency for stability
+  const unreadCount = rewards.filter(r => r && r.id && (r.reward || r.rank_rewards) && !lastViewedRewards.includes(r.id)).length;
 
   useEffect(() => {
     if (!profile?.id) return;
     const fetchMyRewards = async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from("user_rank_rewards")
           .select("*, reward:rank_rewards(*)")
-          .eq("user_id", profile.id)
-          .order("claimed_at", { ascending: false });
-        if (data) setRewards(data as any);
+          .eq("user_id", profile.id);
+
+        if (error) throw error;
+        setRewards((data || []).map((item: any) => ({
+          ...item,
+          reward: item.reward || item.rank_rewards
+        })));
       } catch (err) {
+        console.error("Error fetching rewards:", err);
       } finally {
         setLoading(false);
       }
@@ -104,176 +92,39 @@ const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
     fetchMyRewards();
   }, [profile?.id]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
+  const handleNavigate = () => {
+    window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'bonuses' }));
+  };
 
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center p-2 transition-all">
-        <div className="w-12 h-12 rounded-full bg-neutral-800/50 animate-pulse mb-2 border border-white/5"></div>
+      <div className="flex flex-col items-center justify-center p-2 opacity-50 relative">
+        <div className="w-12 h-12 rounded-full bg-neutral-800/50 animate-pulse border border-white/5"></div>
+        <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 mt-2">---</span>
       </div>
     );
 
-
   return (
-    <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex flex-col items-center justify-center p-2 transition-all group relative"
-      >
-        {unreadCount > 0 && (
-          <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.8)]"></span>
-          </div>
-        )}
-        <div className={`w-12 h-12 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-pink-500/20 transition-all ${unreadCount > 0 ? 'ring-2 ring-pink-500/50 ring-offset-2 ring-offset-black animate-pulse' : ''}`}>
-          <Gift size={20} className={unreadCount > 0 ? "text-pink-400 drop-shadow-[0_0_5px_rgba(244,114,182,0.8)]" : "text-neutral-500 opacity-50"} />
-        </div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
-          Bonus
-        </span>
-        <span className="text-[8px] font-bold uppercase tracking-widest text-pink-400/70 mt-0.5">
-          ({rewards.length}) Obtenus
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 animate-fade-in">
-          <div
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="relative w-full h-full md:h-[85vh] md:max-w-2xl bg-[#0a0a09] md:rounded-[2.5rem] shadow-[0_0_100px_rgba(168,85,247,0.15)] flex flex-col">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111] z-10 sticky top-0">
-              <div className="flex items-center gap-3">
-                <Gift size={24} className="text-purple-500" />
-                <h3 className="text-2xl font-black text-white">Mes Bonus</h3>
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {(() => {
-                const validRewards = rewards.filter((r) => r && r.reward != null);
-                
-                if (!validRewards || validRewards.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center text-center py-24 px-8 h-full">
-                      <div className="relative mb-10">
-                        <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full" />
-                        <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full flex items-center justify-center border border-purple-500/20">
-                          <Gift size={40} className="text-purple-400 opacity-60 animate-pulse" />
-                        </div>
-                      </div>
-                      <h4 className="text-white font-black text-2xl uppercase tracking-widest mb-4">Aucun bonus pour le moment</h4>
-                      <p className="text-neutral-400 text-sm leading-relaxed max-w-sm mb-8">
-                        Continue d'évoluer et de franchir les paliers pour débloquer des bonus exclusifs MZ+ Elite.
-                      </p>
-                      <button 
-                        onClick={() => setIsOpen(false)}
-                        className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl border border-white/10 transition-all"
-                      >
-                        Compris, je fonce !
-                      </button>
-                    </div>
-                  );
-                }
-
-                return validRewards.map((userReward) => {
-                  const rw = userReward.reward;
-                  if (!rw) return null;
-
-                  const isUrl =
-                    rw.file_url?.startsWith("http") &&
-                    !rw.file_url.includes(" ");
-
-                  return (
-                    <div
-                      key={userReward.id}
-                      className="relative group w-full p-5 rounded-[2.5rem] bg-[#1a1a1a] border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer overflow-hidden flex items-center gap-5 shadow-2xl hover:bg-[#222]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        
-                        const bonusFallback = getBonusContent(rw.id, rw.title);
-                        // Prioritize: 1. Hardcoded fallback, 2. Long file_url (markdown), 3. Description
-                        const textContent = bonusFallback || 
-                                           (!isUrl && rw.file_url && rw.file_url.length > 50 ? rw.file_url : null) || 
-                                           rw.description || 
-                                           (isUrl ? "" : rw.file_url) || "";
-                        
-                        if (textContent.length > 10 || !isUrl) {
-                          window.dispatchEvent(new CustomEvent('mz-open-reward-content', {
-                            detail: {
-                              title: rw.title,
-                              text: textContent || rw.file_url || rw.description || "Aucun contenu disponible.",
-                              id: rw.id,
-                              imageUrl: rw.image_url
-                            }
-                          }));
-                          setIsOpen(false);
-                        } else if (isUrl) {
-                          window.open(rw.file_url, "_blank");
-                        }
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                      {rw.image_url ? (
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-white/10 shrink-0">
-                          <img
-                            src={rw.image_url}
-                            alt=""
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600/20 to-amber-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                          {isUrl ? (
-                            <Download size={24} />
-                          ) : (
-                            <BookOpen size={24} />
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex-1">
-                        <h4 className="font-bold text-white text-base line-clamp-1">
-                          {rw.title}
-                        </h4>
-                        <p className="text-[10px] sm:text-xs text-neutral-400 uppercase font-black tracking-widest mt-1">
-                          {isUrl ? "Kit Premium" : "Bonus Interne"}
-                        </p>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-full text-neutral-400 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
-                        {isUrl ? (
-                          <Download size={18} />
-                        ) : (
-                          <ChevronRight size={18} />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              })()}
-            </div>
-          </div>
+    <button
+      onClick={handleNavigate}
+      className="flex flex-col items-center justify-center p-2 transition-all group relative active:scale-90"
+    >
+      {unreadCount > 0 && (
+        <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></span>
         </div>
       )}
-    </>
+      <div className={`w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-amber-500/20 transition-all ${unreadCount > 0 ? 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-black' : ''}`}>
+        <Gift size={20} className={unreadCount > 0 ? "text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" : "text-neutral-500 opacity-50"} />
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+        Bonus
+      </span>
+      <span className="text-[8px] font-bold uppercase tracking-widest text-amber-500/70 mt-0.5">
+        ({rewards.length}) Obtenus
+      </span>
+    </button>
   );
 };
 
@@ -628,7 +479,7 @@ export const GlobalView: React.FC<any> = ({
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-24 pt-10 px-5 relative min-h-screen font-sans">
+    <div className="max-w-xl mx-auto space-y-6 pb-24 pt-10 px-4 md:px-5 relative min-h-screen font-sans overflow-x-hidden">
       {/* GREETING */}
       <div className="flex items-end justify-between mb-8 mt-6">
         <div className="flex flex-col gap-1.5">
@@ -969,14 +820,14 @@ export const GlobalView: React.FC<any> = ({
           <div className="h-[1px] flex-1 ml-4 bg-[var(--color-border-gold)] opacity-20"></div>
         </div>
 
-        <div className="flex items-center justify-center gap-8 px-2 py-4">
+        <div className="flex items-center justify-around md:justify-center gap-2 md:gap-8 px-0 md:px-2 py-4">
           {categories.map((cat, idx) => (
             <motion.div
               key={cat.id}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 * idx, type: "spring" }}
-              className="flex flex-col items-center gap-3 active:scale-95 transition-transform"
+              className="flex flex-col items-center gap-3 active:scale-95 transition-transform min-w-0"
             >
               <button
                 id={cat.id === "business" ? "shop-category-btn" : undefined}
@@ -989,7 +840,7 @@ export const GlobalView: React.FC<any> = ({
                     setActiveCategory(cat.id as any);
                   }
                 }}
-                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl relative group transition-all duration-700 ease-out
+                className={`w-16 h-16 xs:w-20 xs:h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-2xl xs:text-3xl md:text-4xl relative group transition-all duration-700 ease-out
                   ${
                     cat.id === "business" && isShopHighlighted
                       ? "bg-gradient-to-br from-[#1A1814] to-[#C9A84C]/30 border-[3px] border-[#C9A84C] shadow-[0_0_60px_rgba(201,168,76,0.8)] scale-110 z-50 ring-4 ring-[#C9A84C]/50 ring-offset-4 ring-offset-[#0A0908]"
@@ -1002,7 +853,7 @@ export const GlobalView: React.FC<any> = ({
                   <>
                     <div className="absolute inset-0 rounded-full border-[2px] border-[#C9A84C] animate-[ping_2s_ease-in-out_infinite] opacity-100"></div>
                     <motion.div
-                      className="absolute -top-16 flex flex-col items-center pointer-events-none"
+                      className="absolute -top-14 flex flex-col items-center pointer-events-none"
                       initial={{ y: -10, opacity: 0 }}
                       animate={{ y: [0, 8, 0], opacity: 1 }}
                       transition={{
@@ -1014,26 +865,26 @@ export const GlobalView: React.FC<any> = ({
                         opacity: { duration: 0.3 },
                       }}
                     >
-                      <div className="bg-[#C9A84C] text-black font-black text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(201,168,76,0.6)]">
+                      <div className="bg-[#C9A84C] text-black font-black text-[9px] uppercase tracking-wider px-2 py-1 rounded-full shadow-[0_0_20px_rgba(201,168,76,0.6)] whitespace-nowrap">
                         Clique ici
                       </div>
-                      <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#C9A84C] mt-1"></div>
+                      <div className="w-0 h-0 border-l-[4px] border-r-[4px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#C9A84C] mt-0.5"></div>
                     </motion.div>
                   </>
                 )}
                 <div className="absolute inset-0 rounded-full bg-[var(--color-gold-main)]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                {cat.emoji}
+                <span className="shrink-0">{cat.emoji}</span>
                 {cat.badge && (
-                  <span className="absolute -top-1 -right-1 px-2 py-1 bg-[var(--color-gold-main)] text-black text-[7px] font-black rounded-full shadow-lg border border-black/10">
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[var(--color-gold-main)] text-black text-[6px] md:text-[7px] font-black rounded-full shadow-lg border border-black/10">
                     {cat.badge}
                   </span>
                 )}
               </button>
               <div className="text-center space-y-0.5">
-                <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-main)] drop-shadow-sm">
-                  {cat.title}
+                <span className="text-[9px] xs:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[var(--color-text-main)] drop-shadow-sm whitespace-nowrap">
+                  {cat.title.split(' ')[0]}
                 </span>
-                <p className="text-[8px] font-bold text-[var(--color-text-gray)] opacity-40 uppercase tracking-tighter">
+                <p className="text-[6px] xs:text-[7px] md:text-[8px] font-bold text-[var(--color-text-gray)] opacity-40 uppercase tracking-tighter truncate max-w-[60px] xs:max-w-[70px] md:max-w-none mx-auto">
                   {cat.desc}
                 </p>
               </div>

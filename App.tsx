@@ -51,6 +51,7 @@ import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProg
 import { LevelUpCelebration } from './components/features/community/LevelUpCelebration.tsx';
 import { EvolutionShareModal } from './components/features/community/EvolutionShareModal.tsx';
 
+import { BonusHub } from './components/features/bonus/BonusHub.tsx';
 import { BonusContentReader } from './components/features/bonus/BonusContentReader.tsx';
 import { getBonusContent } from './components/features/formation/bonusContentData.ts';
 
@@ -1185,7 +1186,13 @@ const App: React.FC = () => {
     window.addEventListener('close-product-details', handleCloseProduct);
 
     const handleOpenReward = (e: any) => {
-      const { rewardId, id, text, content, title, imageUrl } = e.detail || {};
+      const { rewardId, id, text, content, title, imageUrl, navigateOnly } = e.detail || {};
+      
+      if (navigateOnly) {
+        setActiveTab('bonuses');
+        return;
+      }
+
       const actualId = rewardId || id;
       const actualContent = text || content || (actualId ? getBonusContent(actualId, title) : null);
       
@@ -1413,6 +1420,7 @@ const App: React.FC = () => {
         onComplete={() => setIsRPAGuideActive(false)} 
       />
       {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
+      {activeTab === 'bonuses' && <BonusHub profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'community' && <CommunityTab profile={userProfile} />}
       {activeTab === 'live_withdrawals' && <LiveWithdrawalsView onBack={() => setActiveTab('dashboard')} />}
       {activeTab === 'axis' && <AxisChat profile={userProfile} onSwitchTab={setActiveTab} />}

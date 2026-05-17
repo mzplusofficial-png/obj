@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   LogOut, 
@@ -14,7 +14,8 @@ import {
   Coins,
   ArrowDown,
   Menu,
-  Rocket
+  Rocket,
+  Gift
 } from 'lucide-react';
 import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
@@ -94,6 +95,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   const menuItems = [
     { id: 'dashboard' as TabId, label: 'Tableau de Bord', icon: Home },
+    { id: 'bonuses' as TabId, label: 'Mes Bonus Élite', icon: Gift },
     { id: 'axis' as TabId, label: 'Axis AI', icon: Sparkles },
     { id: 'profile' as TabId, label: 'Mon Profil Élite', icon: User },
     { id: 'revenus' as TabId, label: 'Trésorerie & Gains', icon: Coins },
@@ -108,6 +110,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   const [isBoutiqueHighlighted, setIsBoutiqueHighlighted] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (mainRef.current) {
+        mainRef.current.scrollTop = 0;
+      }
+      window.scrollTo(0, 0);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   useEffect(() => {
     const handleHighlight = () => {
@@ -245,7 +258,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       )}
 
       {/* CONTENU PRINCIPAL */}
-      <main className="flex-1 overflow-y-auto relative custom-scrollbar pb-20 md:pb-0">
+      <main 
+        ref={mainRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar pb-20 md:pb-0"
+      >
         <div className="min-h-full">
           {children}
         </div>
