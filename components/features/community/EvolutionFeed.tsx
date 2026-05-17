@@ -30,15 +30,15 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
         const challenge = profile.store_preferences?.challenge_3j;
         
         if (challenge) {
-          if (challenge.j1Completed) {
+          if (challenge.j1Completed || challenge.j1_completed) {
             const shared = await checkIfAchievementShared(profile.id, 'Défi J1');
             if (!shared) pendingDays.push(1);
           }
-          if (challenge.j2Completed) {
+          if (challenge.j2Completed || challenge.j2_completed) {
             const shared = await checkIfAchievementShared(profile.id, 'Défi J2');
             if (!shared) pendingDays.push(2);
           }
-          if (challenge.j3Completed) {
+          if (challenge.j3Completed || challenge.j3_completed) {
             const shared = await checkIfAchievementShared(profile.id, 'Défi J3');
             if (!shared) pendingDays.push(3);
           }

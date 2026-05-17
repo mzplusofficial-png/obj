@@ -50,7 +50,7 @@ import {
 import { Download, Gift, Share2 as ShareIcon } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
-import { shareEvolution, generateWhatsAppLink, getRandomMessage } from "../services/evolutionService.ts";
+import { shareEvolution, generateWhatsAppLink, getRandomMessage, checkIfAchievementShared } from "../services/evolutionService.ts";
 
 import { getBonusContent } from "./features/formation/bonusContentData.ts";
 
@@ -285,6 +285,7 @@ export const GlobalView: React.FC<any> = ({
   const [loginCount, setLoginCount] = useState(1);
   const [isChallengeActive, setIsChallengeActive] = useState(false);
   const [forceRender, setForceRender] = useState(0);
+  const [sharedChallengeDays, setSharedChallengeDays] = useState<number[]>([]);
 
   useEffect(() => {
     const savedCount = parseInt(localStorage.getItem("mz_login_count") || "0");
@@ -317,6 +318,27 @@ export const GlobalView: React.FC<any> = ({
       window.removeEventListener("mz-new-sale", handleAction);
     };
   }, []);
+
+  const challengeDb = profile?.store_preferences?.challenge_3j || {};
+  const j1Completed = challengeDb.j1Completed === true || challengeDb.j1_completed === true;
+  const j2Completed = challengeDb.j2Completed === true || challengeDb.j2_completed === true;
+  const j3Completed = challengeDb.j3Completed === true || challengeDb.j3_completed === true;
+
+  useEffect(() => {
+    if (!profile) return;
+    const checkShares = async () => {
+      try {
+        const shares = [];
+        if (j1Completed && await checkIfAchievementShared(profile.id, 'Défi J1')) shares.push(1);
+        if (j2Completed && await checkIfAchievementShared(profile.id, 'Défi J2')) shares.push(2);
+        if (j3Completed && await checkIfAchievementShared(profile.id, 'Défi J3')) shares.push(3);
+        setSharedChallengeDays(shares);
+      } catch (err) {
+        console.error("Error checking shared days:", err);
+      }
+    };
+    checkShares();
+  }, [profile?.id, j1Completed, j2Completed, j3Completed]);
 
   useEffect(() => {
     const handleHighlight = () => {
@@ -621,12 +643,7 @@ export const GlobalView: React.FC<any> = ({
       </div>
 
       {(() => {
-        const challengeDb = profile?.store_preferences?.challenge_3j || {};
-        
-        // Priority logic for DailyMission:
-        // 1. Must have logged in at least 3 times (ensures they are familiar with the UI).
-        // 2. AND the 3J challenge must be either Cancelled OR Finished (J3 completed).
-        const is3JFinished = challengeDb.j3Completed === true;
+        const is3JFinished = challengeDb.j3Completed === true || challengeDb.j3_completed === true;
         const is3JCancelled = challengeDb.cancelled === true;
         
         if (loginCount >= 3 && (is3JCancelled || is3JFinished)) {
@@ -639,11 +656,8 @@ export const GlobalView: React.FC<any> = ({
           return null;
         }
 
-        const j1Completed = challengeDb.j1Completed === true;
-        const j2Presented = challengeDb.j2Presented === true;
-        const j2Completed = challengeDb.j2Completed === true;
-        const j3Presented = challengeDb.j3Presented === true;
-        const j3Completed = challengeDb.j3Completed === true;
+        const j2Presented = challengeDb.j2Presented === true || challengeDb.j2_presented === true;
+        const j3Presented = challengeDb.j3Presented === true || challengeDb.j3_presented === true;
 
         // Check if Day 2 is overdue (it was started on a previous day)
         const isJ2Overdue = challengeDb.j2StartedAt && (() => {
@@ -773,37 +787,40 @@ export const GlobalView: React.FC<any> = ({
                   {mission.action} 👉
                 </button>
               )}
-              {isWaiting ? (
+              {isWaiting && !sharedChallengeDays.includes(mission.day) && (
                 <button
-                  onClick={() => handleShare(mission.day)}
+                  onClick={() => {
+                    handleShare(mission.day);
+                    setSharedChallengeDays(prev => [...prev, mission.day]);
+                  }}
                   className="w-full mt-2 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[11px] uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                 >
                   <ShareIcon size={14} />
                   Partager mon succès
                 </button>
-              ) : (
-                <button
-                  onClick={async () => {
-                    if (
-                      !window.confirm(
-                        "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
-                      )
-                    )
-                      return;
-                    const newPrefs = { ...(profile.store_preferences || {}) };
-                    if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
-                    newPrefs.challenge_3j.cancelled = true;
-                    await supabase
-                      .from("users")
-                      .update({ store_preferences: newPrefs })
-                      .eq("id", profile?.id);
-                    window.location.reload();
-                  }}
-                  className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
-                >
-                  Renoncer au défi
-                </button>
               )}
+              
+              <button
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Êtes-vous sûr de vouloir abandonner le défi des 3 Jours ? Cette action est définitive.",
+                    )
+                  )
+                    return;
+                  const newPrefs = { ...(profile.store_preferences || {}) };
+                  if (!newPrefs.challenge_3j) newPrefs.challenge_3j = {};
+                  newPrefs.challenge_3j.cancelled = true;
+                  await supabase
+                    .from("users")
+                    .update({ store_preferences: newPrefs })
+                    .eq("id", profile?.id);
+                  window.location.reload();
+                }}
+                className="w-full mt-2 py-2 text-[10px] font-bold text-neutral-500 hover:text-red-400 uppercase tracking-widest transition-colors"
+              >
+                Renoncer au défi
+              </button>
             </div>
           </motion.div>
         );
@@ -1151,8 +1168,16 @@ export const ProfileTab: React.FC<any> = ({
     !challengeState.cancelled &&
     !challengeState.j3Completed;
 
-  const isAnyDayCompleted = challengeState.j1Completed || challengeState.j2Completed;
-  const lastCompletedDay = challengeState.j2Completed ? 2 : challengeState.j1Completed ? 1 : 0;
+  const isAnyDayCompleted = challengeState.j1Completed || challengeState.j2Completed || challengeState.j1_completed || challengeState.j2_completed;
+  const lastCompletedDay = (challengeState.j2Completed || challengeState.j2_completed) ? 2 : (challengeState.j1Completed || challengeState.j1_completed) ? 1 : 0;
+  
+  const [isAlreadyShared, setIsAlreadyShared] = useState(false);
+
+  useEffect(() => {
+    if (!profile || !lastCompletedDay) return;
+    checkIfAchievementShared(profile.id, `Défi J${lastCompletedDay}`)
+      .then(shared => setIsAlreadyShared(shared));
+  }, [profile, lastCompletedDay]);
 
   const handleShare = async () => {
     if (!profile || !lastCompletedDay) return;
@@ -1167,6 +1192,7 @@ export const ProfileTab: React.FC<any> = ({
       message: message
     });
 
+    setIsAlreadyShared(true);
     const whatsappLink = generateWhatsAppLink(message);
     window.open(whatsappLink, '_blank');
   };
@@ -1425,22 +1451,23 @@ export const ProfileTab: React.FC<any> = ({
               Ta première vente en 3 Jours
             </span>
           </div>
-          {isAnyDayCompleted ? (
-            <button
-              onClick={handleShare}
-              className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-emerald-500/20 whitespace-nowrap flex items-center gap-2"
-            >
-              <ShareIcon size={12} />
-              Partager mon succès
-            </button>
-          ) : (
+          <div className="flex gap-2">
+            {isAnyDayCompleted && !isAlreadyShared && (
+              <button
+                onClick={handleShare}
+                className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-emerald-500/20 whitespace-nowrap flex items-center gap-2"
+              >
+                <ShareIcon size={12} />
+                Partager
+              </button>
+            )}
             <button
               onClick={handleCancelChallenge}
               className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-xl transition-colors border border-red-500/20 whitespace-nowrap"
             >
               Renoncer au défi
             </button>
-          )}
+          </div>
         </div>
       )}
 

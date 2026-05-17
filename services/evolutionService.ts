@@ -73,6 +73,11 @@ export const subscribeToEvolutions = (callback: (evolutions: MemberEvolution[]) 
 };
 
 export const checkIfLevelShared = async (userId: string, levelName: string) => {
+  if (!userId) return false;
+  
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return false;
+
   try {
     const { data, error } = await supabase
       .from(EVOLUTIONS_TABLE)
@@ -91,6 +96,15 @@ export const checkIfLevelShared = async (userId: string, levelName: string) => {
 };
 
 export const checkIfAchievementShared = async (userId: string, achievementTitle: string) => {
+  if (!userId) return false;
+  
+  // Check session validity first
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    // If no session, we can't check authenticated records, but we don't want to throw invalid_token
+    return false;
+  }
+
   try {
     const { data, error } = await supabase
       .from(EVOLUTIONS_TABLE)
@@ -100,10 +114,15 @@ export const checkIfAchievementShared = async (userId: string, achievementTitle:
       .eq('type', 'achievement_unlocked')
       .maybeSingle();
     
-    if (error) return false;
+    if (error) {
+      if (error.message?.includes('JWT') || error.message?.includes('token')) {
+        console.warn("Auth token invalid while checking achievement share status.");
+      }
+      return false;
+    }
     return !!data;
-  } catch (error) {
-    console.error("Error checking shared achievement:", error);
+  } catch (err) {
+    console.error("Error checking shared achievement:", err);
     return false;
   }
 };
