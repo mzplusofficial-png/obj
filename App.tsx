@@ -867,135 +867,84 @@ const App: React.FC = () => {
     return () => window.removeEventListener('mz-navigate-dashboard', handleNavigateDashboard);
   }, []);
 
-  const setupFCM = async (isManual = false) => {
+  const setupFCM = useCallback(async (isManual = false) => {
     // ESSENTIEL : Récupérer la clé VAPID depuis l'environnement ou utiliser une clé de secours
-    // NOTE : Pour le nouveau projet Firebase, une nouvelle clé VAPID doit être générée dans la console Firebase
     const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJq2QbMlGOeSnuz94cUiQ-kqj6DqXGyIEa968-nBPmmPZ2V7Y_USSAhDodiPSiSwyWl-v8y8fP75byiWFgmFtlo";
     
     console.log('FCM: Initializing setup...', { isManual, hasVapid: !!VAPID_KEY });
 
-    if (!VAPID_KEY) {
-       console.warn('FCM: No VAPID key provided. Push tokens cannot be generated.');
-       return;
-    }
+    if (!VAPID_KEY || typeof window === 'undefined') return;
 
-    // Vérifier si nous sommes dans une iframe (AI Studio preview)
-    const isInIframe = window.self !== window.top;
-    
-    // Si la permission est déjà refusée, on n'insiste pas sauf si c'est manuel
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied' && !isManual) {
-      console.log('FCM: Notification permission is denied. Skipping.');
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      console.log('FCM: Notifications not supported');
       return;
     }
 
-    // Si on est dans une iframe et que la permission n'est pas encore accordée
-    if (isInIframe && !isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      console.log('FCM: Running in iframe with default permission, showing banner.');
-      if (!localStorage.getItem('fcm_permission_dismissed')) {
-        setShowPermissionBanner(true);
-      }
-      return;
-    }
-
-    // Si ce n'est pas une demande manuelle et que la permission est "default", on tente de déclencher la demande
-    if (!isManual && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      console.log('FCM: Initializing automatic permission request');
-      // On affiche quand même le bandeau en arrière-plan au cas où le popup est bloqué
-      setShowPermissionBanner(true);
-    }
-
-    try {
-      const result = await requestNotificationPermission(VAPID_KEY);
-      console.log('FCM Registration Result:', result);
-      
-      if (result.status === 'unsupported') {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        if (isManual) {
-          setNotification({
-            title: 'Appareil Non Compatible',
-            body: isIOS 
-              ? 'Sur iPhone, les notifications nécessitent Safari et "Ajouter à l\'écran d\'accueil".' 
-              : 'Votre navigateur actuel ne supporte pas les notifications Push.',
-            type: 'warning'
-          });
-        }
-        setShowPermissionBanner(false);
-      } else if (result.status === 'denied') {
-        console.warn('FCM: Permission denied by user');
-        if (isManual) {
-          setNotification({
-            title: 'Notifications Bloquées',
-            body: 'Veuillez réactiver les notifications dans les paramètres de votre navigateur.',
-            type: 'error'
-          });
-        }
-        setShowPermissionBanner(false);
-      } else if (result.token) {
-        console.log('FCM: Token successfully generated');
-        setFcmToken(result.token);
-        localStorage.setItem('fcm_token', result.token);
-        setShowPermissionBanner(false);
-        
-        if (session?.user?.id) {
-          console.log('FCM: Syncing token with database for user', session.user.id);
-          try {
-            const { error: updateError } = await supabase.from('users').update({ 
-              fcm_token: result.token,
-              last_fcm_sync: new Date().toISOString() 
-            }).eq('id', session.user.id);
-            
-            if (updateError) {
-              console.error('FCM: Failed to save token to database (Status 400 likely means missing columns):', updateError);
-              // Fallback: try without last_fcm_sync if that column is missing
-              const { error: fallbackError } = await supabase.from('users').update({ 
-                fcm_token: result.token
-              }).eq('id', session.user.id);
-              
-              if (fallbackError) {
-                console.error('FCM: Fallback save also failed:', fallbackError);
-              } else {
-                console.log('FCM: Token synced with database (fallback successful)');
-              }
-            } else {
-              console.log('FCM: Token synced with database successfully');
-            }
-          } catch (syncErr) {
-            console.error('FCM: Exception during database sync:', syncErr);
+    // Si on a déjà la permission, on récupère juste le token silencieusement (background sync)
+    if (Notification.permission === 'granted') {
+      console.log('FCM: Permission already granted, syncing token...');
+      try {
+        const result = await requestNotificationPermission(VAPID_KEY);
+        if (result.token) {
+          setFcmToken(result.token);
+          if (session?.user?.id) {
+            await supabase.from('users').update({ fcm_token: result.token, last_fcm_sync: new Date().toISOString() }).eq('id', (session as any).user.id);
           }
         }
-      } else {
-        console.warn('FCM: Process finished without token (status:', result.status, ')');
+      } catch (e) {
+        console.warn('FCM: Background sync failed', e);
       }
-    } catch (err) {
-      console.error('FCM: Fatal error in setupFCM:', err);
+      return;
     }
-  };
+
+    // Si la permission est 'denied', on n'affiche rien (sauf si clic manuel sur un bouton spécifique)
+    if (Notification.permission === 'denied') {
+      if (isManual) {
+        setNotification({
+          title: 'Notifications Bloquées',
+          body: 'Veuillez autoriser les notifications dans les réglages de votre navigateur.',
+          type: 'warning'
+        });
+      }
+      return;
+    }
+
+    // SI PERMISSION === 'DEFAULT'
+    if (Notification.permission === 'default') {
+      // Si c'est manuel, on déclenche le vrai popup natif
+      if (isManual) {
+        setShowPermissionBanner(false);
+        try {
+          const result = await requestNotificationPermission(VAPID_KEY);
+          if (result.status === 'granted' && result.token) {
+            setFcmToken(result.token);
+            if (session?.user?.id) {
+               await supabase.from('users').update({ fcm_token: result.token, last_fcm_sync: new Date().toISOString() }).eq('id', (session as any).user.id);
+            }
+          }
+        } catch (e) {
+          console.error('FCM: Error requesting permission', e);
+        }
+      } else {
+        // Si c'est automatique au chargement, on montre UNIQUEMENT le bandeau discret (Soft Prompt)
+        // après un certain temps pour ne pas être intrusif
+        if (!localStorage.getItem('fcm_permission_dismissed')) {
+          setShowPermissionBanner(true);
+        }
+      }
+    }
+  }, [session]);
 
   useEffect(() => {
-    if (session) {
-      // Retarder le setup FCM pour éviter de bloquer l'initialisation visuelle (noir complet)
+    if (session && !initSequence) {
+      // Déclenchement passif du setup au chargement
       const timer = setTimeout(() => {
-        if (!initSequence) setupFCM();
-      }, 1000);
+        setupFCM(false);
+      }, 3000); // 3 secondes de délai pour laisser l'UI respirer
       
-      const handleFirstInteraction = () => {
-        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-          console.log('FCM: Interaction detected, re-triggering setup');
-          setupFCM(false);
-          document.removeEventListener('click', handleFirstInteraction);
-          document.removeEventListener('touchstart', handleFirstInteraction);
-        }
-      };
-      document.addEventListener('click', handleFirstInteraction);
-      document.addEventListener('touchstart', handleFirstInteraction);
-      
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener('click', handleFirstInteraction);
-        document.removeEventListener('touchstart', handleFirstInteraction);
-      };
+      return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, initSequence]);
 
   // Listen for foreground messages
@@ -1728,40 +1677,49 @@ const App: React.FC = () => {
       </AnimatePresence>
       <PWAInstallBanner />
       
-      {/* Bandeau de permission pour les notifications (particulièrement utile en Iframe/AI Studio) */}
+      {/* Progressive Permission Banner (Soft Prompt) */}
       <AnimatePresence>
         {showPermissionBanner && (
           <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-4 right-4 z-[150] md:left-auto md:right-8 md:bottom-8 md:w-96"
+            initial={{ y: -50, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -20, opacity: 0, scale: 0.95 }}
+            className="fixed top-20 left-4 right-4 z-[150] md:left-auto md:right-8 md:top-8 md:w-96"
           >
-            <div className="bg-[#111] border border-yellow-500/30 rounded-2xl p-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col gap-4">
+            <div className="bg-[#111] border border-yellow-500/20 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-l-4 border-l-yellow-600 flex flex-col gap-4">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-yellow-600/20 border border-yellow-500/40 flex items-center justify-center text-yellow-500 shrink-0">
-                  <Bell size={24} className="animate-pulse" />
+                <div className="w-10 h-10 rounded-full bg-yellow-600/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 shrink-0">
+                  <Bell size={20} className="animate-pulse" />
                 </div>
-                <div>
-                  <h4 className="text-white font-bold text-sm">Activez les notifications</h4>
-                  <p className="text-white/60 text-xs mt-1 leading-relaxed">
-                    Restez informé des nouveaux services et opportunités en temps réel.
+                <div className="flex-1">
+                  <h4 className="text-white font-bold text-sm tracking-tight">Activez vos alertes stratégiques</h4>
+                  <p className="text-white/50 text-[11px] mt-0.5 leading-relaxed">
+                    Ne manquez aucune vente ni opportunité MZ+. Soyez notifié en temps réel.
                   </p>
                 </div>
+                <button 
+                  onClick={() => {
+                    localStorage.setItem('fcm_permission_dismissed', 'true');
+                    setShowPermissionBanner(false);
+                  }}
+                  className="text-neutral-600 hover:text-white transition-colors p-1"
+                >
+                  <X size={18} />
+                </button>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setupFCM(true)}
-                  className="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs uppercase tracking-wider rounded-lg transition-colors"
+                  className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-black text-[10px] uppercase tracking-widest rounded-lg transition-all active:scale-95"
                 >
                   Activer maintenant
                 </button>
                 <button
                   onClick={() => {
-                    setShowPermissionBanner(false);
                     localStorage.setItem('fcm_permission_dismissed', 'true');
+                    setShowPermissionBanner(false);
                   }}
-                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white text-xs font-bold rounded-lg transition-all"
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white font-bold text-[10px] uppercase tracking-widest rounded-lg transition-colors"
                 >
                   Plus tard
                 </button>
