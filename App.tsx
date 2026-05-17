@@ -912,24 +912,27 @@ const App: React.FC = () => {
 
     // SI PERMISSION === 'DEFAULT'
     if (Notification.permission === 'default') {
-      // Si c'est manuel, on déclenche le vrai popup natif
-      if (isManual) {
-        setShowPermissionBanner(false);
+      // On tente de déclencher le popup natif automatiquement si non dismissed
+      if (!localStorage.getItem('fcm_permission_dismissed')) {
+        console.log('FCM: Requesting native permission automatically...');
         try {
-          const result = await requestNotificationPermission(VAPID_KEY);
-          if (result.status === 'granted' && result.token) {
-            setFcmToken(result.token);
-            if (session?.user?.id) {
-               await supabase.from('users').update({ fcm_token: result.token, last_fcm_sync: new Date().toISOString() }).eq('id', (session as any).user.id);
+          // On ne "await" pas forcément ici pour ne pas bloquer si le navigateur met du temps
+          requestNotificationPermission(VAPID_KEY).then(result => {
+            console.log('FCM: Auto request result:', result.status);
+            if (result.status === 'granted' && result.token) {
+              setFcmToken(result.token);
+              if (session?.user?.id) {
+                supabase.from('users').update({ fcm_token: result.token, last_fcm_sync: new Date().toISOString() }).eq('id', (session as any).user.id);
+              }
+            } else if (result.status === 'default') {
+              // Si le popup a été ignoré ou bloqué silencieusement, on montre le bandeau
+              setShowPermissionBanner(true);
             }
-          }
+          }).catch(err => {
+            console.error('FCM: Auto request error:', err);
+            setShowPermissionBanner(true);
+          });
         } catch (e) {
-          console.error('FCM: Error requesting permission', e);
-        }
-      } else {
-        // Si c'est automatique au chargement, on montre UNIQUEMENT le bandeau discret (Soft Prompt)
-        // après un certain temps pour ne pas être intrusif
-        if (!localStorage.getItem('fcm_permission_dismissed')) {
           setShowPermissionBanner(true);
         }
       }
@@ -938,14 +941,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (session && !initSequence) {
-      // Déclenchement passif du setup au chargement
+      // Déclenchement naturel du setup après chargement complet
       const timer = setTimeout(() => {
         setupFCM(false);
-      }, 3000); // 3 secondes de délai pour laisser l'UI respirer
+      }, 5000); // 5 secondes pour être sûr que tout est fluide au rendu
       
       return () => clearTimeout(timer);
     }
-  }, [session, initSequence]);
+  }, [session, initSequence, setupFCM]);
 
   // Listen for foreground messages
   useEffect(() => {
