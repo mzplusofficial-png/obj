@@ -146,7 +146,7 @@ const App: React.FC = () => {
         profile = upsertedProfile || (newProfileData as any);
       }
 
-      const isAdminValue = false;
+      const isAdminValue = profile?.is_admin === true;
       const enrichedProfile: UserProfile = { 
         id: profile?.id || userId, 
         full_name: profile?.full_name || fullName || 'Ambassadeur', 
@@ -154,7 +154,7 @@ const App: React.FC = () => {
         rank_id: profile?.rank_id || 1, 
         email: profile?.email || userEmail, 
         is_admin: isAdminValue, 
-        admin_role: null,
+        admin_role: profile?.admin_role || null,
         rpa_balance: Number(profile?.rpa_balance || 0), 
         rpa_points: Number(profile?.rpa_points || 0), 
         xp: Number(profile?.xp || 0),
@@ -701,8 +701,8 @@ const App: React.FC = () => {
   useEffect(() => {
     if (challengeEligible && !challengeTriggered) {
       let activeSeconds = 0;
-      const isAdminTest = userProfile?.email === 'mzplusofficial@gmail.com' || userProfile?.email === 'maximilienleroy01@gmail.com' || userProfile?.email === 'h.bocquet.pro@gmail.com';
-      const waitTarget = isAdminTest ? 2 : 15;
+      const isAdminTest = false; // Désactivé par sécurité
+      const waitTarget = 15;
       
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible') {
