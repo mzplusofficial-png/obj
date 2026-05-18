@@ -253,16 +253,6 @@ export async function runPriorityDispatcher() {
                             const sendResult = await sendPush(userData.fcm_token, title, body, { url });
                             console.log(`[Dispatcher] sendPush result for ${userId}:`, sendResult);
                             
-                            // SYNC WITH INTERNAL NOTIFICATIONS (So it shows as a banner in-app too)
-                            await supabase.from('admin_push_notifications').insert([{
-                                title,
-                                body,
-                                icon_type: 'zap',
-                                target_type: 'user',
-                                target_value: userId,
-                                url
-                            }]);
-
                             if (sendResult.success) {
                                 // Add to log
                                 const { error: insErr } = await supabase.from('mz_background_notifications_log').insert([{

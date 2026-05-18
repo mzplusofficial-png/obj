@@ -56,7 +56,7 @@ export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initial
       }
     }));
 
-    await reactToEvolution(evolution.id, profile.id, profile.full_name || 'Un membre', type);
+    await reactToEvolution(evolution.id, profile.id, type);
   };
 
   const userReactions = profile ? (evolution.user_reactions?.[profile.id] || {}) : {};

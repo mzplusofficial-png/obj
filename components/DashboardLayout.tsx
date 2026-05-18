@@ -7,6 +7,7 @@ import {
   Trophy,
   Home,
   Sparkles,
+  ShieldCheck,
   Zap,
   HelpCircle,
   User,
@@ -20,6 +21,7 @@ import { TabId, UserProfile } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 import { CurrencySelector } from './ui/CurrencyDisplay.tsx';
 import { NotificationsModal } from './features/notifications/NotificationsModal.tsx';
+import { getUnreadCount, subscribeToNotifications } from '../services/internalNotificationService';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -54,79 +56,40 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children, 
   activeTab, 
   setActiveTab, 
-  isAdmin: _isAdmin = false, 
+  isAdmin = false, 
   profile,
   isMenuOpen = false,
-  setIsMenuOpen: _setIsMenuOpen = () => {}
+  setIsMenuOpen = (open: boolean) => {}
 }) => {
   const [activeMembers, setActiveMembers] = useState(() => Math.floor(Math.random() * (1500 - 800) + 800));
   const [showProfileBadge, setShowProfileBadge] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Fetch unread count for the bell
   useEffect(() => {
     if (!profile?.id) return;
 
-    const fetchUnreadCount = async () => {
-      try {
-        // Fetch last 50 notifications
-        const { data: notifications } = await supabase
-          .from('admin_push_notifications')
-          .select('id, target_type, target_value')
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (!notifications) return;
-
-        // Filter for me
-        const myNotifications = notifications.filter(n => {
-          if (n.target_type === 'all') return true;
-          if (n.target_type === 'level') return n.target_value === profile.user_level;
-          if (n.target_type === 'user') return n.target_value === profile.id;
-          return false;
-        });
-
-        // Get receipts
-        const { data: receipts } = await supabase
-          .from('admin_push_receipts')
-          .select('notification_id')
-          .eq('user_id', profile.id);
-
-        const readIds = new Set(receipts?.map(r => r.notification_id) || []);
-        const unread = myNotifications.filter(n => !readIds.has(n.id));
-        
-        setUnreadCount(unread.length);
-      } catch (err) {
-        console.error("Error fetching unread count:", err);
-      }
+    const fetchUnread = async () => {
+      const count = await getUnreadCount(profile.id);
+      setUnreadCount(count);
     };
 
-    fetchUnreadCount();
+    fetchUnread();
 
-    // Listen for new notifications
-    const channel = supabase
-      .channel('unread_counters')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'admin_push_notifications'
-      }, () => {
-        fetchUnreadCount();
-      })
-      .on('postgres_changes', {
-        event: '*', // When marking as read, receipts table changes
-        schema: 'public',
-        table: 'admin_push_receipts',
-        filter: `user_id=eq.${profile.id}`
-      }, () => {
-        fetchUnreadCount();
-      })
-      .subscribe();
+    // Subscribe to new notifications
+    const unsubscribe = subscribeToNotifications(profile.id, () => {
+      fetchUnread();
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.id, profile?.user_level]);
+    return () => unsubscribe();
+  }, [profile?.id]);
+
+  useEffect(() => {
+    const handleProfileBadge = () => setShowProfileBadge(true);
+    window.addEventListener('mz-profile-badge', handleProfileBadge);
+    return () => window.removeEventListener('mz-profile-badge', handleProfileBadge);
+  }, []);
 
   // When clicking profile tab, clear badge
   const handleTabClick = (tabId: TabId) => {
@@ -234,8 +197,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           >
             <span className="text-lg group-hover:scale-110 transition-transform">🔔</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-[var(--color-main-bg)] animate-bounce-slow">
-                {unreadCount}
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-600 rounded-full flex items-center justify-center text-[10px] font-black text-white px-1 shadow-[0_0_8px_rgba(220,38,38,0.5)] border border-black/20 animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
@@ -380,12 +343,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.7); }
         }
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-        }
         .animate-pulse-dot { animation: pulse-dot 1.5s infinite; }
-        .animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
       `}} />
     </div>
   );

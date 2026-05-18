@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabase.ts';
-import { X, Bell, Trash2, Coins, Gift, AlertTriangle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Bell, Trash2, Coins, Gift, AlertTriangle, Sparkles, CheckCircle2, Heart, Zap, MessageCircle } from 'lucide-react';
+import { getInternalNotifications, markAllAsRead as markInternalAllAsRead, markAsRead as markInternalAsRead } from '../../../services/internalNotificationService';
 
 interface NotificationsModalProps {
   onClose: () => void;
@@ -22,23 +23,23 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      // Fetch all notifications that match the user
-      const { data } = await supabase
+      
+      // 1. Fetch Admin Push Notifications (Global/Targeted)
+      const { data: pushData } = await supabase
         .from('admin_push_notifications')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (data) {
-        // Filter based on target_type
-        const relevant = data.filter(n => {
+      let processedPush: any[] = [];
+      if (pushData) {
+        const relevant = pushData.filter(n => {
           if (n.target_type === 'all') return true;
           if (n.target_type === 'level') return n.target_value === profile.user_level;
           if (n.target_type === 'user') return n.target_value === profile.id;
           return false;
         });
 
-        // Also fetch which ones are read
         const { data: readData } = await supabase
           .from('admin_push_receipts')
           .select('notification_id')
@@ -46,13 +47,35 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
 
         const readIds = new Set((readData || []).map(r => r.notification_id));
 
-        const enriched = relevant.map(n => ({
-          ...n,
-          isRead: readIds.has(n.id)
+        processedPush = relevant.map(n => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          created_at: n.created_at,
+          icon_type: n.icon_type,
+          isRead: readIds.has(n.id),
+          isInternal: false
         }));
-
-        setNotifications(enriched);
       }
+
+      // 2. Fetch Internal Evolution Notifications
+      const internalData = await getInternalNotifications(profile.id);
+      const processedInternal = internalData.map(n => ({
+        id: n.id,
+        title: 'Évolution',
+        body: n.message,
+        created_at: n.created_at,
+        icon_type: n.type === 'evolution_reaction' ? 'reaction' : 'default',
+        isRead: n.is_read,
+        isInternal: true
+      }));
+
+      // Combine and Sort
+      const combined = [...processedPush, ...processedInternal].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setNotifications(combined);
     } catch (e) {
       console.error(e);
     } finally {
@@ -62,11 +85,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
 
   const markAllAsRead = async () => {
      try {
-       const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
-       if (unreadIds.length === 0) return;
+       // Mark Admin Push as Read
+       const unreadPushIds = notifications.filter(n => !n.isRead && !n.isInternal).map(n => n.id);
+       if (unreadPushIds.length > 0) {
+         const inserts = unreadPushIds.map(id => ({ notification_id: id, user_id: profile.id }));
+         await supabase.from('admin_push_receipts').insert(inserts);
+       }
 
-       const inserts = unreadIds.map(id => ({ notification_id: id, user_id: profile.id }));
-       await supabase.from('admin_push_receipts').insert(inserts);
+       // Mark Internal as Read
+       await markInternalAllAsRead(profile.id);
        
        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
      } catch(e) {
@@ -74,11 +101,28 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
      }
   };
 
+  const markSingleAsRead = async (notif: any) => {
+    if (notif.isRead) return;
+    
+    try {
+      if (notif.isInternal) {
+        await markInternalAsRead(notif.id);
+      } else {
+        await supabase.from('admin_push_receipts').insert({ notification_id: notif.id, user_id: profile.id });
+      }
+      
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'money': return <Coins className="text-yellow-500" size={20} />;
       case 'gift': return <Gift className="text-emerald-500" size={20} />;
       case 'alert': return <AlertTriangle className="text-red-500" size={20} />;
+      case 'reaction': return <Heart className="text-pink-500 fill-pink-500" size={20} />;
       default: return <Sparkles className="text-blue-500" size={20} />;
     }
   };
@@ -129,7 +173,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ onClose,
             notifications.map((n) => (
               <div 
                 key={n.id} 
-                className={`p-4 rounded-2xl border transition-colors ${n.isRead ? 'bg-white/5 border-white/5 opacity-70' : 'bg-[var(--color-card-start)] border-[var(--color-border-gold)] shadow-[0_0_15px_rgba(201,168,76,0.1)]'}`}
+                onClick={() => markSingleAsRead(n)}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer group ${n.isRead ? 'bg-white/5 border-white/5 opacity-70' : 'bg-[var(--color-card-start)] border-[var(--color-border-gold)] shadow-[0_0_15px_rgba(201,168,76,0.1)] hover:scale-[1.02]'}`}
               >
                 <div className="flex gap-4">
                   <div className="shrink-0 mt-1">

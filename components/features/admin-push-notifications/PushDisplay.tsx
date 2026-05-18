@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Gift, AlertTriangle, Coins, Sparkles } from 'lucide-react';
+import { Bell, X, Zap, Gift, Info, AlertTriangle, Coins, ArrowRight, Sparkles } from 'lucide-react';
 import { supabase } from '../../../services/supabase.ts';
 
 export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
@@ -15,6 +15,9 @@ export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     audioRef.current.volume = 0.3;
 
+    // Permission is now handled by the global setupFCM/Banner in App.tsx
+
+    
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       if (progressIntervalRef.current) window.clearInterval(progressIntervalRef.current);
@@ -30,6 +33,7 @@ export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
   const triggerNativeNotification = async (title: string, body: string) => {
     if ("Notification" in window && Notification.permission === "granted") {
       try {
+        // Version robuste utilisant le Service Worker pour garantir l'affichage même au premier plan
         if ('serviceWorker' in navigator) {
           const registration = await navigator.serviceWorker.ready;
           registration.showNotification(title, {
@@ -42,10 +46,11 @@ export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
             data: { url: '/' }
           } as any);
         } else {
+          // Fallback simple
           new Notification(title, { body, icon: '/firebase-logo.png' });
         }
-      } catch (err) {
-        console.error("Native Notification Error:", err);
+      } catch (e) {
+        console.error("Native Notification Error:", e);
       }
     }
   };
@@ -113,61 +118,10 @@ export const PushDisplay: React.FC<{ profile: any }> = ({ profile }) => {
   }, [profile?.id, profile?.user_level, isVisible, closePush]);
 
   useEffect(() => {
-    if (!profile?.id) return;
-
-    // 1. Initial Polling Fallback
-    const checkInterval = setInterval(checkNewPush, 60000); // Polling reduced to 1min if realtime works
-    setTimeout(checkNewPush, 2000); 
-
-    // 2. Realtime Subscription for Instant In-App Notifications
-    const channel = supabase
-      .channel('public:admin_push_notifications:user:' + profile.id)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'admin_push_notifications'
-      }, (payload) => {
-        const n = payload.new;
-        // Verify if it's for me
-        const isForMe = n.target_type === 'all' || 
-                        (n.target_type === 'user' && n.target_value === profile.id) ||
-                        (n.target_type === 'level' && n.target_value === profile.user_level);
-        
-        if (isForMe) {
-          console.log("[Realtime Push] Notification received:", n);
-          setActivePush(n);
-          setIsVisible(true);
-          setProgress(100);
-          triggerNativeNotification(n.title, n.body);
-          
-          if (audioRef.current) {
-            audioRef.current.volume = 0.5;
-            audioRef.current.play().catch(() => {});
-          }
-
-          // Mark as received immediately to avoid showing it again in polling
-          supabase.from('admin_push_receipts').insert([{
-            notification_id: n.id,
-            user_id: profile.id
-          }]).then();
-
-          // Standard timer for disappearance
-          if (timerRef.current) window.clearTimeout(timerRef.current);
-          timerRef.current = window.setTimeout(closePush, 10000);
-          
-          if (progressIntervalRef.current) window.clearInterval(progressIntervalRef.current);
-          progressIntervalRef.current = window.setInterval(() => {
-            setProgress(prev => Math.max(0, prev - (100 / 100)));
-          }, 100);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      clearInterval(checkInterval);
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.id, profile?.user_level, checkNewPush, closePush]);
+    const checkInterval = setInterval(checkNewPush, 15000);
+    setTimeout(checkNewPush, 3000); 
+    return () => clearInterval(checkInterval);
+  }, [checkNewPush]);
 
   if (!activePush || !isVisible) return null;
 
