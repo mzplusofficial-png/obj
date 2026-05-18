@@ -50,6 +50,8 @@ import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 import { LevelUpCelebration } from './components/features/community/LevelUpCelebration.tsx';
 import { EvolutionShareModal } from './components/features/community/EvolutionShareModal.tsx';
+import { PremiumTriggerEngine, ScenicMessage } from './services/premiumTriggerService.ts';
+import { PremiumOfferPopup } from './components/features/premium/PremiumOfferPopup.tsx';
 
 import { BonusHub } from './components/features/bonus/BonusHub.tsx';
 import { BonusContentReader } from './components/features/bonus/BonusContentReader.tsx';
@@ -87,6 +89,10 @@ const App: React.FC = () => {
   const [, setFcmToken] = useState<string | null>(null);
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   
+  // Premium Trigger States
+  const [premiumTrigger, setPremiumTrigger] = useState<{ type: 'popup' | 'axis', message: string } | null>(null);
+  const [lastClickCount, setLastClickCount] = useState<number | null>(null);
+  
   // Défis "3 Jours" Trigger States
 
   const [showChallenge, setShowChallenge] = useState(false);
@@ -104,6 +110,85 @@ const App: React.FC = () => {
   const [bonusContent, setBonusContent] = useState<{ id: string; title: string; content: string; previewUrl?: string } | null>(null);
   
   const { triggerAxisMessage, hideAxis, setIsChatOpen, setChatUnlocked } = useAxis();
+
+  // Premium Trigger Engine Integration
+  const runPremiumTrigger = useCallback(async (scenario: 'mission_complete' | 'click_spike' | 'fallback') => {
+    if (!userProfile?.id || userProfile.user_level === 'niveau_mz_plus') return;
+    
+    const result = await PremiumTriggerEngine.trigger(userProfile.id, scenario);
+    if (result) {
+      if (result.type === 'popup') {
+        setPremiumTrigger({ type: 'popup', message: result.message });
+      } else {
+        triggerAxisMessage(result.message, 'progression', 15000, {
+          label: "S'abonner",
+          action: () => setActiveTab('upgrade')
+        }, 'smart');
+      }
+    }
+  }, [userProfile, triggerAxisMessage, setActiveTab]);
+
+  // Handle Fallback Trigger (5 mins active)
+  useEffect(() => {
+    if (!userProfile || userProfile.user_level === 'niveau_mz_plus') return;
+
+    // Last Active tracking for 6h push (Database backed)
+    const updateActivity = () => {
+      if (userProfile?.id) {
+        PremiumTriggerEngine.reportActivity(userProfile.id);
+      }
+    };
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+
+    // Initial check for absence > 6h
+    if (userProfile?.last_active_at) {
+      const lastSession = new Date(userProfile.last_active_at).getTime();
+      const diff = Date.now() - lastSession;
+      const sixHours = 6 * 60 * 60 * 1000;
+      if (diff > sixHours && !localStorage.getItem('mz_premium_away_pushed')) {
+        PremiumTriggerEngine.registerPushTrigger(userProfile.id, 'fallback');
+        localStorage.setItem('mz_premium_away_pushed', 'true');
+      }
+    }
+
+    
+    const startTime = parseInt(localStorage.getItem('mz_active_session_start') || Date.now().toString());
+    if (!localStorage.getItem('mz_active_session_start')) {
+      localStorage.setItem('mz_active_session_start', startTime.toString());
+    }
+
+    const checkFallback = () => {
+      const elapsed = Date.now() - startTime;
+      const fiveMins = 5 * 60 * 1000;
+      if (elapsed >= fiveMins && !localStorage.getItem('mz_premium_fallback_triggered')) {
+        runPremiumTrigger('fallback');
+        localStorage.setItem('mz_premium_fallback_triggered', 'true');
+      }
+    };
+
+    const interval = setInterval(checkFallback, 60000);
+    return () => clearInterval(interval);
+  }, [userProfile, runPremiumTrigger]);
+
+  // Handle Click Spike Trigger
+  useEffect(() => {
+    if (!userProfile || userProfile.user_level === 'niveau_mz_plus' || activeTab !== 'dashboard') return;
+
+    const checkClicks = async () => {
+      const { data } = await supabase.from('product_stats').select('clicks').eq('user_id', userProfile.id);
+      const totalClicks = data?.reduce((acc, curr) => acc + curr.clicks, 0) || 0;
+      
+      if (lastClickCount !== null && totalClicks >= lastClickCount + 10) {
+        runPremiumTrigger('click_spike');
+      }
+      setLastClickCount(totalClicks);
+    };
+
+    const interval = setInterval(checkClicks, 5 * 60 * 1000); // Check every 5 mins
+    checkClicks();
+    return () => clearInterval(interval);
+  }, [userProfile, activeTab, lastClickCount, runPremiumTrigger]);
 
   const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
     try {
@@ -160,6 +245,9 @@ const App: React.FC = () => {
         xp: Number(profile?.xp || 0),
         user_level: (profile?.user_level as 'standard' | 'niveau_mz_plus') || 'standard', 
         created_at: profile?.created_at,
+        last_active_at: profile?.last_active_at,
+        last_premium_trigger_at: profile?.last_premium_trigger_at,
+        premium_trigger_history: profile?.premium_trigger_history || [],
         store_preferences: { ...(profile?.store_preferences || {}) },
         country_code: profile?.country_code || profile?.country
       };
@@ -508,17 +596,8 @@ const App: React.FC = () => {
         updates.j1Completed = true;
         setChallengeCelebratedStep(1);
         
-        // Reward XP for completing Day 1 - REMOVED AT USER REQUEST
-        /*
-        window.dispatchEvent(new CustomEvent('mz-xp-reward', {
-          detail: { 
-            amount: 30, 
-            title: 'Jour 1 Validé !', 
-            description: 'Félicitations pour le choix de ton premier produit ! 🔥',
-            source: 'challenge_j1'
-          }
-        }));
-        */
+        // Premium Trigger on Mission Complete
+        runPremiumTrigger('mission_complete');
 
         setTimeout(() => {
           setShowChallengeCelebration(true);
@@ -540,6 +619,9 @@ const App: React.FC = () => {
           updates.j2CompletedAtStr = new Date().toISOString();
           setChallengeCelebratedStep(2);
 
+          // Premium Trigger on Mission Complete
+          runPremiumTrigger('mission_complete');
+
           // Reward XP for completing Day 2
           window.dispatchEvent(new CustomEvent('mz-xp-reward', {
             detail: { 
@@ -556,6 +638,9 @@ const App: React.FC = () => {
        } else if (challengeState.j3Presented && !challengeState.j3Completed) {
           updates.j3Completed = true;
           setChallengeCelebratedStep(3);
+
+          // Premium Trigger on Mission Complete
+          runPremiumTrigger('mission_complete');
 
           // Reward XP for completing Day 3
           window.dispatchEvent(new CustomEvent('mz-xp-reward', {
@@ -1736,6 +1821,16 @@ const App: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      <PremiumOfferPopup 
+        isOpen={!!premiumTrigger}
+        message={premiumTrigger?.message || ''}
+        onClose={() => setPremiumTrigger(null)}
+        onUpgrade={() => {
+          setPremiumTrigger(null);
+          setActiveTab('upgrade');
+        }}
+      />
     </DashboardLayout>
   );
 };

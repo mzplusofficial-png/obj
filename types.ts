@@ -36,6 +36,9 @@ export interface UserProfile {
   last_xp_update?: string;
   user_level: 'standard' | 'niveau_mz_plus';
   created_at?: string;
+  last_active_at?: string;
+  last_premium_trigger_at?: string;
+  premium_trigger_history?: any[];
   store_preferences?: any;
   country_code?: string;
 }
