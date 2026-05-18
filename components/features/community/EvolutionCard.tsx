@@ -10,15 +10,19 @@ import {
   Award
 } from 'lucide-react';
 import { MemberEvolution, reactToEvolution, generateWhatsAppLink } from '../../../services/evolutionService';
+import { WhatsAppShareModal } from './WhatsAppShareModal';
 import { UserProfile } from '../../../types';
+import { AnimatePresence } from 'motion/react';
 
 interface EvolutionCardProps {
   evolution: MemberEvolution;
   profile: UserProfile | null;
+  onExternalShare?: (message: string) => void;
 }
 
-export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initialEvolution, profile }) => {
+export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initialEvolution, profile, onExternalShare }) => {
   const [evolution, setEvolution] = useState(initialEvolution);
+  const [showShareModal, setShowShareModal] = useState(false);
   
   useEffect(() => {
     setEvolution(initialEvolution);
@@ -52,30 +56,39 @@ export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initial
       }
     }));
 
-    await reactToEvolution(evolution.id, profile.id, type);
+    await reactToEvolution(evolution.id, profile.id, profile.full_name || 'Un membre', type);
   };
 
   const userReactions = profile ? (evolution.user_reactions?.[profile.id] || {}) : {};
 
   const handleShareWhatsApp = () => {
-    const link = generateWhatsAppLink(evolution.message);
-    window.open(link, '_blank');
+    setShowShareModal(true);
+  };
+
+  const executeShare = () => {
+    if (onExternalShare) {
+      onExternalShare(evolution.message);
+    } else {
+      const link = generateWhatsAppLink(evolution.message);
+      window.open(link, '_blank');
+    }
+    setShowShareModal(false);
   };
 
   const getTypeIcon = () => {
     switch (evolution.type) {
-      case 'level_up': return <Trophy className="text-yellow-500" size={20} />;
-      case 'formation_completed': return <Award className="text-emerald-500" size={20} />;
-      case 'achievement_unlocked': return <Target className="text-purple-500" size={20} />;
-      default: return <Rocket className="text-blue-500" size={20} />;
+      case 'level_up': return <Trophy className="text-yellow-500" size={14} />;
+      case 'formation_completed': return <Award className="text-emerald-500" size={14} />;
+      case 'achievement_unlocked': return <Target className="text-purple-500" size={14} />;
+      default: return <Rocket className="text-blue-500" size={14} />;
     }
   };
 
   const getTypeLabel = () => {
     switch (evolution.type) {
-      case 'level_up': return 'Progression de Niveau';
-      case 'formation_completed': return 'Formation Terminée';
-      case 'achievement_unlocked': return 'Défi Réussi';
+      case 'level_up': return 'Progression';
+      case 'formation_completed': return 'Formation';
+      case 'achievement_unlocked': return 'Défi';
       default: return 'Évolution';
     }
   };
@@ -98,9 +111,12 @@ export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initial
               <h4 className="font-black text-white text-xs tracking-tight uppercase italic truncate">
                 {evolution.user_name}
               </h4>
-              <span className="text-[8px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
-                {evolution.new_level || evolution.type}
-              </span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                {getTypeIcon()}
+                <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest whitespace-nowrap">
+                  {evolution.new_level || getTypeLabel()}
+                </span>
+              </div>
             </div>
             <p className="text-[12px] text-neutral-300 leading-snug mt-1.5 font-medium italic">
               "{evolution.message}"
@@ -153,6 +169,18 @@ export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initial
           {new Date(evolution.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
         </span>
       </div>
+
+      <AnimatePresence>
+        {showShareModal && (
+          <WhatsAppShareModal 
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            onShare={executeShare}
+            title="Impacte la Communauté"
+            description="Partage cette évolution sur WhatsApp pour motiver tes troupes !"
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

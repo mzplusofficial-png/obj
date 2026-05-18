@@ -4,6 +4,7 @@ import { Target, Zap, Rocket, X, CheckCircle2, Flame, Droplets, Crown, Share2 } 
 import { supabase } from '../../../services/supabase.ts';
 import { UserProfile } from '../../../types.ts';
 import { shareEvolution, generateWhatsAppLink, getRandomMessage } from '../../../services/evolutionService.ts';
+import { WhatsAppShareModal } from '../../features/community/WhatsAppShareModal';
 
 interface ChallengePresentationProps {
   isVisible: boolean;
@@ -18,6 +19,8 @@ interface ChallengePresentationProps {
 export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ isVisible, onAccept, onClose, mode = 'intro', completedStep = 0, hasFailedDay2 = false, profile }) => {
   const [typedText, setTypedText] = useState("");
   const [isSharing, setIsSharing] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
   const [typedText2, setTypedText2] = useState("");
   const fullText = "Hey 🙋‍♂️..j'ai un défi pour toi ";
   const [showContent, setShowContent] = useState(false);
@@ -27,6 +30,7 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
     setIsSharing(true);
     try {
       const message = getRandomMessage('challenge', { day: completedStep });
+      setShareMessage(message);
       
       await shareEvolution({
         user_id: profile.id,
@@ -37,14 +41,19 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
         message: message
       });
 
-      // Auto open WhatsApp
-      const whatsappLink = generateWhatsAppLink(message);
-      window.open(whatsappLink, '_blank');
+      setShowWhatsAppModal(true);
     } catch (err) {
       console.error(err);
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const executeWhatsAppShare = () => {
+    const link = generateWhatsAppLink(shareMessage);
+    window.open(link, '_blank');
+    setShowWhatsAppModal(false);
+    onAccept();
   };
   const getInitialStep = () => {
     if (mode === 'celebration') return 'timeline';
@@ -991,9 +1000,23 @@ export const ChallengePresentation: React.FC<ChallengePresentationProps> = ({ is
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
-
               </div>
             </div>
+
+            <AnimatePresence>
+              {showWhatsAppModal && (
+                <WhatsAppShareModal 
+                  isOpen={showWhatsAppModal}
+                  onClose={() => {
+                    setShowWhatsAppModal(false);
+                    onAccept();
+                  }}
+                  onShare={executeWhatsAppShare}
+                  title="Force à la Communauté"
+                  description="Félicitations pour cette étape ! Partage ton succès pour motiver le reste du groupe sur WhatsApp."
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       )}

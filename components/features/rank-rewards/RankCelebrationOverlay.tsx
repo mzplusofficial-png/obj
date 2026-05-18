@@ -4,7 +4,8 @@ import { Gift, Sparkles, Download, CheckCircle, ChevronRight, DownloadCloud, Cro
 import { supabase } from '../../../services/supabase';
 import { RankReward, UserProfile } from '../../../types';
 import confetti from 'canvas-confetti';
-import { shareEvolution, getEvolutionMessages } from '../../../services/evolutionService';
+import { shareEvolution, getEvolutionMessages, generateWhatsAppLink } from '../../../services/evolutionService';
+import { WhatsAppShareModal } from '../community/WhatsAppShareModal';
 
 interface RankCelebrationOverlayProps {
   profile: UserProfile;
@@ -19,6 +20,8 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSharing, setIsSharing] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
 
   // Sound effects
   useEffect(() => {
@@ -38,6 +41,7 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
     try {
       const messages = getEvolutionMessages(profile.full_name || profile.username, profile.rank_name || 'Élite');
       const message = messages[Math.floor(Math.random() * messages.length)];
+      setShareMessage(message);
       
       await shareEvolution({
         user_id: profile.id,
@@ -48,11 +52,18 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
         message: message
       });
       setHasShared(true);
+      setShowWhatsAppModal(true);
     } catch (error) {
       console.error("Error sharing evolution:", error);
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const executeWhatsAppShare = () => {
+    const link = generateWhatsAppLink(shareMessage);
+    window.open(link, '_blank');
+    setShowWhatsAppModal(false);
   };
 
   // Fetch Rewards
@@ -115,7 +126,7 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
 
   // Confetti effect
   useEffect(() => {
-    if (step === 'celebration' || step === 'claimed') {
+    if (step === 'celebration') {
       const duration = 4 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
@@ -419,6 +430,18 @@ export const RankCelebrationOverlay: React.FC<RankCelebrationOverlayProps> = ({ 
             </div>
           )}
         </motion.div>
+
+        <AnimatePresence>
+          {showWhatsAppModal && (
+            <WhatsAppShareModal 
+              isOpen={showWhatsAppModal}
+              onClose={() => setShowWhatsAppModal(false)}
+              onShare={executeWhatsAppShare}
+              title="Impacte la Communauté"
+              description="Félicitations pour ton nouveau grade ! Partage ton succès sur WhatsApp pour motiver le reste du groupe."
+            />
+          )}
+        </AnimatePresence>
       </div>
     </AnimatePresence>
   );

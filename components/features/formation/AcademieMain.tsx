@@ -51,7 +51,7 @@ export const AcademieMain: React.FC<AcademieMainProps> = ({ profile, onSwitchTab
   const [pendingFormationId, setPendingFormationId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'free' | 'premium'>('free');
   const isPremium = profile?.user_level === 'niveau_mz_plus';
-  const isAdmin = profile?.is_admin === true || !!profile?.admin_role;
+  const isAdmin = false; // Désactivé à la demande de l'utilisateur
 
   const fetchFormations = async () => {
     const { data } = await supabase

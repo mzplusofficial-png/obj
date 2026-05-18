@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, TrendingUp, Share2, Sparkles } from 'lucide-react';
-import { MemberEvolution, subscribeToEvolutions, shareEvolution, getEvolutionMessages, checkIfLevelShared, generateWhatsAppLink, checkIfAchievementShared, getRandomMessage } from '../../../services/evolutionService';
+import { MemberEvolution, subscribeToEvolutions, shareEvolution, checkIfLevelShared, generateWhatsAppLink, checkIfAchievementShared, getRandomMessage } from '../../../services/evolutionService';
 import { EvolutionCard } from './EvolutionCard';
+import { WhatsAppShareModal } from './WhatsAppShareModal';
 import { UserProfile } from '../../../types';
+import { supabase } from '../../../services/supabase';
 
 export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profile }) => {
   const [evolutions, setEvolutions] = useState<MemberEvolution[]>([]);
@@ -12,10 +14,11 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
   const [isSharing, setIsSharing] = useState(false);
   const [canShareLevel, setCanShareLevel] = useState(false);
   const [unsharedChallengeDays, setUnsharedChallengeDays] = useState<number[]>([]);
+  const [shareModal, setShareModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   useEffect(() => {
-    const unsubscribe = subscribeToEvolutions((data) => {
-      setEvolutions(data);
+    const unsubscribe = subscribeToEvolutions((newEvolutions) => {
+      setEvolutions(newEvolutions);
       setLoading(false);
     });
 
@@ -71,9 +74,7 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
       await shareEvolution(shareData);
       setCanShareLevel(false);
 
-      // Automatically open WhatsApp after internal share
-      const whatsappLink = generateWhatsAppLink(message);
-      window.open(whatsappLink, '_blank');
+      setShareModal({ isOpen: true, message });
     } catch (err: any) {
       console.error(err);
       alert("Une erreur est survenue lors du partage.");
@@ -100,9 +101,7 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
       await shareEvolution(shareData);
       setUnsharedChallengeDays(prev => prev.filter(d => d !== day));
 
-      // Automatically open WhatsApp after internal share
-      const whatsappLink = generateWhatsAppLink(message);
-      window.open(whatsappLink, '_blank');
+      setShareModal({ isOpen: true, message });
     } catch (err) {
       console.error(err);
       alert("Une erreur est survenue lors du partage.");
@@ -197,11 +196,32 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
         <div className="space-y-6">
           <AnimatePresence mode="popLayout">
             {filteredEvolutions.map((ev) => (
-              <EvolutionCard key={ev.id} evolution={ev} profile={profile} />
+              <EvolutionCard 
+                key={ev.id} 
+                evolution={ev} 
+                profile={profile} 
+                onExternalShare={(msg) => setShareModal({ isOpen: true, message: msg })}
+              />
             ))}
           </AnimatePresence>
         </div>
       )}
+
+      <AnimatePresence>
+        {shareModal.isOpen && (
+          <WhatsAppShareModal 
+            isOpen={shareModal.isOpen}
+            onClose={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
+            onShare={() => {
+              console.log("Sharing to WhatsApp:", shareModal.message);
+              window.open(generateWhatsAppLink(shareModal.message), '_blank');
+              setShareModal(prev => ({ ...prev, isOpen: false }));
+            }}
+            title="Impacte la Communauté"
+            description="Félicitations ! Partage maintenant ton succès dans le groupe WhatsApp pour inspirer tout le monde."
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

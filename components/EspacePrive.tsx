@@ -155,7 +155,7 @@ export const EspacePrive: React.FC<{ profile: UserProfile | null; onContactAmbas
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const isAdmin = profile?.is_admin === true;
+  const isAdmin = false;
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -274,88 +274,6 @@ export const EspacePrive: React.FC<{ profile: UserProfile | null; onContactAmbas
 
   const handlePostTip = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tipInput.trim() || !profile?.id || !isAdmin || isSending) return;
-    
-    setIsSending(true);
-    let finalMediaUrl = '';
-
-    try {
-      // 1. Upload du média si présent
-      if (selectedFile) {
-        setIsUploading(true);
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `strategies/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('mz_assets')
-          .upload(filePath, selectedFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('mz_assets')
-          .getPublicUrl(filePath);
-        
-        finalMediaUrl = publicUrl;
-      }
-
-      // 2. Insertion en base
-      const { error } = await supabase.from('mz_elite_tips').insert([{ 
-        admin_id: profile.id, 
-        content: tipInput.trim(),
-        media_url: finalMediaUrl || null,
-        media_type: uploadType || null,
-        heart_count: 0,
-        fire_count: 0,
-        trophy_count: 0,
-        zap_count: 0,
-        rocket_count: 0,
-        clap_count: 0,
-        sparkle_count: 0,
-        reactions_count: 0
-      }]);
-
-      if (error) throw error;
-
-      // 3. Envoi d'une notification push broadcast
-      try {
-        await fetch('/api/send-push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tokens: [], // Le backend récupérera tout si on passe tokens=[] ou un flag
-            target: 'all',
-            title: 'Nouveau Conseil Élite ! 💎',
-            body: tipInput.trim().substring(0, 100) + (tipInput.length > 100 ? '...' : ''),
-            url: '/espace-prive',
-            icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135679.png'
-          })
-        });
-      } catch (pushErr) {
-        console.warn("FCM Broadcast Tip failed:", pushErr);
-      }
-
-      // 4. Reset UI
-      setTipInput('');
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      setUploadType(null);
-      
-      // Feedback succès
-      fetchTips();
-      if (window.navigator.vibrate) window.navigator.vibrate(20);
-      
-    } catch (e: any) { 
-      console.error("Publication Error:", e);
-      alert(`Erreur de publication : ${e.message || "Problème serveur"}. Vérifiez votre statut Admin.`);
-    } finally { 
-      setIsSending(false); 
-      setIsUploading(false);
-    }
   };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -544,15 +462,7 @@ export const EspacePrive: React.FC<{ profile: UserProfile | null; onContactAmbas
                           )}
 
                           {/* Bouton de suppression Admin Salon */}
-                          {isAdmin && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
-                              className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-20"
-                              title="Supprimer ce message"
-                            >
-                              <Trash2 size={10} />
-                            </button>
-                          )}
+                          {/* Bouton de suppression Admin Salon retiré */}
                           
                           {msg.reply_to_msg && (
                             <div className={`mb-2 p-1.5 rounded-lg text-[9px] opacity-70 border-l-2 bg-black/30 ${msg.reply_to_msg.sender_level === 'niveau_mz_plus' ? 'border-purple-500' : 'border-yellow-600'}`}>
@@ -780,8 +690,8 @@ export const EspacePrive: React.FC<{ profile: UserProfile | null; onContactAmbas
                </div>
              )}
           </div>
-        )}
-      </div>
+         )}
+       </div>
     </div>
   );
 };

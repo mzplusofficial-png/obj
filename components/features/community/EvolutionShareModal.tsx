@@ -10,6 +10,7 @@ import {
   Rocket
 } from 'lucide-react';
 import { shareEvolution, getEvolutionMessages, generateWhatsAppLink } from '../../../services/evolutionService';
+import { WhatsAppShareModal } from './WhatsAppShareModal';
 
 interface EvolutionShareModalProps {
   isVisible: boolean;
@@ -30,6 +31,8 @@ export const EvolutionShareModal: React.FC<EvolutionShareModalProps> = ({
 }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
 
   const getTitle = () => {
     switch (type) {
@@ -41,8 +44,8 @@ export const EvolutionShareModal: React.FC<EvolutionShareModalProps> = ({
 
   const getSubTitle = () => {
     switch (type) {
-      case 'formation_completed': return data?.title || 'Expertise MZ+';
-      case 'achievement_unlocked': return data?.title || 'Succès Débloqué';
+      case 'formation_completed': return (data?.title as string) || 'Expertise MZ+';
+      case 'achievement_unlocked': return (data?.title as string) || 'Succès Débloqué';
       default: return 'Progression Elite';
     }
   };
@@ -60,6 +63,7 @@ export const EvolutionShareModal: React.FC<EvolutionShareModalProps> = ({
     try {
       const messages = getEvolutionMessages(userName, getSubTitle());
       const message = messages[Math.floor(Math.random() * messages.length)];
+      setShareMessage(message);
       
       await shareEvolution({
         user_id: userId,
@@ -70,19 +74,19 @@ export const EvolutionShareModal: React.FC<EvolutionShareModalProps> = ({
       });
 
       setHasShared(true);
-      
-      // Also open WhatsApp
-      const link = generateWhatsAppLink(message);
-      window.open(link, '_blank');
-      
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      setShowWhatsAppModal(true);
     } catch (error) {
       console.error("Error sharing evolution:", error);
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const executeWhatsAppShare = () => {
+    const link = generateWhatsAppLink(shareMessage);
+    window.open(link, '_blank');
+    setShowWhatsAppModal(false);
+    onClose();
   };
 
   return (
@@ -157,6 +161,21 @@ export const EvolutionShareModal: React.FC<EvolutionShareModalProps> = ({
               </button>
             </div>
           </motion.div>
+          
+          <AnimatePresence>
+            {showWhatsAppModal && (
+              <WhatsAppShareModal 
+                isOpen={showWhatsAppModal}
+                onClose={() => {
+                  setShowWhatsAppModal(false);
+                  onClose();
+                }}
+                onShare={executeWhatsAppShare}
+                title="Impacte la Communauté"
+                description={`Félicitations pour ${getSubTitle()} ! Partage ta réussite sur WhatsApp pour motiver les troupes.`}
+              />
+            )}
+          </AnimatePresence>
         </div>
       )}
     </AnimatePresence>

@@ -7,7 +7,6 @@ import {
   Trophy,
   Home,
   Sparkles,
-  ShieldCheck,
   Zap,
   HelpCircle,
   User,
@@ -55,20 +54,79 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children, 
   activeTab, 
   setActiveTab, 
-  isAdmin = false, 
+  isAdmin: _isAdmin = false, 
   profile,
   isMenuOpen = false,
-  setIsMenuOpen = (open: boolean) => {}
+  setIsMenuOpen: _setIsMenuOpen = () => {}
 }) => {
   const [activeMembers, setActiveMembers] = useState(() => Math.floor(Math.random() * (1500 - 800) + 800));
   const [showProfileBadge, setShowProfileBadge] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const handleProfileBadge = () => setShowProfileBadge(true);
-    window.addEventListener('mz-profile-badge', handleProfileBadge);
-    return () => window.removeEventListener('mz-profile-badge', handleProfileBadge);
-  }, []);
+    if (!profile?.id) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        // Fetch last 50 notifications
+        const { data: notifications } = await supabase
+          .from('admin_push_notifications')
+          .select('id, target_type, target_value')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (!notifications) return;
+
+        // Filter for me
+        const myNotifications = notifications.filter(n => {
+          if (n.target_type === 'all') return true;
+          if (n.target_type === 'level') return n.target_value === profile.user_level;
+          if (n.target_type === 'user') return n.target_value === profile.id;
+          return false;
+        });
+
+        // Get receipts
+        const { data: receipts } = await supabase
+          .from('admin_push_receipts')
+          .select('notification_id')
+          .eq('user_id', profile.id);
+
+        const readIds = new Set(receipts?.map(r => r.notification_id) || []);
+        const unread = myNotifications.filter(n => !readIds.has(n.id));
+        
+        setUnreadCount(unread.length);
+      } catch (err) {
+        console.error("Error fetching unread count:", err);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Listen for new notifications
+    const channel = supabase
+      .channel('unread_counters')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'admin_push_notifications'
+      }, () => {
+        fetchUnreadCount();
+      })
+      .on('postgres_changes', {
+        event: '*', // When marking as read, receipts table changes
+        schema: 'public',
+        table: 'admin_push_receipts',
+        filter: `user_id=eq.${profile.id}`
+      }, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, profile?.user_level]);
 
   // When clicking profile tab, clear badge
   const handleTabClick = (tabId: TabId) => {
@@ -175,7 +233,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             className="p-2.5 bg-[var(--color-card-start)]/50 border border-[var(--color-border-gold)] rounded-xl hover:bg-[var(--color-card-end)] transition-all relative flex items-center justify-center group"
           >
             <span className="text-lg group-hover:scale-110 transition-transform">🔔</span>
-            <span className="absolute top-2 right-2 w-1 h-1 bg-red-600 rounded-full animate-pulse"></span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-[var(--color-main-bg)] animate-bounce-slow">
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </header>
@@ -239,16 +301,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
 
             <div className="mt-8 pt-8 border-t border-[var(--color-border-gold)] space-y-3">
-              {isAdmin && (
-                <button 
-                  onClick={() => { setActiveTab('admin'); setIsMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all ${
-                    activeTab === 'admin' ? 'bg-blue-600 text-white shadow-xl' : 'bg-blue-900/10 text-blue-400 border border-blue-500/20'
-                  }`}
-                >
-                  <ShieldCheck size={18} /> ADMIN DASHBOARD
-                </button>
-              )}
               <button onClick={handleLogout} className="w-full flex items-center gap-3 p-4 rounded-xl font-bold uppercase text-[10px] tracking-widest text-red-500 hover:bg-red-500/5 transition-all">
                 <LogOut size={18} /> Déconnexion
               </button>
@@ -328,7 +380,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.7); }
         }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
         .animate-pulse-dot { animation: pulse-dot 1.5s infinite; }
+        .animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
       `}} />
     </div>
   );

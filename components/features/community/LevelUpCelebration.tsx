@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { shareEvolution, getEvolutionMessages, generateWhatsAppLink, checkIfLevelShared } from '../../../services/evolutionService';
+import { WhatsAppShareModal } from './WhatsAppShareModal';
 
 interface LevelUpCelebrationProps {
   rankData: {
@@ -32,6 +33,8 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
 }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [hasShared, setHasShared] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
     const checkAlreadyShared = async () => {
@@ -45,26 +48,14 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
 
   useEffect(() => {
     if (rankData) {
-      // Fire confetti!
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 200 };
-
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-      const interval: any = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-      }, 250);
-
-      return () => clearInterval(interval);
+      // Fire initial confetti
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#fbbf24', '#ffffff', '#000000'],
+        zIndex: 1000
+      });
     }
   }, [rankData]);
 
@@ -75,11 +66,12 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
     try {
       const messages = getEvolutionMessages(userName, rankData.rankName);
       const message = messages[Math.floor(Math.random() * messages.length)];
+      setShareMessage(message);
       
       await shareEvolution({
         user_id: userId,
         user_name: userName,
-        user_avatar: '', // In a real app we'd pass avatar if available
+        user_avatar: '',
         type: 'level_up' as const,
         old_level: getRankNameFromId(rankData.rankId - 1),
         new_level: rankData.rankName,
@@ -87,19 +79,19 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
       });
 
       setHasShared(true);
-      
-      // Also open WhatsApp
-      const link = generateWhatsAppLink(message);
-      window.open(link, '_blank');
-      
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      setShowWhatsAppModal(true);
     } catch (error) {
       console.error("Error sharing evolution:", error);
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const executeWhatsAppShare = () => {
+    const link = generateWhatsAppLink(shareMessage);
+    window.open(link, '_blank');
+    setShowWhatsAppModal(false);
+    onClose();
   };
 
   const getRankNameFromId = (id: number) => {
@@ -205,6 +197,21 @@ export const LevelUpCelebration: React.FC<LevelUpCelebrationProps> = ({
             </span>
           </div>
         </motion.div>
+
+        <AnimatePresence>
+          {showWhatsAppModal && (
+            <WhatsAppShareModal 
+              isOpen={showWhatsAppModal}
+              onClose={() => {
+                setShowWhatsAppModal(false);
+                onClose();
+              }}
+              onShare={executeWhatsAppShare}
+              title="Impacte la Communauté"
+              description={`Bravo ! Partage ton nouveau rang de ${rankData.rankName} sur WhatsApp pour inspirer tes pairs.`}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </AnimatePresence>
   );

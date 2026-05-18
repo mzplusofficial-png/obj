@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   UserPlus,
   Lock,
@@ -47,11 +47,11 @@ import {
   LiquidProgressionTube,
   getCurrentLevel,
 } from "./features/progression/LiquidProgressionTube.tsx";
-import { Gift, Share2 as ShareIcon } from "lucide-react";
+import { Gift, Share2 as ShareIcon, TrendingUp as TrendingIcon } from "lucide-react";
 import { DailyMission } from "./features/challenges/DailyMission.tsx";
 import { EvolutionFeed } from "./features/community/EvolutionFeed.tsx";
+import { WhatsAppShareModal } from "./features/community/WhatsAppShareModal.tsx";
 import { shareEvolution, generateWhatsAppLink, getRandomMessage, checkIfAchievementShared } from "../services/evolutionService.ts";
-
 
 
 const UserRewardsSection: React.FC<{ profile: UserProfile | null }> = ({
@@ -150,6 +150,44 @@ export const GlobalView: React.FC<any> = ({
   const [isChallengeActive, setIsChallengeActive] = useState(false);
   const [forceRender, setForceRender] = useState(0);
   const [sharedChallengeDays, setSharedChallengeDays] = useState<number[]>([]);
+  const [shareModalData, setShareModalData] = useState<{ 
+    isOpen: boolean; 
+    day: number | null;
+    platform?: "whatsapp" | "facebook" | "gmail";
+    type: 'challenge' | 'referral'
+  }>({
+    isOpen: false,
+    day: null,
+    type: 'challenge'
+  });
+
+  const handleExecuteShare = async () => {
+    if (!profile) return;
+    
+    if (shareModalData.type === 'challenge' && shareModalData.day !== null) {
+      const day = shareModalData.day;
+      const message = getRandomMessage('challenge', { day });
+      
+      await shareEvolution({
+        user_id: profile.id,
+        user_name: profile.full_name || profile.username,
+        user_avatar: profile.avatar_url,
+        type: 'achievement_unlocked',
+        new_level: `Défi J${day}`,
+        message: message
+      });
+
+      setSharedChallengeDays(prev => [...prev, day]);
+      setShareModalData(prev => ({ ...prev, isOpen: false }));
+
+      // Auto open WhatsApp
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, '_blank');
+    } else if (shareModalData.type === 'referral') {
+      setShareModalData(prev => ({ ...prev, isOpen: false }));
+      executeReferralShare(shareModalData.platform);
+    }
+  };
 
   useEffect(() => {
     const savedCount = parseInt(localStorage.getItem("mz_login_count") || "0");
@@ -283,7 +321,15 @@ export const GlobalView: React.FC<any> = ({
     },
   ];
 
-  const handleShare = async (platform?: string) => {
+  const handleReferralShare = (platform?: "whatsapp" | "facebook" | "gmail") => {
+    if (platform === "whatsapp") {
+      setShareModalData({ isOpen: true, day: null, platform: "whatsapp", type: 'referral' });
+    } else {
+      executeReferralShare(platform);
+    }
+  };
+
+  const executeReferralShare = (platform?: "whatsapp" | "facebook" | "gmail") => {
     const baseUrl = window.location.origin;
     const shareUrl = `${baseUrl}/register?ref=${profile?.referral_code || "elite"}`;
     const shareText = `Je viens de tomber sur MZ+.\nC’est un système en ligne qui permettrait de générer des revenus en ligne assez simplement.\nJ'ai deja commnecz et franchement ça a l’air intéressant.\nSi tu veux jeter un œil 👇\n\n${shareUrl}`;
@@ -305,7 +351,7 @@ export const GlobalView: React.FC<any> = ({
       );
     } else if (navigator.share) {
       try {
-        await navigator.share({
+        navigator.share({
           title: "MZ+ Elite Business",
           text: shareText,
           url: shareUrl,
@@ -357,7 +403,7 @@ export const GlobalView: React.FC<any> = ({
           <div className="grid grid-cols-1 gap-3 animate-fade-in text-left">
             <div className="grid grid-cols-2 gap-3 pb-2">
               <button
-                onClick={() => handleShare("whatsapp")}
+                onClick={() => handleReferralShare("whatsapp")}
                 className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-center"
               >
                 <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
@@ -371,7 +417,7 @@ export const GlobalView: React.FC<any> = ({
               </button>
 
               <button
-                onClick={() => handleShare("facebook")}
+                onClick={() => executeReferralShare("facebook")}
                 className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all text-center"
               >
                 <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -383,7 +429,7 @@ export const GlobalView: React.FC<any> = ({
               </button>
 
               <button
-                onClick={() => handleShare("gmail")}
+                onClick={() => executeReferralShare("gmail")}
                 className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all text-center"
               >
                 <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20">
@@ -395,7 +441,7 @@ export const GlobalView: React.FC<any> = ({
               </button>
 
               <button
-                onClick={() => handleShare()}
+                onClick={() => executeReferralShare()}
                 className="flex flex-col items-center gap-2 p-5 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-center"
               >
                 <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white">
@@ -506,6 +552,16 @@ export const GlobalView: React.FC<any> = ({
         </div>
       </div>
 
+      <AnimatePresence>
+        {shareModalData.isOpen && (
+          <WhatsAppShareModal 
+            isOpen={shareModalData.isOpen} 
+            onClose={() => setShareModalData(prev => ({ ...prev, isOpen: false }))}
+            onShare={handleExecuteShare}
+          />
+        )}
+      </AnimatePresence>
+
       {(() => {
         const is3JFinished = challengeDb.j3Completed === true || challengeDb.j3_completed === true;
         const is3JCancelled = challengeDb.cancelled === true;
@@ -534,22 +590,8 @@ export const GlobalView: React.FC<any> = ({
         let mission = null;
         let isWaiting = false;
 
-        const handleShare = async (day: number) => {
-          if (!profile) return;
-          const message = getRandomMessage('challenge', { day });
-          
-          await shareEvolution({
-            user_id: profile.id,
-            user_name: profile.full_name || profile.username,
-            user_avatar: profile.avatar_url,
-            type: 'achievement_unlocked',
-            new_level: `Défi J${day}`,
-            message: message
-          });
-
-          // Auto open WhatsApp
-          const whatsappLink = generateWhatsAppLink(message);
-          window.open(whatsappLink, '_blank');
+        const handleShare = (day: number) => {
+          setShareModalData({ isOpen: true, day });
         };
 
         // Priority 1: Day 3 (either naturally unlocked or J2 missed)
@@ -1017,6 +1059,31 @@ const SubServiceCard = ({ title, desc, icon: Icon, onClick, locked }: any) => (
   </button>
 );
 
+export const EvolutionTab: React.FC<{ profile: UserProfile | null; onBack: () => void }> = ({ profile, onBack }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="pb-24"
+  >
+    <div className="flex items-center gap-4 mb-8 px-2">
+      <button 
+        onClick={onBack}
+        className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 transition-all"
+      >
+        <ArrowLeft size={20} />
+      </button>
+      <div>
+        <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">Fil d'Évolutions</h2>
+        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Le succès de la communauté en direct</p>
+      </div>
+    </div>
+    
+    <div className="bg-black/40 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-6 shadow-2xl">
+      <EvolutionFeed profile={profile} />
+    </div>
+  </motion.div>
+);
+
 export const ProfileTab: React.FC<any> = ({
   profile,
   onLogout,
@@ -1036,6 +1103,7 @@ export const ProfileTab: React.FC<any> = ({
   const lastCompletedDay = (challengeState.j2Completed || challengeState.j2_completed) ? 2 : (challengeState.j1Completed || challengeState.j1_completed) ? 1 : 0;
   
   const [isAlreadyShared, setIsAlreadyShared] = useState(false);
+  const [shareModal, setShareModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   useEffect(() => {
     if (!profile?.id || !lastCompletedDay) return;
@@ -1047,17 +1115,24 @@ export const ProfileTab: React.FC<any> = ({
     if (!profile || !lastCompletedDay) return;
     const message = getRandomMessage('challenge', { day: lastCompletedDay });
     
+    setShareModal({ isOpen: true, message });
+  };
+
+  const handleExecuteShare = async () => {
+    if (!profile || !lastCompletedDay || !shareModal.message) return;
+    
     await shareEvolution({
       user_id: profile.id,
       user_name: profile.full_name || profile.username,
       user_avatar: profile.avatar_url,
       type: 'achievement_unlocked',
       new_level: `Défi J${lastCompletedDay}`,
-      message: message
+      message: shareModal.message
     });
 
     setIsAlreadyShared(true);
-    const whatsappLink = generateWhatsAppLink(message);
+    setShareModal(prev => ({ ...prev, isOpen: false }));
+    const whatsappLink = generateWhatsAppLink(shareModal.message);
     window.open(whatsappLink, '_blank');
   };
 
@@ -1226,7 +1301,37 @@ export const ProfileTab: React.FC<any> = ({
         </div>
       </div>
 
-      <div id="progression-tube">
+      {/* Evolution Trigger Icon - Improved Placement & Responsiveness */}
+      <div className="px-2 mb-8">
+         <motion.button
+           whileHover={{ scale: 1.02 }}
+           whileTap={{ scale: 0.98 }}
+           onClick={() => onSwitchTab('evolution')}
+           className="w-full relative group p-5 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/5 flex items-center justify-between shadow-2xl hover:border-purple-500/50 transition-all duration-300"
+         >
+           <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]"></div>
+           
+           <div className="flex items-center gap-4">
+             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 group-hover:rotate-6 transition-transform">
+               <TrendingIcon size={24} />
+             </div>
+             <div className="text-left">
+               <div className="text-xs font-black text-white uppercase tracking-tighter italic leading-none mb-1.5">Fil d'Évolutions</div>
+               <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest leading-none">Vois le succès de la communauté</div>
+             </div>
+           </div>
+
+           <div className="flex items-center gap-3">
+             <div className="flex gap-1">
+               <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
+               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse delay-75"></div>
+             </div>
+             <ChevronRight size={18} className="text-neutral-600 group-hover:text-white transition-colors" />
+           </div>
+         </motion.button>
+      </div>
+
+      <div className="space-y-6">
         <LiquidProgressionTube currentXp={profile?.xp || 0} />
       </div>
 
@@ -1335,22 +1440,6 @@ export const ProfileTab: React.FC<any> = ({
         </div>
       )}
 
-      {/* Evolution Access Icon */}
-      <div className="pt-8 border-t border-white/5 flex justify-center">
-        <button
-          onClick={() => onSwitchTab("community")}
-          className="group relative flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 hover:bg-blue-500/10 hover:border-blue-500/20 transition-all duration-300"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-            <Rocket size={24} />
-          </div>
-          <span className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em]">Évolutions</span>
-          <div className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-md bg-blue-500 text-[8px] font-bold text-white uppercase tracking-widest animate-pulse">
-            Live
-          </div>
-        </button>
-      </div>
-
       <div className="pt-8 border-t border-white/5 space-y-4">
         <button
           onClick={onLogout}
@@ -1366,6 +1455,18 @@ export const ProfileTab: React.FC<any> = ({
           Millionaire Zone Plus v7.4.2 • Elite Secure Logout
         </p>
       </div>
+
+      <AnimatePresence>
+        {shareModal.isOpen && (
+          <WhatsAppShareModal 
+            isOpen={shareModal.isOpen}
+            onClose={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
+            onShare={handleExecuteShare}
+            title="Impacte la Communauté"
+            description="Le succès se partage ! Clique pour inspirer les autres membres sur WhatsApp."
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

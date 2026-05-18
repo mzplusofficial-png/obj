@@ -8,15 +8,16 @@ import { DashboardLayout } from './components/DashboardLayout.tsx';
 import { 
   GlobalView, 
   RevenueTab, 
+  CommunityTab,
   TeamTab, 
   RPADashboard, 
   CoachingTab, 
   FormationTab, 
   UpgradeTab, 
-  SuggestionsTab,
-  GuidesTab,
+  SuggestionsTab, 
+  GuidesTab, 
   ProfileTab,
-  CommunityTab
+  EvolutionTab
 } from './components/DashboardTabs.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { RankRewardChecker } from './components/features/rank-rewards/RankRewardChecker.tsx';
@@ -24,7 +25,6 @@ import { MyStore } from './components/features/my-store/MyStore.tsx';
 import { StandalonePublicStore } from './components/features/my-store/StandalonePublicStore.tsx';
 import { RewardFeature } from './components/features/programme-recompense/RewardFeature.tsx';
 import { PWAInstallBanner } from './components/ui/PWAInstallBanner.tsx';
-import { AdminPanel } from './components/AdminPanel.tsx';
 import { ProductSalesPage } from './components/ProductSalesPage.tsx';
 import { EspacePrive } from './components/EspacePrive.tsx';
 import { MZPlusFlashOfferOverlay } from './components/features/mz-plus-offer/MZPlusFlashOfferOverlay.tsx';
@@ -54,12 +54,6 @@ import { EvolutionShareModal } from './components/features/community/EvolutionSh
 import { BonusHub } from './components/features/bonus/BonusHub.tsx';
 import { BonusContentReader } from './components/features/bonus/BonusContentReader.tsx';
 import { getBonusContent } from './components/features/formation/bonusContentData.ts';
-
-const ADMIN_EMAILS = [
-  'equipemzplus@gmail.com',
-  'millionairezoneplus@gmail.com',
-  'admin@mz.plus'
-];
 
 const App: React.FC = () => {
   const [session, setSession] = useState<unknown>(null);
@@ -114,7 +108,6 @@ const App: React.FC = () => {
   const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
     try {
       const userEmail = email?.toLowerCase().trim() || "";
-      const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail);
       
       let { data: profile } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
       
@@ -146,14 +139,14 @@ const App: React.FC = () => {
           email: userEmail, 
           referral_code: newRefCode, 
           rank_id: 1, 
-          is_admin: isHardcodedAdmin, 
+          is_admin: false, 
           user_level: 'standard'
         };
         const { data: upsertedProfile } = await supabase.from('users').upsert(newProfileData, { onConflict: 'id' }).select('*').single();
         profile = upsertedProfile || (newProfileData as any);
       }
 
-      const isAdminValue = isHardcodedAdmin || profile?.is_admin === true || !!profile?.admin_role;
+      const isAdminValue = false;
       const enrichedProfile: UserProfile = { 
         id: profile?.id || userId, 
         full_name: profile?.full_name || fullName || 'Ambassadeur', 
@@ -161,7 +154,7 @@ const App: React.FC = () => {
         rank_id: profile?.rank_id || 1, 
         email: profile?.email || userEmail, 
         is_admin: isAdminValue, 
-        admin_role: profile?.admin_role || (isHardcodedAdmin ? 'super_admin' : null),
+        admin_role: null,
         rpa_balance: Number(profile?.rpa_balance || 0), 
         rpa_points: Number(profile?.rpa_points || 0), 
         xp: Number(profile?.xp || 0),
@@ -1270,7 +1263,7 @@ const App: React.FC = () => {
   if (customerProduct) return (<ProductSalesPage product={customerProduct} onPurchase={handlePurchase} purchaseStep={purchaseStep} countdown={900} isLoggedIn={!!session} />);
   if (!session) return <LandingPage />;
 
-  const isAdmin = userProfile?.is_admin === true || !!userProfile?.admin_role;
+  const isAdmin = false; // Désactivé à la demande de l'utilisateur
 
   const handleShareClose = () => {
     setShowSharePopup(false);
@@ -1420,8 +1413,7 @@ const App: React.FC = () => {
       )}
       {activeTab === 'upgrade' && <UpgradeTab />}
       {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
-      {activeTab === 'sql_console' && isAdmin && <SQLConsole profile={userProfile} />}
-      {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
+      {activeTab === 'evolution' && <EvolutionTab profile={userProfile} onBack={() => setActiveTab('profile')} />}
       <AxisGuideFlow session={session} userProfile={userProfile} isReady={!loading && !initSequence} />
       <RankRewardChecker profile={userProfile} onRedirectProfile={() => {
         setActiveTab('profile');

@@ -4,7 +4,7 @@ import { Trophy, Target, Clock, ArrowLeft, Users, CheckCircle2, ShoppingBag, Bra
 import { UserProfile } from '../../../types';
 import { supabase } from '../../../services/supabase';
 import { shareEvolution, generateWhatsAppLink, getRandomMessage } from '../../../services/evolutionService';
-import confetti from 'canvas-confetti';
+import { WhatsAppShareModal } from '../community/WhatsAppShareModal';
 
 const playSound = (type: 'correct' | 'wrong' | 'start' | 'finish') => {
   try {
@@ -352,7 +352,7 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
   const [claimingSales, setClaimingSales] = useState(false);
   const [claimingQuiz, setClaimingQuiz] = useState(false);
   const [claimingPremium, setClaimingPremium] = useState(false);
-  const [sharingMission, setSharingMission] = useState<string | null>(null);
+  const [sharingMission, setSharingMission] = useState<{ title: string; message: string } | null>(null);
   const [weeklySales, setWeeklySales] = useState(0);
   const [localTeamCount, setLocalTeamCount] = useState(teamCount);
   const [premiumTeamCount, setPremiumTeamCount] = useState(0);
@@ -456,12 +456,17 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
     };
   }, [profile.id, profile.referral_code]);
 
-  const handleShareMission = async (title: string, xp: number) => {
+  const handleShareMission = async (title: string) => {
     if (!profile) return;
-    setSharingMission(title);
+    const message = getRandomMessage('mission', { missionTitle: title });
+    setSharingMission({ title, message });
+  };
+
+  const executeWhatsAppShare = async () => {
+    if (!profile || !sharingMission) return;
+    const { title, message } = sharingMission;
+    
     try {
-      const message = getRandomMessage('mission', { missionTitle: title });
-      
       await shareEvolution({
         user_id: profile.id,
         user_name: profile.full_name || profile.username,
@@ -781,11 +786,11 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         Validé
                      </div>
                      <button
-                        onClick={() => handleShareMission('Le Recruteur', xpReward)}
+                        onClick={() => handleShareMission('Le Recruteur')}
                         disabled={!!sharingMission}
                         className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
                      >
-                        {sharingMission === 'Le Recruteur' ? (
+                        {sharingMission?.title === 'Le Recruteur' ? (
                           <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Share2 size={16} />
@@ -860,11 +865,11 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         Validé
                      </div>
                      <button
-                        onClick={() => handleShareMission("Vendeur d'Élite", xpRewardSales)}
+                        onClick={() => handleShareMission("Vendeur d'Élite")}
                         disabled={!!sharingMission}
                         className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
                      >
-                        {sharingMission === "Vendeur d'Élite" ? (
+                        {sharingMission?.title === "Vendeur d'Élite" ? (
                           <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Share2 size={16} />
@@ -939,11 +944,11 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         Validé
                      </div>
                      <button
-                        onClick={() => handleShareMission('Manager Pro', xpRewardPremium)}
+                        onClick={() => handleShareMission('Manager Pro')}
                         disabled={!!sharingMission}
                         className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
                      >
-                        {sharingMission === 'Manager Pro' ? (
+                        {sharingMission?.title === 'Manager Pro' ? (
                           <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Share2 size={16} />
@@ -1003,11 +1008,11 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
                         Validé
                      </div>
                      <button
-                        onClick={() => handleShareMission('Expert MZ+', quizScore)}
+                        onClick={() => handleShareMission('Expert MZ+')}
                         disabled={!!sharingMission}
                         className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-2"
                      >
-                        {sharingMission === 'Expert MZ+' ? (
+                        {sharingMission?.title === 'Expert MZ+' ? (
                           <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Share2 size={16} />
@@ -1058,6 +1063,18 @@ export const WeeklyChallenge: React.FC<{ profile: UserProfile, teamCount: number
           onClose={() => setQuizStarted(false)} 
         />
       )}
+
+      <AnimatePresence>
+        {sharingMission && (
+          <WhatsAppShareModal 
+            isOpen={!!sharingMission}
+            onClose={() => setSharingMission(null)}
+            onShare={executeWhatsAppShare}
+            title="Impacte la Communauté"
+            description={`Félicitations pour ton succès "${sharingMission.title}" ! Partage ta réussite pour motiver le reste du groupe sur WhatsApp.`}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

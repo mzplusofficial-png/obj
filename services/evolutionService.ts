@@ -127,11 +127,11 @@ export const checkIfAchievementShared = async (userId: string, achievementTitle:
   }
 };
 
-export const reactToEvolution = async (evolutionId: string, userId: string, reactionType: string) => {
+export const reactToEvolution = async (evolutionId: string, userId: string, reactorName: string, reactionType: string) => {
   try {
     const { data: current, error: fetchError } = await supabase
       .from(EVOLUTIONS_TABLE)
-      .select('reactions, user_reactions')
+      .select('reactions, user_reactions, user_id')
       .eq('id', evolutionId)
       .single();
 
@@ -159,6 +159,49 @@ export const reactToEvolution = async (evolutionId: string, userId: string, reac
       // Toggle on
       userReactions[userId][reactionType] = true;
       reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+
+      // Envoyer une notification à l'auteur si ce n'est pas lui qui réagit
+      if (current.user_id && current.user_id !== userId) {
+        const reactionEmoji = reactionType === 'rocket' ? '🚀' : reactionType === 'cool' ? '😎' : '👏';
+        const title = 'Nouvelle réaction !';
+        const body = `${reactorName} a réagi avec ${reactionEmoji} à ton évolution.`;
+        const url = '/?tab=community';
+        
+        // 1. In-App Notification (Database)
+        await supabase.from('admin_push_notifications').insert([{
+          title,
+          body,
+          icon_type: 'info',
+          target_type: 'user',
+          target_value: current.user_id,
+          url
+        }]);
+
+        // 2. Real Push Notification (API)
+        try {
+          const { data: authorData } = await supabase
+            .from('users')
+            .select('fcm_token')
+            .eq('id', current.user_id)
+            .single();
+          
+          if (authorData?.fcm_token) {
+            await fetch('/api/send-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token: authorData.fcm_token,
+                title,
+                body,
+                url,
+                icon: 'https://ui-avatars.com/api/?name=MZ&background=ca8a04&color=fff&size=512&format=png'
+              })
+            });
+          }
+        } catch (pushErr) {
+          console.warn("FCM reaction push failed:", pushErr);
+        }
+      }
     }
 
     const { error: updateError } = await supabase
