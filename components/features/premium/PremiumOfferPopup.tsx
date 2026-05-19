@@ -7,9 +7,10 @@ interface PremiumOfferPopupProps {
   onClose: () => void;
   message: string;
   onUpgrade: () => void;
+  cta?: string;
 }
 
-export const PremiumOfferPopup: React.FC<PremiumOfferPopupProps> = ({ isOpen, onClose, message, onUpgrade }) => {
+export const PremiumOfferPopup: React.FC<PremiumOfferPopupProps> = ({ isOpen, onClose, message, onUpgrade, cta }) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -62,7 +63,7 @@ export const PremiumOfferPopup: React.FC<PremiumOfferPopupProps> = ({ isOpen, on
                   className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 group"
                 >
                   <Rocket size={18} className="group-hover:translate-x-1 transition-transform" />
-                  Passer Premium maintenant
+                  {cta || "Passer Premium maintenant"}
                 </button>
                 
                 <button

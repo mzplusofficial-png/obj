@@ -90,7 +90,7 @@ const App: React.FC = () => {
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   
   // Premium Trigger States
-  const [premiumTrigger, setPremiumTrigger] = useState<{ type: 'popup' | 'axis', message: string } | null>(null);
+  const [premiumTrigger, setPremiumTrigger] = useState<{ type: 'popup' | 'axis', message: string, priority?: number, cta?: string } | null>(null);
   const [lastClickCount, setLastClickCount] = useState<number | null>(null);
   
   // Défis "3 Jours" Trigger States
@@ -115,14 +115,19 @@ const App: React.FC = () => {
   const runPremiumTrigger = useCallback(async (scenario: 'mission_complete' | 'click_spike' | 'fallback') => {
     if (!userProfile?.id || userProfile.user_level === 'niveau_mz_plus') return;
     
+    // Délai de 30 secondes pour le succès de mission (moins brusque)
+    if (scenario === 'mission_complete') {
+      await new Promise(resolve => setTimeout(resolve, 30000));
+    }
+
     const result = await PremiumTriggerEngine.trigger(userProfile.id, scenario);
     if (result) {
       if (result.type === 'popup') {
-        setPremiumTrigger({ type: 'popup', message: result.message });
+        setPremiumTrigger({ type: 'popup', message: result.message, priority: result.priority, cta: result.cta });
       } else {
         triggerAxisMessage(result.message, 'progression', 15000, {
-          label: "S'abonner",
-          action: () => setActiveTab('upgrade')
+          label: result.cta || "S'abonner",
+          action: () => setActiveTab('flash_offer')
         }, 'smart');
       }
     }
@@ -1823,12 +1828,13 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       <PremiumOfferPopup 
-        isOpen={!!premiumTrigger}
+        isOpen={premiumTrigger?.type === 'popup'}
         message={premiumTrigger?.message || ''}
+        cta={premiumTrigger?.cta}
         onClose={() => setPremiumTrigger(null)}
         onUpgrade={() => {
           setPremiumTrigger(null);
-          setActiveTab('upgrade');
+          setActiveTab('flash_offer');
         }}
       />
     </DashboardLayout>
