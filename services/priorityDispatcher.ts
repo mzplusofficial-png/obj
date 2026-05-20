@@ -90,8 +90,6 @@ export async function runPriorityDispatcher() {
         for (const userData of (usersData || [])) {
             const userId = userData.id;
             try {
-                if (!userData.fcm_token) continue;
-                
                 // Get last ping for this user
                 const userPing = activeTracking?.find(t => t.user_id === userId);
                 const lastActivityDate = userPing?.last_ping ? new Date(userPing.last_ping) : new Date(0);
@@ -247,32 +245,73 @@ export async function runPriorityDispatcher() {
                     }
 
                     if (!hasBeenSent) {
-                        const tokenStart = userData.fcm_token.substring(0, 10);
-                        console.log(`[Dispatcher] Attempting to send ${notifType} to user ${userId} (Token start: ${tokenStart}...)`);
+                        // 1. Create Internal Notification inside database for in-app cloche
                         try {
-                            const sendResult = await sendPush(userData.fcm_token, title, body, { url });
-                            console.log(`[Dispatcher] sendPush result for ${userId}:`, sendResult);
-                            
-                            if (sendResult.success) {
-                                // Add to log
-                                const { error: insErr } = await supabase.from('mz_background_notifications_log').insert([{
-                                    user_id: userId,
-                                    notif_type: notifType
-                                }]);
-                                
-                                if (insErr && insErr.code !== '42P01') {
-                                    console.error('[Dispatcher] Error logging notification:', insErr);
+                            const isPremiumUpsell = notifType.includes('upsell') || notifType.includes('inactivity');
+                            const { error: insErr } = await supabase.from('internal_notifications').insert({
+                                recipient_id: userId,
+                                sender_id: userId, // Avoids 'system' UUID type casting error
+                                type: notifType,
+                                message: body,
+                                is_read: false,
+                                title: title,
+                                metadata: { 
+                                    title: title,
+                                    scenario: notifType, 
+                                    is_blink: isPremiumUpsell,
+                                    icon_type: isPremiumUpsell ? 'premium_upsell' : (notifType.includes('success') ? 'success' : 'default'),
+                                    cta_label: isPremiumUpsell ? 'Profiter de l\'offre ⚡' : undefined
                                 }
+                            });
 
-                                // Mark state as presented in challenge table to sync UI
-                                if (notifType === 'challenge_j1_success') {
-                                    await supabase.from('mz_challenge_3j_state')
-                                        .update({ j2_presented: true })
-                                        .eq('user_id', userId);
-                                }
+                            if (insErr) {
+                                console.warn('[Dispatcher] Failed to insert with complete schema, retrying with basic fallback schema:', insErr.message);
+                                await supabase.from('internal_notifications').insert({
+                                    recipient_id: userId,
+                                    sender_id: userId,
+                                    type: notifType,
+                                    message: body,
+                                    is_read: false
+                                });
                             }
-                        } catch (pushErr) {
-                            console.error(`[Dispatcher] Failed to send push to ${userId}:`, pushErr);
+                            console.log(`[Dispatcher] Successfully created internal notification in DB for ${userId}: ${notifType}`);
+                        } catch (dbErr) {
+                            console.error(`[Dispatcher] Error creating internal database notification:`, dbErr);
+                        }
+
+                        // 2. Perform the traditional Background Push Notification (FCM) if a token exists
+                        if (userData.fcm_token) {
+                            const tokenStart = userData.fcm_token.substring(0, 10);
+                            console.log(`[Dispatcher] Attempting to send ${notifType} to user ${userId} (Token start: ${tokenStart}...)`);
+                            try {
+                                const sendResult = await sendPush(userData.fcm_token, title, body, { url });
+                                console.log(`[Dispatcher] sendPush result for ${userId}:`, sendResult);
+                            } catch (pushErr) {
+                                console.error(`[Dispatcher] Failed to send push to ${userId}:`, pushErr);
+                            }
+                        } else {
+                            console.log(`[Dispatcher] Skipping native push for ${userId} (no FCM token registered)`);
+                        }
+
+                        // Always log to avoid duplicate triggers
+                        try {
+                            const { error: insErr } = await supabase.from('mz_background_notifications_log').insert([{
+                                user_id: userId,
+                                notif_type: notifType
+                            }]);
+                            
+                            if (insErr && insErr.code !== '42P01') {
+                                console.error('[Dispatcher] Error logging notification:', insErr);
+                            }
+
+                            // Mark state as presented in challenge table to sync UI
+                            if (notifType === 'challenge_j1_success') {
+                                await supabase.from('mz_challenge_3j_state')
+                                    .update({ j2_presented: true })
+                                    .eq('user_id', userId);
+                            }
+                        } catch (logErr) {
+                            console.error('[Dispatcher] Error executing notification bookkeeping:', logErr);
                         }
                     }
                 }

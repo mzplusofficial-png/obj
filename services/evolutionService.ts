@@ -131,7 +131,7 @@ export const reactToEvolution = async (evolutionId: string, userId: string, reac
   try {
     const { data: current, error: fetchError } = await supabase
       .from(EVOLUTIONS_TABLE)
-      .select('reactions, user_reactions')
+      .select('reactions, user_reactions, user_id')
       .eq('id', evolutionId)
       .single();
 
@@ -178,6 +178,33 @@ export const reactToEvolution = async (evolutionId: string, userId: string, reac
         post_id: evolutionId,
         reaction_type: reactionType
       }, { onConflict: 'user_id,post_id,reaction_type' });
+
+      // Notify the author of the post (if they are not the reactor themselves)
+      if (current && current.user_id && current.user_id !== userId) {
+        try {
+          let reactorName = 'Un partenaire';
+          const { data: userData } = await supabase.from('users').select('full_name').eq('id', userId).single();
+          if (userData?.full_name) {
+            reactorName = userData.full_name;
+          }
+          
+          await supabase.from('internal_notifications').insert({
+            recipient_id: current.user_id,
+            sender_id: userId,
+            type: 'evolution_reaction',
+            message: `${reactorName} a réagi à ta publication d'évolution.`,
+            is_read: false,
+            title: 'Vibe de soutien ! 🔥',
+            metadata: {
+              post_id: evolutionId,
+              reaction_type: reactionType,
+              icon_type: 'reaction'
+            }
+          });
+        } catch (notifErr) {
+          console.error("Error inserting evolution_reaction notification:", notifErr);
+        }
+      }
     } else {
       // If toggling off, remove the record
       await supabase.from('evolution_reactions')

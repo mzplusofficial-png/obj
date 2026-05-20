@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, X, AlertTriangle, Crown, Rocket } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
@@ -50,7 +50,7 @@ import { rewardUserXP } from './services/gamification.ts';
 import { PROGRESSION_LEVELS } from './components/features/progression/LiquidProgressionTube.tsx';
 import { LevelUpCelebration } from './components/features/community/LevelUpCelebration.tsx';
 import { EvolutionShareModal } from './components/features/community/EvolutionShareModal.tsx';
-import { PremiumTriggerEngine, ScenicMessage } from './services/premiumTriggerService.ts';
+import { PremiumTriggerEngine } from './services/premiumTriggerService.ts';
 import { PremiumOfferPopup } from './components/features/premium/PremiumOfferPopup.tsx';
 
 import { BonusHub } from './components/features/bonus/BonusHub.tsx';
@@ -60,6 +60,10 @@ import { getBonusContent } from './components/features/formation/bonusContentDat
 const App: React.FC = () => {
   const [session, setSession] = useState<unknown>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const profileRef = useRef<UserProfile | null>(null);
+  useEffect(() => {
+    profileRef.current = userProfile;
+  }, [userProfile]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [teamCount, setTeamCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -137,9 +141,12 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!userProfile || userProfile.user_level === 'niveau_mz_plus') return;
 
-    // Last Active tracking for 6h push (Database backed)
+    // Last Active tracking with a 3-minute throttle to protect database performance
+    let lastReported = 0;
     const updateActivity = () => {
-      if (userProfile?.id) {
+      const now = Date.now();
+      if (userProfile?.id && now - lastReported > 180000) {
+        lastReported = now;
         PremiumTriggerEngine.reportActivity(userProfile.id);
       }
     };
@@ -178,22 +185,89 @@ const App: React.FC = () => {
 
   // Handle Click Spike Trigger
   useEffect(() => {
-    if (!userProfile || userProfile.user_level === 'niveau_mz_plus' || activeTab !== 'dashboard') return;
+    if (activeTab !== 'dashboard') return;
 
     const checkClicks = async () => {
-      const { data } = await supabase.from('product_stats').select('clicks').eq('user_id', userProfile.id);
-      const totalClicks = data?.reduce((acc, curr) => acc + curr.clicks, 0) || 0;
+      const profile = profileRef.current;
+      if (!profile || profile.user_level === 'niveau_mz_plus') return;
+
+      const { data } = await supabase.from('product_stats').select('clicks').eq('user_id', profile.id);
+      const totalClicks = data?.reduce((acc: number, curr: any) => acc + curr.clicks, 0) || 0;
       
-      if (lastClickCount !== null && totalClicks >= lastClickCount + 10) {
+      const prefs = profile.store_preferences || {};
+      const clickSpike = prefs.click_spike || {};
+
+      const timesTriggered = parseInt(clickSpike.times_triggered || '0', 10);
+      const hasTriggeredFirstTime = clickSpike.triggered === true || timesTriggered >= 1;
+
+      let shouldTrigger = false;
+      let nextClickSpike = { ...clickSpike };
+
+      if (!hasTriggeredFirstTime) {
+        // First execution threshold: 10 clicks
+        if (totalClicks >= 10) {
+          shouldTrigger = true;
+          nextClickSpike = {
+            triggered: true,
+            times_triggered: 1,
+            baseline_clicks: totalClicks,
+            history: [{ timestamp: Date.now(), clicks: 0 }]
+          };
+        }
+      } else {
+        // Second time and onwards: 15 clicks in 1 hour
+        const baselineClicks = clickSpike.baseline_clicks !== undefined ? parseInt(clickSpike.baseline_clicks, 10) : totalClicks;
+        let history = Array.isArray(clickSpike.history) ? [...clickSpike.history] : [];
+
+        if (totalClicks > baselineClicks) {
+          const clicksDiff = totalClicks - baselineClicks;
+          history.push({ timestamp: Date.now(), clicks: clicksDiff });
+          nextClickSpike.baseline_clicks = totalClicks;
+        } else if (totalClicks < baselineClicks) {
+          nextClickSpike.baseline_clicks = totalClicks;
+        }
+
+        // Clean up items older than 1 hour (3600000 ms)
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        history = history.filter((item: any) => item.timestamp >= oneHourAgo);
+        nextClickSpike.history = history;
+
+        const clicksInLastHour = history.reduce((sum: number, item: any) => sum + item.clicks, 0);
+
+        if (clicksInLastHour >= 15) {
+          shouldTrigger = true;
+          const nextTimes = timesTriggered > 0 ? timesTriggered + 1 : 2;
+          nextClickSpike.times_triggered = nextTimes;
+          nextClickSpike.history = []; // Clear history to avoid re-triggering consecutively
+        }
+      }
+
+      // Check if state changed
+      const hasStateChanged = JSON.stringify(clickSpike) !== JSON.stringify(nextClickSpike);
+
+      if (hasStateChanged) {
+        const newPrefs = {
+          ...prefs,
+          click_spike: nextClickSpike
+        };
+
+        // Update state reactively
+        setUserProfile((prev: any) => prev ? { ...prev, store_preferences: newPrefs } : prev);
+
+        // Update DB
+        await supabase.from('users').update({ store_preferences: newPrefs }).eq('id', profile.id);
+      }
+
+      if (shouldTrigger) {
         runPremiumTrigger('click_spike');
       }
       setLastClickCount(totalClicks);
     };
 
-    const interval = setInterval(checkClicks, 5 * 60 * 1000); // Check every 5 mins
+    const interval = setInterval(checkClicks, 10 * 1000); // Check every 10 seconds for instant responsive dev and real production validation
     checkClicks();
     return () => clearInterval(interval);
-  }, [userProfile, activeTab, lastClickCount, runPremiumTrigger]);
+  }, [activeTab, runPremiumTrigger]);
 
   const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
     try {

@@ -1,5 +1,5 @@
 
-export type Scenario = 'mission_complete' | 'click_spike' | 'fallback' | 'level_up' | 'streak_milestone';
+export type Scenario = 'mission_complete' | 'click_spike' | 'fallback' | 'level_up' | 'streak_milestone' | 'streak_3d';
 
 /**
  * Trigger Priority Levels:
@@ -12,6 +12,7 @@ export const TRIGGER_PRIORITIES: Record<string, number> = {
   'mission_complete': 1,
   'click_spike': 1,
   'fallback': 1,
+  'streak_3d': 1,
   
   // Level 2: Engagement (Future use)
   'level_up': 2,

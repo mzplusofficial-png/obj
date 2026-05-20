@@ -52,6 +52,50 @@ const NavButton = ({ active, onClick, emoji, label, id, showBadge, highlighted }
   </button>
 );
 
+const playNotificationSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    // Play two gorgeous chime notes (harmonized and soft)
+    const playNote = (freq: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'triangle'; // Triangle is warmer and premium like a high-end slot or prestige welcome
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gain.gain.setValueAtTime(0.15, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    // Attempt to play premium MP3 notification sound
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    audio.volume = 0.4;
+    audio.play()
+      .then(() => {
+        console.log("Notification sound played via high fidelity MP3 file.");
+      })
+      .catch((err) => {
+        console.warn("Autoplay blocked or MP3 failed, playing synthesized prestige chime fallback:", err);
+        ctx.resume().then(() => {
+          const now = ctx.currentTime;
+          playNote(1396.91, now, 0.45); // F6
+          playNote(2093.00, now + 0.08, 0.6); // C7
+        }).catch(e => console.warn("Synthesizer context block:", e));
+      });
+  } catch (error) {
+    console.warn("Chime error:", error);
+  }
+};
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
   children, 
   activeTab, 
@@ -65,25 +109,44 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [showProfileBadge, setShowProfileBadge] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const prevUnreadCountRef = useRef(0);
 
   // Fetch unread count for the bell
   useEffect(() => {
     if (!profile?.id) return;
 
-    const fetchUnread = async () => {
-      const count = await getUnreadCount(profile.id);
+    const fetchUnread = async (isUpdate = false) => {
+      const count = await getUnreadCount(profile.id, profile.user_level);
+      
+      // If count increases during an update trigger, ring the bell with the premium chime
+      if (isUpdate && count > prevUnreadCountRef.current) {
+        playNotificationSound();
+      }
+      
+      prevUnreadCountRef.current = count;
       setUnreadCount(count);
     };
 
-    fetchUnread();
+    // Initial load: fetch quiet
+    fetchUnread(false);
 
-    // Subscribe to new notifications
+    // Subscribe to new realtime notifications
     const unsubscribe = subscribeToNotifications(profile.id, () => {
-      fetchUnread();
+      fetchUnread(true);
     });
 
-    return () => unsubscribe();
-  }, [profile?.id]);
+    // Listen to local 'read' actions to sync the UI badge immediately without waiting
+    const handleLocalUpdate = () => {
+      fetchUnread(false);
+    };
+
+    window.addEventListener('mz-notifications-updated', handleLocalUpdate);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('mz-notifications-updated', handleLocalUpdate);
+    };
+  }, [profile?.id, profile?.user_level]);
 
   useEffect(() => {
     const handleProfileBadge = () => setShowProfileBadge(true);
@@ -190,9 +253,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
           <button 
             onClick={() => setShowNotifications(true)}
-            className="p-2.5 bg-[var(--color-card-start)]/50 border border-[var(--color-border-gold)] rounded-xl hover:bg-[var(--color-card-end)] transition-all relative flex items-center justify-center group"
+            className={`p-2.5 bg-[var(--color-card-start)]/50 border rounded-xl hover:bg-[var(--color-card-end)] transition-all relative flex items-center justify-center group ${
+              unreadCount > 0 
+                ? 'border-[var(--color-gold-main)] animate-container-pulse' 
+                : 'border-[var(--color-border-gold)]'
+            }`}
           >
-            <span className="text-lg group-hover:scale-110 transition-transform">🔔</span>
+            <span className={`text-lg group-hover:scale-110 transition-transform ${unreadCount > 0 ? 'animate-bell-ring' : ''}`}>🔔</span>
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-600 rounded-full flex items-center justify-center text-[10px] font-black text-white px-1 shadow-[0_0_8px_rgba(220,38,38,0.5)] border border-black/20 animate-pulse">
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -203,7 +270,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </header>
 
       {showNotifications && (
-        <NotificationsModal profile={profile} onClose={() => setShowNotifications(false)} />
+        <NotificationsModal 
+          profile={profile} 
+          onClose={() => setShowNotifications(false)} 
+          setActiveTab={setActiveTab} 
+        />
       )}
 
       {/* OVERLAY MENU MOBILE PLEIN ÉCRAN */}
@@ -341,6 +412,30 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           50% { opacity: 0.5; transform: scale(0.7); }
         }
         .animate-pulse-dot { animation: pulse-dot 1.5s infinite; }
+
+        @keyframes bell-ring {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          5%, 15%, 25% { transform: rotate(12deg) scale(1.1); }
+          10%, 20%, 30% { transform: rotate(-12deg) scale(1.1); }
+          35% { transform: rotate(8deg) scale(1.05); }
+          40% { transform: rotate(-8deg) scale(1.05); }
+          45% { transform: rotate(4deg) scale(1); }
+          50% { transform: rotate(-4deg) scale(1); }
+          55%, 100% { transform: rotate(0deg) scale(1); }
+        }
+        .animate-bell-ring {
+          animation: bell-ring 2.2s ease-in-out infinite;
+          transform-origin: top center;
+          display: inline-block;
+        }
+
+        @keyframes container-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.4); border-color: rgba(201,168,76, 0.2); }
+          50% { box-shadow: 0 0 16px 2px rgba(201, 168, 76, 0.3); border-color: var(--color-gold-main); }
+        }
+        .animate-container-pulse {
+          animation: container-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
       `}} />
     </div>
   );

@@ -32,14 +32,27 @@ export const getInternalNotifications = async (userId: string) => {
 
 export const getUnreadCount = async (userId: string, userLevel?: string) => {
   try {
+    // Read deleted IDs from localStorage to filter them out
+    let deletedIds: string[] = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        deletedIds = JSON.parse(localStorage.getItem('mz_deleted_notification_ids') || '[]');
+      } catch (e) {
+        console.error("Error reading deleted notifications from localStorage:", e);
+      }
+    }
+    const deletedSet = new Set(deletedIds);
+
     // 1. Count Internal Notifications
-    const { count: internalCount, error: internalError } = await supabase
+    const { data: internalUnread, error: internalError } = await supabase
       .from(NOTIFICATIONS_TABLE)
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .eq('recipient_id', userId)
       .eq('is_read', false);
 
     if (internalError) throw internalError;
+
+    const unreadInternalFiltered = (internalUnread || []).filter(n => !deletedSet.has(n.id)).length;
 
     // 2. Count Admin Push Notifications (more complex as it depends on receipts)
     // First get all relevant notifications
@@ -49,6 +62,7 @@ export const getUnreadCount = async (userId: string, userLevel?: string) => {
 
     const relevantIds = (allNotifs || [])
       .filter(n => {
+        if (deletedSet.has(n.id)) return false;
         if (n.target_type === 'all') return true;
         if (n.target_type === 'level' && userLevel) return n.target_value === userLevel;
         if (n.target_type === 'user') return n.target_value === userId;
@@ -66,10 +80,10 @@ export const getUnreadCount = async (userId: string, userLevel?: string) => {
       const readSet = new Set((readIds || []).map(r => r.notification_id));
       const unreadPushCount = relevantIds.filter(id => !readSet.has(id)).length;
       
-      return (internalCount || 0) + unreadPushCount;
+      return unreadInternalFiltered + unreadPushCount;
     }
 
-    return internalCount || 0;
+    return unreadInternalFiltered;
   } catch (error) {
     console.error("Error fetching unread count:", error);
     return 0;
@@ -107,6 +121,44 @@ export const markAllAsRead = async (userId: string) => {
   }
 };
 
+export const deleteInternalNotification = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from(NOTIFICATIONS_TABLE)
+      .delete()
+      .eq('id', notificationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error deleting internal notification:", error);
+    return false;
+  }
+};
+
+export const getDeletedNotificationIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem('mz_deleted_notification_ids') || '[]');
+  } catch (e) {
+    console.error("Error parsing deleted notifications from localStorage:", e);
+    return [];
+  }
+};
+
+export const deleteLocalNotification = (id: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const deleted = getDeletedNotificationIds();
+    if (!deleted.includes(id)) {
+      deleted.push(id);
+      localStorage.setItem('mz_deleted_notification_ids', JSON.stringify(deleted));
+    }
+  } catch (e) {
+    console.error("Error saving deleted notification to localStorage:", e);
+  }
+};
+
 export const subscribeToNotifications = (userId: string, onUpdate: () => void) => {
   const subscription = supabase
     .channel(`internal_notifications_${userId}`)
@@ -120,7 +172,13 @@ export const subscribeToNotifications = (userId: string, onUpdate: () => void) =
     })
     .subscribe();
 
+  // Fallback polling to guarantee delivery even if Supabase Realtime is deactivated/stale
+  const fallbackInterval = setInterval(() => {
+    onUpdate();
+  }, 10000);
+
   return () => {
     supabase.removeChannel(subscription);
+    clearInterval(fallbackInterval);
   };
 };

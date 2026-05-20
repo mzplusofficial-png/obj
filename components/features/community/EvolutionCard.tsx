@@ -95,9 +95,10 @@ export const EvolutionCard: React.FC<EvolutionCardProps> = ({ evolution: initial
 
   return (
     <motion.div
+      id={`evolution-card-${evolution.id}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111] border border-white/5 rounded-2xl p-4 shadow-xl relative overflow-hidden group"
+      className="bg-[#111] border border-white/5 rounded-2xl p-4 shadow-xl relative overflow-hidden group transition-all duration-300"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex gap-3">

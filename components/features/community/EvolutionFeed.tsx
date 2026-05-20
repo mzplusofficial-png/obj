@@ -51,9 +51,54 @@ export const EvolutionFeed: React.FC<{ profile: UserProfile | null }> = ({ profi
     };
     
     checkPendingShares();
-
+ 
     return () => unsubscribe();
   }, [profile?.id, profile?.rank_name, JSON.stringify(profile?.store_preferences?.challenge_3j)]);
+ 
+  // Handling redirection scroll and golden highlighted target from notifications
+  useEffect(() => {
+    if (loading || evolutions.length === 0) return;
+
+    const performScrollToPost = (postId: string) => {
+      // Small timeout to allow the DOM node to be rendered
+      setTimeout(() => {
+        const element = document.getElementById(`evolution-card-${postId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Add highlight animation ring and glow
+          element.classList.add('ring-2', 'ring-[var(--color-gold-main)]', 'shadow-[0_0_30px_rgba(201,168,76,0.55)]', 'scale-[1.02]');
+          
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-[var(--color-gold-main)]', 'shadow-[0_0_30px_rgba(201,168,76,0.55)]', 'scale-[1.02]');
+          }, 4500);
+
+          localStorage.removeItem('mz_scroll_to_post');
+          (window as any).mz_scroll_to_post = null;
+        }
+      }, 350);
+    };
+
+    // Check on tab load / mount
+    const initialTargetId = localStorage.getItem('mz_scroll_to_post') || (window as any).mz_scroll_to_post;
+    if (initialTargetId) {
+      performScrollToPost(initialTargetId);
+    }
+
+    // Subscribe to immediate clicks if tab is already open/mounted
+    const handleScrollEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const postId = customEvent.detail?.postId;
+      if (postId) {
+        performScrollToPost(postId);
+      }
+    };
+
+    window.addEventListener('mz-scroll-to-post', handleScrollEvent as EventListener);
+    return () => {
+      window.removeEventListener('mz-scroll-to-post', handleScrollEvent as EventListener);
+    };
+  }, [loading, evolutions]);
 
   const handleShareCurrentRank = async () => {
     if (!profile || isSharing || !canShareLevel) return;
