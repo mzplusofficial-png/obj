@@ -1528,7 +1528,23 @@ const App: React.FC = () => {
         isActive={isRPAGuideActive} 
         onComplete={() => setIsRPAGuideActive(false)} 
       />
-      {activeTab === 'profile' && <ProfileTab profile={userProfile} onLogout={handleLogout} isAdmin={isAdmin} onSwitchTab={setActiveTab} onRefresh={triggerRefresh} />}
+      {activeTab === 'profile' && (
+        <ProfileTab 
+          profile={userProfile} 
+          onLogout={handleLogout} 
+          isAdmin={isAdmin} 
+          onSwitchTab={setActiveTab} 
+          onRefresh={triggerRefresh} 
+          onStartAxisGuide={() => {
+            localStorage.removeItem('mz_axis_welcomed');
+            sessionStorage.setItem('mz_axis_guide_active', 'true');
+            setActiveTab('dashboard');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('mz-force-welcome-guide'));
+            }, 500);
+          }}
+        />
+      )}
       {activeTab === 'bonuses' && <BonusHub profile={userProfile} onSwitchTab={setActiveTab} />}
       {activeTab === 'community' && <CommunityTab profile={userProfile} />}
       {activeTab === 'live_withdrawals' && <LiveWithdrawalsView onBack={() => setActiveTab('dashboard')} />}
@@ -1572,6 +1588,14 @@ const App: React.FC = () => {
             localStorage.removeItem('mz_referral_guide_seen');
             setActiveTab('team');
             // La redirection déclenchera le guide Axis dans ReferralDashboard
+          }}
+          onStartAxisGuide={() => {
+            localStorage.removeItem('mz_axis_welcomed');
+            sessionStorage.setItem('mz_axis_guide_active', 'true');
+            setActiveTab('dashboard');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('mz-force-welcome-guide'));
+            }, 500);
           }}
         />
       )}

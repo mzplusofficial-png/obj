@@ -22,6 +22,7 @@ import {
   MapPin,
   FileText,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import {
   UserProfile,
@@ -1090,6 +1091,7 @@ export const ProfileTab: React.FC<any> = ({
   isAdmin,
   onSwitchTab,
   onRefresh,
+  onStartAxisGuide,
 }) => {
   const isMzPlus = profile?.user_level === "niveau_mz_plus";
   const challengeState = profile?.store_preferences?.challenge_3j || {};
@@ -1154,8 +1156,10 @@ export const ProfileTab: React.FC<any> = ({
     window.location.reload();
   };
 
+  const userLevel = getCurrentLevel(profile?.xp || 0);
+
   return (
-    <div className="max-w-xl mx-auto space-y-8 pb-24 pt-10 px-5 animate-fade-in font-sans">
+    <div className="max-w-2xl mx-auto space-y-8 pb-24 pt-10 px-5 animate-fade-in font-sans">
       <SectionTitle
         title="Mon Espace Élite"
         subtitle="Gérez votre identité et vos paramètres de compte."
@@ -1182,142 +1186,166 @@ export const ProfileTab: React.FC<any> = ({
         </button>
       )}
 
-      <div className="relative group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-gold-main)] to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative bg-[#0d0d0c] border border-white/5 rounded-[2.5rem] p-8">
-          <div className="flex flex-col items-center text-center gap-6">
-            <div className="relative">
-              {(() => {
-                const userLevel = getCurrentLevel(profile?.xp || 0);
-                const ProfileIcon = userLevel.icon;
-                return (
-                  <div
-                    className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 flex items-center justify-center shadow-2xl relative z-10"
+      {/* Main Glassmorphism Identity Card */}
+      <div className="relative group overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#0d0d0c]/80 backdrop-blur-xl p-8 shadow-2xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-gold-main)]/5 blur-[80px] rounded-full pointer-events-none" />
+        
+        <div className="flex flex-col items-center text-center gap-6">
+          {/* Avatar Area */}
+          <div className="relative">
+            {(() => {
+              const ProfileIcon = userLevel.icon;
+              return (
+                <div
+                  className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1A1814] to-[#0A0908] border-2 flex items-center justify-center shadow-2xl relative z-10"
+                  style={{
+                    borderColor: `${userLevel.hex}50`,
+                    boxShadow: `0 0 35px ${userLevel.hex}30`,
+                  }}
+                >
+                  <ProfileIcon
+                    size={40}
+                    color={userLevel.hex}
                     style={{
-                      borderColor: `${userLevel.hex}50`,
-                      boxShadow: `0 0 30px ${userLevel.hex}30`,
+                      filter: `drop-shadow(0 0 10px ${userLevel.hex}80)`,
                     }}
-                  >
-                    <ProfileIcon
-                      size={40}
-                      color={userLevel.hex}
-                      style={{
-                        filter: `drop-shadow(0 0 10px ${userLevel.hex}80)`,
-                      }}
-                    />
-                  </div>
-                );
-              })()}
-              {isMzPlus && (
-                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 z-20">
-                  <Crown size={14} fill="currentColor" />
+                  />
                 </div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-xl font-black uppercase tracking-tighter text-white italic">
-                {profile?.full_name || "Utilisateur Élite"}
-              </h3>
-              <div className="flex items-center justify-center gap-2">
-                {(() => {
-                  const userLevel = getCurrentLevel(profile?.xp || 0);
-                  const Icon = userLevel.icon;
-                  return (
-                    <div
-                      className="px-3 py-1 flex items-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg transition-transform hover:scale-105"
-                      style={{
-                        borderColor: `${userLevel.hex}40`,
-                        color: userLevel.hex,
-                        backgroundColor: `${userLevel.hex}15`,
-                        boxShadow: `0 0 15px ${userLevel.hex}40`,
-                      }}
-                    >
-                      <Icon size={12} strokeWidth={3} />
-                      {userLevel.name}
-                    </div>
-                  );
-                })()}
-                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
-                  •
-                </span>
-                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
-                  {profile?.email}
-                </span>
+              );
+            })()}
+            {isMzPlus && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 z-20">
+                <Crown size={14} fill="currentColor" />
               </div>
-            </div>
+            )}
+          </div>
 
-            <div className="w-full h-[1px] bg-white/5"></div>
-
-            {/* Country Display (Read-only) */}
-            <div className="w-full space-y-2">
-              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block text-left ml-1">
-                Localisation (Pays)
-              </label>
-              <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white flex items-center gap-3">
-                 <span className="text-xl">
-                   {(() => {
-                     const code = profile?.country_code?.toLowerCase();
-                     const flags: Record<string, string> = {
-                       ci: "🇨🇮", sn: "🇸🇳", cm: "🇨🇲", ml: "🇲🇱", bf: "🇧🇫", tg: "🇹🇬", bj: "🇧🇯", ne: "🇳🇪", gn: "🇬🇳", ga: "🇬🇦", cg: "🇨🇬", cd: "🇨🇩", fr: "🇫🇷", dz: "🇩🇿", ma: "🇲🇦", tn: "🇹🇳", mg: "🇲🇬", ca: "🇨🇦"
-                     };
-                     return flags[code || ""] || "🌐";
-                   })()}
-                 </span>
-                 <span className="font-bold uppercase tracking-widest text-[10px]">
-                   {(() => {
-                     const names: Record<string, string> = {
-                       ci: "Côte d'Ivoire", sn: "Sénégal", cm: "Cameroun", ml: "Mali", bf: "Burkina Faso", tg: "Togo", bj: "Bénin", ne: "Niger", gn: "Guinée", ga: "Gabon", cg: "Congo", cd: "RDC", fr: "France", dz: "Algérie", ma: "Maroc", tn: "Tunisie", mg: "Madagascar", ca: "Canada"
-                     };
-                     return names[profile?.country_code?.toLowerCase() || ""] || "Localisation Automatique";
-                   })()}
-                 </span>
+          {/* User Names & Level Badges */}
+          <div className="space-y-3">
+            <h3 className="text-2xl font-black uppercase tracking-tight text-white italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              {profile?.full_name || "Utilisateur Élite"}
+            </h3>
+            
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div
+                className="px-3 py-1 flex items-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border"
+                style={{
+                  borderColor: `${userLevel.hex}40`,
+                  color: userLevel.hex,
+                  backgroundColor: `${userLevel.hex}15`,
+                }}
+              >
+                <userLevel.icon size={11} strokeWidth={3} />
+                {userLevel.name}
               </div>
+              
+              <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-bold text-neutral-400 select-all tracking-wider">
+                {profile?.email}
+              </span>
             </div>
+          </div>
 
-            <div className="w-full h-[1px] bg-white/5"></div>
+          <div className="w-full h-[1px] bg-white/5 my-2"></div>
 
-            <div className="grid grid-cols-2 w-full gap-4">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">
-                  Points Acquis
-                </p>
-                <p className="text-sm font-black text-[var(--color-gold-main)] uppercase tracking-tighter">
-                  {profile?.xp || 0} XP
-                </p>
+          {/* New Structured Details Grid */}
+          <div className="w-full text-left">
+            {/* Inscription Display */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <Calendar size={18} />
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">
+              <div>
+                <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">
                   Membre Depuis
                 </p>
-                <p className="text-sm font-black text-white uppercase tracking-tighter">
+                <h5 className="font-black uppercase tracking-wider text-[11px] text-white">
                   {profile?.created_at
                     ? new Date(profile.created_at).toLocaleDateString()
                     : "---"}
-                </p>
+                </h5>
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 w-full gap-4 pt-1">
+            <div className="p-4 rounded-2xl bg-[#141412] border border-white/5 text-center">
+              <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1 leading-none">
+                Cumul des Points
+              </p>
+              <p className="text-base font-black text-[var(--color-gold-main)] uppercase tracking-tight">
+                {profile?.xp || 0} XP
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-2xl bg-[#141412] border border-white/5 text-center flex flex-col justify-center">
+              <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1 leading-none font-sans">
+                Statut Élite
+              </p>
+              <p className={`text-xs font-black uppercase tracking-widest ${isMzPlus ? 'text-purple-400' : 'text-neutral-400'}`}>
+                {isMzPlus ? 'Premium' : 'Standard'}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* New Dedicated Axis Companion Direct Access Section */}
+      <div className="relative group overflow-hidden rounded-[2rem] border border-amber-500/20 bg-amber-500/5 p-6 shadow-xl">
+        <div className="absolute -right-12 -bottom-12 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full pointer-events-none"></div>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+              <Eye size={24} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1.5 font-sans">Assistant de réussite</div>
+              <h4 className="text-sm font-black text-white uppercase tracking-tighter leading-none mb-1">
+                L'oeil Intelligent d'Axis
+              </h4>
+              <p className="text-[11px] text-neutral-400 font-medium max-w-sm">
+                Besoin d'aide pour importer tes produits, configurer ta boutique ou lancer tes ventes ? Clique ici !
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => {
+              if (onStartAxisGuide) {
+                onStartAxisGuide();
+              } else {
+                // fallback
+                localStorage.removeItem('mz_axis_welcomed');
+                sessionStorage.setItem('mz_axis_guide_active', 'true');
+                onSwitchTab('dashboard');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('mz-force-welcome-guide'));
+                }, 300);
+              }
+            }}
+            className="w-full md:w-auto px-5 py-3 rounded-xl bg-amber-500 text-black hover:bg-amber-400 active:scale-95 transition-all text-xs font-black uppercase tracking-widest whitespace-nowrap shadow-lg shadow-amber-500/10 text-center"
+          >
+            Lancer Axis
+          </button>
+        </div>
+      </div>
+
       {/* Evolution Trigger Icon - Improved Placement & Responsiveness */}
-      <div className="px-2 mb-8">
+      <div className="px-1">
          <motion.button
-           whileHover={{ scale: 1.02 }}
-           whileTap={{ scale: 0.98 }}
+           whileHover={{ scale: 1.01 }}
+           whileTap={{ scale: 0.99 }}
            onClick={() => onSwitchTab('evolution')}
-           className="w-full relative group p-5 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/5 flex items-center justify-between shadow-2xl hover:border-purple-500/50 transition-all duration-300"
+           className="w-full relative group p-5 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/5 flex items-center justify-between shadow-2xl hover:border-purple-500/40 transition-all duration-300"
          >
            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]"></div>
            
            <div className="flex items-center gap-4">
-             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 group-hover:rotate-6 transition-transform">
-               <TrendingIcon size={24} />
+             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 group-hover:rotate-6 transition-transform shrink-0">
+               <TrendingIcon size={22} />
              </div>
              <div className="text-left">
-               <div className="text-xs font-black text-white uppercase tracking-tighter italic leading-none mb-1.5">Fil d'Évolutions</div>
-               <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest leading-none">Vois le succès de la communauté</div>
+               <div className="text-xs font-black text-white uppercase tracking-tighter italic leading-none mb-1.5">Fil d'Évolutions Élite</div>
+               <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest leading-none">Découvrez le succès en direct de vos pairs</div>
              </div>
            </div>
 
@@ -1331,7 +1359,12 @@ export const ProfileTab: React.FC<any> = ({
          </motion.button>
       </div>
 
-      <div className="space-y-6">
+      {/* Progression Section (Umtampered Progression Tube) */}
+      <div className="space-y-3 px-1 border-t border-white/5 pt-8">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">Votre progression élite</span>
+          <span className="text-[10px] font-bold text-[var(--color-gold-main)] uppercase tracking-widest">{profile?.xp || 0} XP TOTAUX</span>
+        </div>
         <LiquidProgressionTube currentXp={profile?.xp || 0} />
       </div>
 
@@ -1351,35 +1384,35 @@ export const ProfileTab: React.FC<any> = ({
         </button>
       </div>
 
-      {/* Icon Grid Actions */}
-      <div className="grid grid-cols-4 gap-2 mt-4">
+      {/* Icon Grid Actions - Beautiful Bento Column Layout */}
+      <div className="grid grid-cols-4 gap-2.5 mt-4 px-1">
         <button
           onClick={() => onSwitchTab("leaderboard")}
-          className="flex flex-col items-center justify-center p-2 transition-all group"
+          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#0e0e0d] border border-white/5 hover:border-yellow-500/20 hover:bg-yellow-500/5 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-yellow-500/20 transition-all">
-            <Trophy size={20} className="text-yellow-400" />
+          <div className="w-11 h-11 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-yellow-500/20 transition-all shadow-md">
+            <Trophy size={18} className="text-yellow-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
-            Class.
+          <span className="text-[10px] font-black uppercase tracking-tight text-neutral-200">
+            Mondial
           </span>
           <span className="text-[8px] font-bold uppercase tracking-widest text-yellow-500/70 mt-0.5">
-            Mondial
+            Rang
           </span>
         </button>
 
         <button
           onClick={() => onSwitchTab("leaderboard_local")}
-          className="flex flex-col items-center justify-center p-2 transition-all group"
+          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#0e0e0d] border border-white/5 hover:border-purple-500/20 hover:bg-purple-500/5 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all">
-            <MapPin size={20} className="text-purple-400" />
+          <div className="w-11 h-11 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all shadow-md">
+            <MapPin size={18} className="text-purple-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
-            Class.
+          <span className="text-[10px] font-black uppercase tracking-tight text-neutral-200">
+            Local
           </span>
           <span className="text-[8px] font-bold uppercase tracking-widest text-purple-400/70 mt-0.5">
-            Local
+            Territoire
           </span>
         </button>
 
@@ -1388,22 +1421,22 @@ export const ProfileTab: React.FC<any> = ({
             onSwitchTab("weekly_challenge");
             localStorage.setItem('mz_weekly_challenge_seen', 'true');
           }}
-          className="flex flex-col items-center justify-center p-2 transition-all group relative"
+          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#0e0e0d] border border-white/5 hover:border-blue-500/20 hover:bg-blue-500/5 transition-all group relative"
         >
           {localStorage.getItem('mz_weekly_challenge_seen') !== 'true' && (
-            <div className="absolute top-0 right-[20%] flex h-3 w-3 translate-x-1 -translate-y-1">
+            <div className="absolute top-1 right-[20%] flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
             </div>
           )}
-          <div className={`w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all ${localStorage.getItem('mz_weekly_challenge_seen') !== 'true' ? 'animate-bounce shadow-[0_0_15px_rgba(59,130,246,0.2)] border-blue-400/50' : ''}`}>
-            <Target size={20} className="text-blue-400" />
+          <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all shadow-md">
+            <Target size={18} className="text-blue-400" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">
+          <span className="text-[10px] font-black uppercase tracking-tight text-neutral-200">
             Défi
           </span>
           <span className="text-[8px] font-bold uppercase tracking-widest text-blue-400/70 mt-0.5">
-            Hebdo.
+            Hebdo
           </span>
         </button>
 
@@ -1440,6 +1473,7 @@ export const ProfileTab: React.FC<any> = ({
         </div>
       )}
 
+      {/* Logout Row */}
       <div className="pt-8 border-t border-white/5 space-y-4">
         <button
           onClick={onLogout}
@@ -1574,10 +1608,12 @@ export const GuidesTab: React.FC<any> = ({
   onStartAffiliationGuide,
   onStartRPAGuide,
   onStartTeamGuide,
+  onStartAxisGuide,
 }) => (
   <GuidesTabComponent
     onStartAffiliationGuide={onStartAffiliationGuide}
     onStartRPAGuide={onStartRPAGuide}
     onStartTeamGuide={onStartTeamGuide}
+    onStartAxisGuide={onStartAxisGuide}
   />
 );

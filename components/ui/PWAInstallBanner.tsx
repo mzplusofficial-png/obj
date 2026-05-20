@@ -22,11 +22,10 @@ export const PWAInstallBanner = () => {
     };
 
     const checkPromptDelay = () => {
-      const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
-      if (lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000) {
-        return true; // Too soon
-      }
-      return false;
+      // On le propose à chaque visite sur la page.
+      // Si l'utilisateur l'a fermé (dismiss) dans la session en cours, on respecte son choix temporairement pour ne pas l'gêner,
+      // mais dès qu'il revient ou recharge la page (nouvelle session), la bannière s'affichera à nouveau.
+      return sessionStorage.getItem('mz_pwa_prompt_dismissed') === 'true';
     };
 
     if (checkIfInstalled() || checkPromptDelay()) {
@@ -86,17 +85,19 @@ export const PWAInstallBanner = () => {
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
         setIsVisible(false);
+        setIsInstalled(true);
+        localStorage.setItem('mz_pwa_installed', 'true');
       }
     }
-    // Enregistrer l'action (même pour iOS guide)
-    localStorage.setItem('mz_pwa_prompt_timestamp', Date.now().toString());
+    // Enregistrer l'action pour la session en cours
+    sessionStorage.setItem('mz_pwa_prompt_dismissed', 'true');
     window.dispatchEvent(new CustomEvent('mz-pwa-handled'));
   };
 
   const closeBanner = () => {
     setIsVisible(false);
-    // On repousse de 24h
-    localStorage.setItem('mz_pwa_prompt_timestamp', Date.now().toString());
+    // On masque temporairement pour ne pas importuner pendant la session en cours
+    sessionStorage.setItem('mz_pwa_prompt_dismissed', 'true');
     window.dispatchEvent(new CustomEvent('mz-pwa-handled'));
   };
 

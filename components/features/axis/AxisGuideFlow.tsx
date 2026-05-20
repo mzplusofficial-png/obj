@@ -266,8 +266,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
                           window.matchMedia('(display-mode: standalone)').matches || 
                           ('standalone' in navigator && (navigator as unknown as { standalone: boolean }).standalone);
                           
-      const lastPrompt = localStorage.getItem('mz_pwa_prompt_timestamp');
-      const recentlyPrompted = lastPrompt && Date.now() - parseInt(lastPrompt) < 24 * 60 * 60 * 1000;
+      const isPromptDismissed = sessionStorage.getItem('mz_pwa_prompt_dismissed') === 'true';
 
       const runOnce = () => {
         localStorage.setItem('mz_axis_welcomed', 'true');
@@ -275,7 +274,7 @@ export const AxisGuideFlow: React.FC<AxisGuideFlowProps> = ({ session, userProfi
         startGuide();
       };
 
-      if (isInstalled || recentlyPrompted) {
+      if (isInstalled || isPromptDismissed) {
          runOnce();
       } else {
          // On attend la fermeture (ou la fin) de la bannière PWA

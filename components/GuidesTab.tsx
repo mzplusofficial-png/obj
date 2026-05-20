@@ -1,15 +1,16 @@
 
 import React from 'react';
-import { HelpCircle, Target, Briefcase, Sparkles, ArrowRight, PlayCircle, Users } from 'lucide-react';
+import { HelpCircle, Target, Briefcase, Sparkles, PlayCircle, Users, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface GuidesTabProps {
   onStartAffiliationGuide: () => void;
   onStartRPAGuide: () => void;
   onStartTeamGuide: () => void;
+  onStartAxisGuide: () => void;
 }
 
-export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, onStartRPAGuide, onStartTeamGuide }) => {
+export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, onStartRPAGuide, onStartTeamGuide, onStartAxisGuide }) => {
   const guides = [
     {
       id: 'affiliation',
@@ -40,6 +41,16 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, o
       bgColor: 'bg-emerald-500/10',
       borderColor: 'border-emerald-500/20',
       action: onStartTeamGuide
+    },
+    {
+      id: 'axis',
+      title: 'Assistant Axis',
+      description: 'Relance l\'oeil bienveillant d\'Axis pour t\'accompagner pas à pas dans l\'importation de produits et le démarrage de ton activité.',
+      icon: Eye,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/20',
+      action: onStartAxisGuide
     },
     {
       id: 'global',
